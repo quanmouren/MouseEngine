@@ -9,7 +9,10 @@ from tkinter.ttk import *
 import threading
 from tkinterdnd2 import TkinterDnD, DND_FILES
 import toml
-
+import pystray
+from PIL import Image
+import sys
+import queue
 
 
 def 获取mouses配置(file_path):
@@ -955,24 +958,112 @@ def ui_设置():
     # 测试提取数据
     print(controller.get_input_values())
     
-    win.mainloop()
+    return win
 
-
-
-
-
-
-
-
-
+# 全局变量
 mouse_path = r"mouses"
 username = "woshi"
 
 #wallpaper_engine 配置路径
 config_path = r"D:\Application\STEAM\steamapps\common\wallpaper_engine\config.json"
 
-# 触发刷新确保启动时应用当前配置
-触发刷新()
+# 全局变量存储主窗口和退出标志
+main_window = None
+exit_flag = False
 
-# 启动GUI
-ui_设置()
+# 创建系统托盘图标
+def create_system_tray():
+    # 创建一个简单的图标（16x16像素的蓝色方块）
+    image = Image.new('RGB', (16, 16), color='blue')
+    
+    # 创建菜单
+    menu = pystray.Menu(
+        pystray.MenuItem("配置当前壁纸", show_config_window),
+        pystray.MenuItem("退出", exit_application)
+    )
+    
+    # 创建系统托盘图标
+    icon = pystray.Icon("wallpaper_mouse_config", image, "壁纸鼠标配置", menu)
+    
+    # 运行系统托盘图标
+    icon.run()
+
+# 显示配置窗口
+def show_config_window(icon, item):
+    global main_window
+    if main_window is None:
+        # 在单独的线程中运行UI
+        ui_thread = threading.Thread(target=run_ui, daemon=True)
+        ui_thread.start()
+    else:
+        # 如果窗口已存在，显示并置顶
+        try:
+            main_window.deiconify()
+            main_window.lift()
+            main_window.focus_force()
+        except Exception as e:
+            print(f"显示窗口错误: {e}")
+            # 如果窗口已损坏，重新创建
+            main_window = None
+            show_config_window(icon, item)
+
+# 在单独线程中运行UI
+def run_ui():
+    global main_window
+    try:
+        main_window = ui_设置()
+        # 设置窗口关闭时的行为
+        main_window.protocol("WM_DELETE_WINDOW", hide_window)
+        main_window.mainloop()
+    except Exception as e:
+        print(f"UI运行错误: {e}")
+
+# 隐藏窗口而不是关闭
+def hide_window():
+    global main_window
+    if main_window:
+        try:
+            main_window.withdraw()
+        except Exception as e:
+            print(f"隐藏窗口错误: {e}")
+
+# 退出应用程序
+def exit_application(icon, item):
+    global exit_flag, main_window
+    print("正在退出应用程序...")
+    exit_flag = True
+    
+    # 停止系统托盘图标
+    icon.stop()
+    
+    # 关闭主窗口
+    if main_window:
+        try:
+            main_window.quit()
+            main_window.destroy()
+        except Exception as e:
+            print(f"关闭窗口错误: {e}")
+    
+    # 强制退出程序
+    os._exit(0)
+
+# 循环刷新函数
+def loop_refresh():
+    while not exit_flag:
+        try:
+            触发刷新()
+            time.sleep(0.5)
+        except Exception as e:
+            print(f"刷新错误: {e}")
+            time.sleep(0.5)
+
+if __name__ == "__main__":
+    # 启动时先执行一次刷新
+    触发刷新()
+    
+    # 启动循环刷新线程
+    refresh_thread = threading.Thread(target=loop_refresh, daemon=True)
+    refresh_thread.start()
+    
+    # 启动系统托盘图标（在主线程中运行）
+    create_system_tray()
