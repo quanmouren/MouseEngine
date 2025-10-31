@@ -1,7 +1,12 @@
 import json
 import os
+import os
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from src.Tlog import TLog
 
-def get_monitor_path(config_path, user, monitor):
+def 获取当前壁纸路径(config_path, user, monitor):
+    log = TLog("获取当前壁纸路径")
     """
     从Wallpaper Engine配置文件中获取指定Monitor的壁纸文件路径
     :param config_path: Wallpaper Engine配置文件路径
@@ -12,14 +17,18 @@ def get_monitor_path(config_path, user, monitor):
     try:
         if not os.path.exists(config_path):
             print(f"配置文件不存在: {config_path}")
+            log.error(f"配置文件不存在: {config_path}")
             return None
         with open(config_path, 'r', encoding='utf-8') as file:
             config_data = json.load(file)
         wallpaper_path = config_data.get(user, {}).get('general', {}).get(
             'wallpaperconfig', {}).get('selectedwallpapers', {}).get(f"Monitor{monitor}", {}).get('file')
-        
+        log.debug(f"获取到壁纸路径: {wallpaper_path}")
         return wallpaper_path
         
     except Exception as e:
         print(f"读取配置文件时出错: {e}")
+        log.error(f"读取配置文件时出错: {e}")
         return None
+
+

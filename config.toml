@@ -1,2 +1,10 @@
 [wallpaper]
-3409595232 = "芙宁娜"
+3306588730 = "芙宁娜"
+2704773569 = "默认"
+
+[path]
+wallpaper_engine_config = "D:/Application/STEAM/steamapps/common/wallpaper_engine/config.json"  #壁纸引擎配置文件路径
+
+
+[config]
+enable_default_icon_group = true  #启用默认图标组 在当前设置的图标组中缺少图标时将被默认组替换，这个组名只能是”默认“
