@@ -65,9 +65,9 @@ def 保存组配置(name, folder_path, file_list):
         :param file_list: 16个文件路径列表
     """
     log.debug("开始保存配置")
-    if len(file_list) != 16:
-        log.debug("file_list 长度不为16，抛出异常")
-        raise ValueError("file_list must contain exactly 16 items")
+    if len(file_list) != 15:
+        log.debug("file_list 长度不为15，抛出异常")
+        raise ValueError("file_list must contain exactly 15 items")
     
     target_folder = os.path.join(folder_path, name)
     log.debug(f"目标文件夹路径: {target_folder}")
@@ -89,7 +89,7 @@ def 保存组配置(name, folder_path, file_list):
     cursor_keys = [
         "Arrow", "Help", "AppStarting", "Wait", "Crosshair", "IBeam", 
         "Handwriting", "No", "SizeNS", "SizeWE", "SizeNWSE", "SizeNESW", 
-        "SizeAll", "PersonSelect", "Hand", "UpArrow"
+        "SizeAll", "Hand", "UpArrow"
     ]
 
     toml_data = {"mouses": dict(zip(cursor_keys, copied_paths))}

@@ -24,9 +24,8 @@ CURSOR_ORDER_MAPPING = [
     "SizeNWSE",       # 10: 沿对角线调整大小1
     "SizeNESW",       # 11: 沿对角线调整大小2
     "SizeAll",        # 12: 移动
-    "PersonSelect",   # 13: 个人选择
-    "Hand",           # 14: 链接选择
-    "UpArrow",        # 15: 位置选择
+    "Hand",           # 13: 链接选择
+    "UpArrow"          # 14: 位置选择
 ]
 
 # 读取配置文件
@@ -91,9 +90,8 @@ def 设置鼠标指针(cursor_paths):
     - cursor_paths[10]: 沿对角线调整大小1
     - cursor_paths[11]: 沿对角线调整大小2
     - cursor_paths[12]: 移动
-    - cursor_paths[13]: 个人选择
-    - cursor_paths[14]: 链接选择
-    - cursor_paths[15]: 位置选择
+    - cursor_paths[13]: 链接选择
+    - cursor_paths[14]: 位置选择
 
     :return: 成功返回True，失败返回False
     """
