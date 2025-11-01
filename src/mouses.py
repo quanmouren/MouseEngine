@@ -74,9 +74,8 @@ def 保存组配置(name, folder_path, file_list):
         :param folder_path: 配置文件夹路径
         :param file_list: 16个文件路径列表
     """
-    log.debug("开始保存配置")
     if len(file_list) != 15:
-        log.debug("file_list 长度不为15，抛出异常")
+        log.debug("file_list 长度不符")
         raise ValueError("file_list must contain exactly 15 items")
     
     target_folder = os.path.join(folder_path, name)
@@ -110,8 +109,8 @@ def 保存组配置(name, folder_path, file_list):
     with open(toml_path, "w", encoding="utf-8") as f:
         toml.dump(toml_data, f)
     log.debug("TOML 文件写入完成")
-    触发刷新()
-    log.debug("触发刷新完成")
+    #触发刷新()
+    #log.debug("触发刷新完成")
     return target_folder
     
 def wallpaper(query_path, config_path="config.toml"):

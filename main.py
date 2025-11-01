@@ -1,15 +1,14 @@
-from src.getWallpaperConfig import 获取当前壁纸路径
-from src.setMouse import 设置鼠标指针
 import time
 import os
 import shutil
 import toml
-
-
 from src.Tlog import TLog
 import toml
 log = TLog("main")
 from src.mouses import 触发刷新,保存组配置,wallpaper,add_wallpaper,delete_wallpaper
+from src.getWallpaperConfig import 获取当前壁纸路径
+from src.setMouse import 设置鼠标指针
+
 
 
 

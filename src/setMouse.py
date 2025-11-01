@@ -111,22 +111,30 @@ def 设置鼠标指针(cursor_paths):
         )
         for index, cursor_name in enumerate(CURSOR_ORDER_MAPPING):
             cursor_path = None
-            # 优先使用提供的鼠标指针
-            if index < len(cursor_paths) and cursor_paths[index]:
-                candidate_path = os.path.abspath(cursor_paths[index])
-                log.debug(f"处理光标 {cursor_name}: {candidate_path}")
-                if os.path.exists(candidate_path):
-                    cursor_path = candidate_path
-                else:
-                    #print(f"警告：文件不存在 - {candidate_path}")
-                    log.error(f"文件不存在 - {candidate_path}")
-                    # 尝试使用默认文件作为替代
-                    if enable_default:
-                        default_path = 获取默认图标路径(index)
-                        if default_path and os.path.exists(default_path):
-                            log.debug(f"<r ! >使用默认光标 {cursor_name} 替代: {default_path}")
-                            cursor_path = default_path
-            # 如果启用了默认图标组且当前没有提供鼠标指针，使用默认配置
+            # 检查是否在范围内
+            if index < len(cursor_paths):
+                # 获取原始配置路径
+                original_path = cursor_paths[index]
+                
+                # 如果配置明确为空字符串，跳过（不使用默认）
+                if original_path == "":
+                    log.debug(f"默认配置为空，跳过: {cursor_name}")
+                    cursor_path = None
+                # 如果有配置值且不为空
+                elif original_path:
+                    candidate_path = os.path.abspath(original_path)
+                    log.debug(f"处理光标 {cursor_name}: {candidate_path}")
+                    if os.path.exists(candidate_path):
+                        cursor_path = candidate_path
+                    else:
+                        log.error(f"文件不存在 - {candidate_path}")
+                        # 尝试使用默认文件作为替代
+                        if enable_default:
+                            default_path = 获取默认图标路径(index)
+                            if default_path and os.path.exists(default_path):
+                                log.debug(f"<r ! >使用默认光标 {cursor_name} 替代: {default_path}")
+                                cursor_path = default_path
+            # 如果超出范围且启用了默认图标组，使用默认配置
             elif enable_default:
                 default_path = 获取默认图标路径(index)
                 if default_path and os.path.exists(default_path):
@@ -135,9 +143,11 @@ def 设置鼠标指针(cursor_paths):
                 else:
                     log.error(f"默认光标不存在或索引无效: {index}")
             
-            # 如果找到了有效的光标路径，则设置
-            if cursor_path:
+            # 只有当光标路径有效且不为空时，才进行设置
+            if cursor_path and cursor_path.strip():
                 winreg.SetValueEx(base_key, cursor_name, 0, winreg.REG_SZ, cursor_path)
+            else:
+                log.debug(f"跳过空光标设置: {cursor_name}")
         winreg.CloseKey(base_key)
         update_system_cursors()
         return True
