@@ -5,8 +5,14 @@ from PIL import Image, ImageTk
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.mouses import 保存组配置
+from src.getWallpaperConfig import 获取当前壁纸路径
 from tkinterdnd2 import DND_FILES, TkinterDnD
+from src.Tlog import TLog
+import toml
 
+
+
+log = TLog("UI_鼠标组设置")
 class FilePathInputApp:
     def __init__(self, root, icon_paths):
         self.root = root
@@ -99,10 +105,9 @@ class FilePathInputApp:
             file_path = event.data
             if file_path.startswith('{') and file_path.endswith('}'):
                 file_path = file_path[1:-1]
-            
-            files = file_path.split()
-            if files:
-                file_path = files[0]
+            file_path = file_path.strip()
+            if '\n' in file_path or '\t' in file_path:
+                file_path = file_path.split()[0]
             
             widget.delete(0, tk.END)
             widget.insert(0, file_path)
@@ -151,8 +156,8 @@ def main():
         "image\\aero_unavail.png",
         "image\\aero_ns.png",
         "image\\aero_ew.png",
-        "image\\aero_nesw.png",
         "image\\aero_nwse.png",
+        "image\\aero_nesw.png",
         "image\\aero_move.png",
         "image\\aero_link.png",
         "image\\aero_up.png"
@@ -163,4 +168,7 @@ def main():
     root.mainloop()
 
 if __name__ == "__main__":
+    
+    config_path = toml.load("config.toml")["path"]["wallpaper_engine_config"]
+    log.debug(f"当前壁纸路径{获取当前壁纸路径(config_path, "woshi", 1)}")
     main()
