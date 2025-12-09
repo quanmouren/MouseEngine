@@ -3,31 +3,76 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.Tlog import TLog
+import toml
+import getpass
 
-def 获取当前壁纸路径(config_path, user, monitor):
-    log = TLog("获取当前壁纸路径")
+
+
+def 获取当前壁纸(config_path: str, user: str) -> list:
     """
-    从Wallpaper Engine配置文件中获取指定Monitor的壁纸文件路径
-    :param config_path: Wallpaper Engine配置文件路径
-    :param user: 用户名
-    :param monitor: 显示器编号
-    :return: 壁纸文件路径，如果没有找到则返回None
+    从 Wallpaper Engine 的 config.json 文件中提取每个显示器当前的壁纸信息。
+
+    Args:
+        config_path (str):
+        user (str)
+
+    Returns:
+        list: 包含每个显示器壁纸信息的列表。
+              结构为: [[当前加载, id, 播放列表, 加载列表名], ...]
     """
     try:
-        if not os.path.exists(config_path):
-            print(f"配置文件不存在: {config_path}")
-            log.error(f"配置文件不存在: {config_path}")
-            return None
-        with open(config_path, 'r', encoding='utf-8') as file:
-            config_data = json.load(file)
-        wallpaper_path = config_data.get(user, {}).get('general', {}).get(
-            'wallpaperconfig', {}).get('selectedwallpapers', {}).get(f"Monitor{monitor}", {}).get('file')
-        log.debug(f"获取到壁纸路径: {wallpaper_path}")
-        return wallpaper_path
-        
+        with open(config_path, 'r', encoding='utf-8') as f:
+            config_data = json.load(f)
+    except FileNotFoundError:
+        log.error(f"错误：配置文件未找到，路径: {config_path}")
+        return []
+    except json.JSONDecodeError:
+        log.error(f"错误：文件不是有效的 JSON 格式: {config_path}")
+        return []
     except Exception as e:
-        print(f"读取配置文件时出错: {e}")
-        log.error(f"读取配置文件时出错: {e}")
-        return None
+        log.error(f"读取配置文件时发生未知错误: {e}")
+        return []
+
+    try:
+        selected_wallpapers = config_data[user]['general']['wallpaperconfig']['selectedwallpapers']
+    except KeyError as e:
+        log.error(f"错误：无法在 JSON 中找到指定路径的键: {e}")
+        return []
+    
+    result_list = []
+    
+    for monitor_key, monitor_data in selected_wallpapers.items():
+        try:
+            file_path = monitor_data.get('file')
+            items_list = monitor_data.get('playlist', {}).get('items', [])
+            playlist_name = monitor_data.get('playlist', {}).get('name')
+            
+            wallpaper_id = ""
+            if file_path:
+                dir_path = os.path.dirname(file_path)
+                dir_path_normalized = dir_path.replace('\\', '/')
+                wallpaper_id = os.path.basename(dir_path_normalized)
+            
+            monitor_result = [
+                file_path,
+                wallpaper_id,
+                items_list,
+                playlist_name
+            ]
+            
+            result_list.append(monitor_result)
+            
+        except Exception as e:
+            log.warning(f"处理显示器 {monitor_key} 时发生错误，跳过: {e}")
+            continue
+
+    return result_list
 
 
+if __name__ == '__main__':
+    winUserName = getpass.getuser()
+
+    log = TLog("获取当前壁纸路径")
+    #config_path = toml.load("config.toml")["path"]["wallpaper_engine_config"]
+    config_path = r"D:/Application/STEAM/steamapps/common/wallpaper_engine/config.json"
+    log.debug(f"当前壁纸路径{获取当前壁纸(config_path, winUserName)}")
