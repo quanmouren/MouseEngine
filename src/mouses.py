@@ -2,9 +2,11 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.Tlog import TLog
-from src.getWallpaperConfig import 获取当前壁纸路径
+from src.getWallpaperConfig import 获取当前壁纸
 from src.setMouse import 设置鼠标指针
 import time
+from screeninfo import get_monitors
+import pyautogui
 
 import shutil
 import toml
@@ -23,7 +25,7 @@ def 触发刷新(config_path,username,monitor):
         :param username: 用户名
         :param monitor: 显示器编号
     """
-    path = 获取当前壁纸路径(config_path, username, monitor)
+    path = 获取当前壁纸(config_path, username, monitor)[0]
 
     normalized_path = os.path.normpath(path)
     if os.path.isfile(normalized_path):
@@ -113,52 +115,7 @@ def 保存组配置(name, folder_path, file_list):
     #log.debug("触发刷新完成")
     return target_folder
     
-def wallpaper(query_path, config_path="config.toml"):
-    """
-    从查询路径中提取文件所在的最后一个文件夹名，检查其在config.toml的wallpaper项目中是否存在
-    
-    :param query_path: 待查询的文件路径字符串
-    :param config_path: config.toml文件路径（默认当前目录）
-    :return: 若存在则返回对应值，否则返回False
-    """
-    log.debug(f"收到数据 query_path={query_path}, config_path={config_path}")
-    normalized_path = os.path.normpath(query_path)
-    log.debug(f"标准化路径: {normalized_path}")
-    if os.path.isfile(normalized_path):
-        file_dir = os.path.dirname(normalized_path)
-        log.debug(f"路径指向文件，提取目录: {file_dir}")
-    else:
-        file_dir = normalized_path
-        log.debug(f"路径指向目录: {file_dir}")
-    last_folder = os.path.basename(file_dir)
-    log.debug(f"提取最后一级文件夹名: {last_folder}")
-    if not last_folder:
-        log.debug("最后一级文件夹名为空，返回False")
-        return False
-    if not os.path.exists(config_path):
-        log.debug(f"配置文件不存在，准备创建默认配置: {config_path}")
-        default_config = {"wallpaper": {}}
-        with open(config_path, 'w', encoding='utf-8') as f:
-            toml.dump(default_config, f)
-        log.debug("默认配置已写入")
-    try:
-        log.debug(f"尝试读取配置文件: {config_path}")
-        with open(config_path, 'r', encoding='utf-8') as f:
-            config_data = toml.load(f)
-        log.debug("配置文件读取成功")
-        if "wallpaper" not in config_data:
-            log.debug("wallpaper 节点不存在，准备写入空字典")
-            config_data["wallpaper"] = {}
-            with open(config_path, 'w', encoding='utf-8') as f:
-                toml.dump(config_data, f)
-            log.debug("wallpaper 空字典已写入")
-        result = config_data["wallpaper"].get(last_folder, False)
-        log.debug(f"查询结果: {result}")
-        return result
-    
-    except toml.TomlDecodeError:
-        log.debug("TOML 解析失败，返回False")
-        return False
+ 
 
 
 def add_wallpaper(name, query_path, config_path="config.toml"):
@@ -259,3 +216,23 @@ def delete_wallpaper(query_path, config_path="config.toml"):
     except Exception as e:
         log.debug(f"配置写入失败，异常: {e}，返回False")
         return False
+
+
+def get_current_monitor_index_minimal():
+    """返回鼠标当前所在的显示器索引"""
+    
+    x, y = pyautogui.position()
+    for i, m in enumerate(get_monitors()):
+        if m.x <= x < (m.x + m.width) and m.y <= y < (m.y + m.height):
+            return i
+            
+    return -1
+
+
+
+if __name__ == "__main__":
+    wallpaper("2992022633")
+    print(wallpaper("2992022633"))
+
+
+

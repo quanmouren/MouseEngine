@@ -27,7 +27,9 @@ class TLog:
             text = text.replace(">", "\033[0;31m")
             text = text.replace("<!", "\033[1;31m")
             text = text.replace("<#!", "\033[41m")
+        text = text.replace(">>", "[@backslash]")
         text = text.replace(">", "\033[0m")
+        text = text.replace("[@backslash]", ">")
         text = text.replace("<time", f"\033[0;34m{datetime.datetime.now().strftime("%H:%M:%S.%f")[:-3]}\033[0m")
         return text
     def DEBUG(self, text):
