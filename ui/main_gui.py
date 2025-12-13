@@ -270,12 +270,13 @@ class WallpaperConfigPage(ctk.CTkFrame):
             self.mouse_group_name_label.configure(text=f"鼠标组: {group_name}")
             
         cursor_paths = get_mouse_config_paths(group_name)
-
-        # Update ComboBox values and reset it
         if hasattr(self, 'mouse_group_select_combobox'):
             group_options = ["从现有组选择"] + get_available_mouse_groups()
             self.mouse_group_select_combobox.configure(values=group_options)
-            self.mouse_group_select_combobox.set(group_options[0])
+            if group_name and group_name in group_options:
+                self.mouse_group_select_combobox.set(group_name)
+            else:
+                self.mouse_group_select_combobox.set(group_options[0])
 
         for name in self.CURSOR_ORDER: 
             entry = self.cursor_entry_widgets.get(name)
