@@ -128,7 +128,6 @@ def 触发刷新(config_path, username, monitor=None):
             log.error(f"应用鼠标配置失败: {e}")
             return False
             
-    log.warning("未找到任何可用的鼠标组配置。")
     return False
 
 
@@ -161,7 +160,7 @@ def 保存组配置(name, folder_path, file_list):
             source_path = os.path.abspath(file_path_input)
             
             if not os.path.exists(source_path):
-                log.warning(f"源文件不存在，跳过: {source_path}")
+                log.error(f"源文件不存在，跳过: {source_path}")
                 mouse_config[cursor_name] = ""
                 continue
 
@@ -208,7 +207,7 @@ def 保存组配置(name, folder_path, file_list):
         return False
 
 
-def add_wallpaper(name, query_path, config_path=CONFIG_PATH):
+def old_add_wallpaper(name, query_path, config_path=CONFIG_PATH):
     """
     绑定壁纸 ID 到 config.toml。
     """
@@ -242,6 +241,34 @@ def add_wallpaper(name, query_path, config_path=CONFIG_PATH):
                 toml.dump(config_data, f)
         
         log.info(f"配置写入成功: {last_folder} -> {name}")
+        return True
+    except Exception as e:
+        log.error(f"配置写入失败: {e}")
+        return False
+
+def add_wallpaper(name, ID, config_path=CONFIG_PATH):
+    """
+    绑定壁纸 ID 到 config.toml。
+    """
+    log.debug(f"add_wallpaper: name={name}, ID={ID}")
+    
+    # 读取现有配置
+    config_data = load_toml_config(config_path)
+    if "wallpaper" not in config_data:
+        config_data["wallpaper"] = {}
+
+    config_data["wallpaper"][ID] = name
+    
+    # 写入配置
+    try:
+        if portalocker:
+            with portalocker.Lock(config_path, 'w', encoding='utf-8') as f:
+                toml.dump(config_data, f)
+        else:
+            with open(config_path, 'w', encoding='utf-8') as f:
+                toml.dump(config_data, f)
+        
+        log.info(f"配置写入成功: {ID} -> {name}")
         return True
     except Exception as e:
         log.error(f"配置写入失败: {e}")
@@ -285,7 +312,6 @@ def delete_wallpaper(query_path, config_path=CONFIG_PATH):
         log.error(f"配置删除失败: {e}")
         return False
 
-# 补充：删除鼠标组函数 (UI 需要)
 def 删除鼠标组(group_name, base_path=MOUSE_BASE_PATH):
     """删除整个鼠标组文件夹"""
     if group_name == "默认":
@@ -306,5 +332,5 @@ def 删除鼠标组(group_name, base_path=MOUSE_BASE_PATH):
 
 
 if __name__ == "__main__":
-    # 测试代码
+    add_wallpaper("表1", "testdfghj")
     pass

@@ -1,5 +1,3 @@
-# main_gui.py
-
 import customtkinter as ctk
 import os
 import sys
@@ -8,7 +6,6 @@ from PIL import Image
 import tkinter.messagebox as tk_messagebox 
 import glob
 import getpass
-from screeninfo import get_monitors
 from customtkinter import filedialog 
 
 project_root = os.path.dirname(os.path.abspath(__file__)) 
@@ -24,7 +21,7 @@ except ImportError as e:
     try:
         from Tlog import TLog
         from getWallpaperConfig import 获取当前壁纸
-        from mouses import 保存组配置, add_wallpaper, delete_wallpaper, wallpaper
+        from mouses import 保存组配置, wallpaper, delete_wallpaper, wallpaper
         from setMouse import 设置鼠标指针
         project_root = os.path.dirname(os.path.abspath(__file__))
     except ImportError as e2:
@@ -50,7 +47,7 @@ def load_toml_config(path=CONFIG_PATH):
         return {}
 
 def get_mouse_group_name(wallpaper_id: str) -> str:
-    """根据壁纸 ID 获取对应的鼠标组名称 (使用 mouses.py 提供的辅助函数)"""
+    """根据壁纸 ID 获取对应的鼠标组名称"""
     return wallpaper(wallpaper_id, CONFIG_PATH)
 
 def get_mouse_config_paths(group_name: str) -> dict:
@@ -101,9 +98,8 @@ def find_preview_image_path(file_path: str) -> str:
 
 def derive_wallpaper_id(file_path: str) -> str:
     """
-    从壁纸文件路径中提取壁纸 ID (通常是最后一级目录名)。
-    注意：在 main_gui.py 中，我们依赖 getWallpaperConfig.py 提供的 ID (索引 1)。
-    这个函数主要用于处理播放列表中的项目，因为它们的 file_path 需要即时派生 ID。
+    从壁纸文件路径中提取壁纸 ID (通常是最后一级目录名)
+    加载播放列表使用
     """
     if not file_path:
         return ""
@@ -128,17 +124,36 @@ class WallpaperConfigPage(ctk.CTkFrame):
         self.main_area_data = (None, None) 
         self.currently_displayed_playlist_data = ([], "") 
 
-        # 定义光标名称顺序 
+        # 光标名称顺序
         self.CURSOR_ORDER = [
             "Arrow", "Help", "AppStarting", "Wait", "Crosshair", "IBeam", 
             "Handwriting", "No", "SizeNS", "SizeWE", "SizeNWSE", "SizeNESW", 
             "SizeAll", "Hand", "UpArrow"
         ]
         
+        # 光标名称映射
+        self.CURSOR_MAPPING = [
+            ("Arrow", "标准选择 (Arrow)"), 
+            ("Help", "帮助选择 (Help)"), 
+            ("AppStarting", "后台运行 (AppStarting)"), 
+            ("Wait", "忙碌 (Wait)"), 
+            ("Crosshair", "精确定位 (Crosshair)"), 
+            ("IBeam", "文本选择 (IBeam)"), 
+            ("Handwriting", "手写 (Handwriting)"), 
+            ("No", "不可用 (No)"), 
+            ("SizeNS", "垂直调整 (SizeNS)"), 
+            ("SizeWE", "水平调整 (SizeWE)"), 
+            ("SizeNWSE", "对角调整 1 (SizeNWSE)"), 
+            ("SizeNESW", "对角调整 2 (SizeNESW)"), 
+            ("SizeAll", "移动 (SizeAll)"), 
+            ("Hand", "链接选择 (Hand)"), 
+            ("UpArrow", "替代选择 (UpArrow)")
+        ]
+            
         # 左侧固定宽度
         self.MAIN_FRAME_LEFT_WIDTH = 300
 
-        # -------------------- 布局设置 --------------------
+        # 布局设置
         self.grid_columnconfigure((0, 1), weight=1)
         self.grid_rowconfigure(1, weight=1) 
         self.grid_rowconfigure(2, weight=0) 
@@ -258,14 +273,16 @@ class WallpaperConfigPage(ctk.CTkFrame):
 
         # Update ComboBox values and reset it
         if hasattr(self, 'mouse_group_select_combobox'):
-            group_options = ["为此组命名"] + get_available_mouse_groups()
+            group_options = ["从现有组选择"] + get_available_mouse_groups()
             self.mouse_group_select_combobox.configure(values=group_options)
             self.mouse_group_select_combobox.set(group_options[0])
 
-        for name, entry in self.cursor_entry_widgets.items():
-            path = cursor_paths.get(name, "")
-            entry.delete(0, ctk.END)
-            entry.insert(0, path)
+        for name in self.CURSOR_ORDER: 
+            entry = self.cursor_entry_widgets.get(name)
+            if entry:
+                path = cursor_paths.get(name, "")
+                entry.delete(0, ctk.END)
+                entry.insert(0, path)
 
     # 主要功能区
     def create_wallpaper_info_area(self, current_data):
@@ -300,7 +317,7 @@ class WallpaperConfigPage(ctk.CTkFrame):
         group_name = choice
         
         # 选中提示项时不进行配置加载
-        if group_name == "为此组命名":
+        if group_name == "从现有组选择" or group_name == "为此组命名":
             # 重新加载当前壁纸绑定的配置 
             file_path, wallpaper_id, _, _ = self.config_data[self.current_monitor_index]
             self.update_mouse_config_custom(file_path, wallpaper_id)
@@ -310,10 +327,12 @@ class WallpaperConfigPage(ctk.CTkFrame):
         cursor_paths = get_mouse_config_paths(group_name)
 
         # 填充输入框
-        for name, entry in self.cursor_entry_widgets.items():
-            path = cursor_paths.get(name, "")
-            entry.delete(0, ctk.END)
-            entry.insert(0, path)
+        for name in self.CURSOR_ORDER:
+            entry = self.cursor_entry_widgets.get(name)
+            if entry:
+                path = cursor_paths.get(name, "")
+                entry.delete(0, ctk.END)
+                entry.insert(0, path)
 
         # 更新鼠标组名称标签
         self.mouse_group_name_label.configure(text=f"鼠标组: {group_name} (已加载配置)")
@@ -359,17 +378,18 @@ class WallpaperConfigPage(ctk.CTkFrame):
         
         
         self.cursor_entry_widgets = {}
-        for i, cursor_name in enumerate(self.CURSOR_ORDER):
-            ctk.CTkLabel(content_frame, text=f"{i+1}. {cursor_name}:").grid(row=i, column=0, padx=(10, 5), pady=4, sticky="w")
+        for i, (key, label) in enumerate(self.CURSOR_MAPPING):
+            ctk.CTkLabel(content_frame, text=f"{i+1}. {label}:").grid(row=i, column=0, padx=(10, 5), pady=4, sticky="w")
             
             # 输入框
             entry = ctk.CTkEntry(content_frame, height=25)
             entry.grid(row=i, column=1, padx=5, pady=4, sticky="ew")
-            self.cursor_entry_widgets[cursor_name] = entry
+            # 字典的键使用英文，以匹配配置文件
+            self.cursor_entry_widgets[key] = entry 
             
             # 浏览按钮
             browse_btn = ctk.CTkButton(content_frame, text="浏览", width=60, 
-                                             command=lambda name=cursor_name: self.浏览光标文件(name)) 
+                                             command=lambda name=key: self.浏览光标文件(name)) 
             browse_btn.grid(row=i, column=2, padx=(0, 10), pady=4, sticky="e")
         
         # 保存按钮
@@ -381,17 +401,94 @@ class WallpaperConfigPage(ctk.CTkFrame):
         self.update_mouse_config_custom(file_path, wallpaper_id)
         
         right_frame.grid_rowconfigure(1, weight=1)
+    
+    def get_all_cursor_paths(self) -> list:
+        """
+        获取所有光标路径输入框的内容，并按 self.CURSOR_ORDER 顺序返回一个列表。
+        
+        """
+        cursor_path_list = []
+        
+        if not hasattr(self, 'CURSOR_ORDER') or not hasattr(self, 'cursor_entry_widgets'):
+            log.error("错误：CURSOR_ORDER 或 cursor_entry_widgets 未初始化。")
+            return []
+        
+        for cursor_name in self.CURSOR_ORDER:
+            entry_widget = self.cursor_entry_widgets.get(cursor_name)
+            
+            if entry_widget:
+                path = entry_widget.get().strip()
+                cursor_path_list.append(path)
+            else:
+                cursor_path_list.append("")
+                
+        return cursor_path_list
+
+
+    def get_wallpaper_id_and_group_selection(self) -> list:
+            """
+            获取当前正在编辑的壁纸id和组名
+            """
+            result_list = []
+            
+            if hasattr(self, 'main_area_data') and len(self.main_area_data) >= 2:
+                wallpaper_id = self.main_area_data[1]
+            else:
+                wallpaper_id = ""
+            result_list.append(wallpaper_id)
+
+            if hasattr(self, 'mouse_group_select_combobox'):
+                selected_group = self.mouse_group_select_combobox.get()
+            else:
+                selected_group = ""
+            result_list.append(selected_group)
+            return result_list
 
 
     def 浏览光标文件(self, cursor_name):
-        """处理浏览按钮点击事件，选择 .ani 或 .cur 文件 (仅保留 pass)""" 
-        print("1")
-        pass
+        """
+        处理浏览按钮点击事件，选择 .ani 或 .cur 文件。
+        """
+        entry = self.cursor_entry_widgets.get(cursor_name)
+        if not entry:
+            log.error(f"找不到对应的输入框 widget: {cursor_name}")
+            return
+            
+        current_path = entry.get()
+        initial_dir = os.path.dirname(current_path) if current_path else None
+        chinese_label = next((label for key, label in self.CURSOR_MAPPING if key == cursor_name), cursor_name)
+
+        file_path = filedialog.askopenfilename(
+            title=f"选择 {chinese_label} 光标文件",
+            filetypes=[
+                ("光标文件", "*.ani;*.cur"),
+                ("动态光标", "*.ani"),
+                ("静态光标", "*.cur"),
+                ("所有文件", "*.*")
+            ],
+            initialdir=initial_dir
+        )
+        
+        # 选择文件
+        if file_path:
+            normalized_path = os.path.normpath(file_path)
+            # 更新对应的输入框
+            entry.delete(0, ctk.END)
+            entry.insert(0, normalized_path)
+            log.info(f"为 {cursor_name} 选择了光标文件: {normalized_path}")
 
     def 保存并应用配置(self):
-        """使用 self.main_area_data 中存储的当前编辑数据进行保存 (仅保留 pass)"""
-        print("2")
-        pass
+        wallpaper_id, selected_group = self.get_wallpaper_id_and_group_selection()
+        if selected_group == "" or selected_group == "从现有组选择" or selected_group == "为此组命名":
+            log.error("鼠标组名称不正确")
+            self.mouse_group_select_combobox.set("为此组命名")
+            tk_messagebox.showinfo("错误", "请为此组命名")
+        else:
+            cursor_path_list = self.get_all_cursor_paths()
+            log.debug(cursor_path_list)
+            保存组配置(selected_group, "mouses", cursor_path_list)
+            log.debug(f"正在保存壁纸: {wallpaper_id} 的鼠标配置. 组名: {selected_group}")
+            add_wallpaper(selected_group, wallpaper_id)
 
     # 次要功能区
     def create_secondary_area(self):
@@ -450,8 +547,6 @@ class WallpaperConfigPage(ctk.CTkFrame):
         self.update_wallpaper_info_custom(file_path, wallpaper_id)
         self.update_mouse_config_custom(file_path, wallpaper_id)
         
-       
-
 
     # 核心数据更新函数
     def update_display_data(self):
@@ -504,7 +599,6 @@ class App(ctk.CTk):
         if not 'wallpaper_data' in locals():
             self.quit()
             return
-
 
         # 布局
         self.grid_rowconfigure(0, weight=1)
