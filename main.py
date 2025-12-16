@@ -11,6 +11,10 @@ from src.Tlog import TLog
 from src.getWallpaperConfig import 获取当前壁纸
 from src.mouses import get_current_monitor_index_minimal
 from src.setMouse import 设置鼠标指针
+
+from src.Initialize import initialize_config
+initialize_config()
+
 try:
     from pystray import Icon, Menu, MenuItem
     from PIL import Image
@@ -20,7 +24,6 @@ except ImportError:
     TRAY_AVAILABLE = False
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(PROJECT_ROOT)
-
 try:
     from ui.main_gui import App as ConfigApp 
     from ui.playlist_gui import App as PlaylistApp 

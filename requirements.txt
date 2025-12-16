@@ -1,0 +1,7 @@
+customtkinter==5.2.2
+pillow==10.4.0
+toml==0.10.2
+psutil==6.0.0
+pystray==0.19.5
+screeninfo==0.8.1
+pyautogui==0.9.54
