@@ -11,7 +11,7 @@ from src.Tlog import TLog
 from src.getWallpaperConfig import 获取当前壁纸
 from src.mouses import get_current_monitor_index_minimal
 from src.setMouse import 设置鼠标指针
-
+from ui.settings_ui import open_settings_window
 from src.Initialize import initialize_config
 initialize_config()
 
@@ -81,13 +81,16 @@ def run_ui_in_thread(UI_App_Class, title):
 
     start_thread(ui_target, f"{title}_UI_Thread")
 
-def open_config_mouse_gui(icon=None, item=None):
+def open_config_mouse_gui(icon="icon300.png", item=None):
     """打开 '配置鼠标组' UI"""
     run_ui_in_thread(ConfigApp, "配置鼠标组")
 
 def open_bind_mouse_gui(icon=None, item=None):
     """打开 '绑定鼠标组' UI"""
     run_ui_in_thread(PlaylistApp, "绑定鼠标组")
+
+def open_settings_ui(icon=None, item=None):
+    open_settings_window() 
 
 def on_exit_request(icon, item):
     """安全退出所有线程和程序"""
@@ -106,7 +109,7 @@ def setup_pystray_icon():
         log.error("系统托盘功能未启用。主程序将通过 time.sleep 循环运行。")
         return None
     
-    icon_path = os.path.join(PROJECT_ROOT, "icon.png")
+    icon_path = os.path.join(PROJECT_ROOT, "icon300.png")
     if not os.path.exists(icon_path):
         log.error(f"图标文件未找到: {icon_path}。请在项目根目录放置一个 icon.png 文件。")
         image = Image.new('RGB', (64, 64), color='black') 
@@ -120,9 +123,10 @@ def setup_pystray_icon():
     menu = Menu(
         MenuItem('配置鼠标组', open_config_mouse_gui, enabled=UI_IMPORT_SUCCESS),
         MenuItem('绑定鼠标组', open_bind_mouse_gui, enabled=UI_IMPORT_SUCCESS),
+        #MenuItem('设置', open_settings_ui),
         Menu.SEPARATOR,
         MenuItem('退出', on_exit_request)
-    )
+        )
 
     TRAY_ICON = Icon("MouseEngine", image, "壁纸鼠标主题切换器", menu)
     

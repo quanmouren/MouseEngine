@@ -2,3 +2,8 @@
 __pycache__/
 mouses/
 config.toml
+.vscode/settings.json
+venv/
+docs/licenses/一键整理许可证.ps1
+todo
+svg.svg

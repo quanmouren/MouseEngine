@@ -2,7 +2,7 @@ import customtkinter as ctk
 import os
 import sys
 import toml
-from PIL import Image
+from PIL import Image, ImageSequence
 import tkinter.messagebox as tk_messagebox 
 import glob
 import getpass
@@ -79,7 +79,7 @@ def get_available_mouse_groups() -> list:
     return sorted(groups)
 
 def find_preview_image_path(file_path: str) -> str:
-    """根据壁纸文件路径查找 preview 图像文件"""
+    """根据壁纸文件路径查找 preview 图像文件"""#BUG 视频壁纸索引错误/预览图定位错误
     if not file_path:
         return None
 
@@ -255,7 +255,7 @@ class WallpaperConfigPage(ctk.CTkFrame):
                 self.preview_label.configure(text=f"加载失败: {preview_path}\n{e}", image=None)
                 log.error(f"加载预览图失败: {e}")
         else:
-            self.preview_label.configure(text="无预览图", image=None)
+            self.preview_label.configure(text="无预览图", image=None)#BUG 造成line 567 self.handle_playlist_item_click(path))错误
 
     def update_mouse_config_custom(self, file_path, wallpaper_id):
         """加载并填充鼠标组配置，接受 file_path 和 wallpaper_id"""
@@ -265,7 +265,7 @@ class WallpaperConfigPage(ctk.CTkFrame):
             if wallpaper_id and wallpaper_id.isnumeric():
                 self.mouse_group_name_label.configure(text=f"鼠标组: 未绑定 ID {wallpaper_id}")
             else:
-                self.mouse_group_name_label.configure(text=f"鼠标组: 未绑定 (可能为默认壁纸)")
+                self.mouse_group_name_label.configure(text=f"鼠标组: 未绑定 (无法获取ID)")
         else:
             self.mouse_group_name_label.configure(text=f"鼠标组: {group_name}")
             
@@ -348,6 +348,29 @@ class WallpaperConfigPage(ctk.CTkFrame):
         right_frame.grid(row=0, column=1, padx=(5, 10), pady=10, sticky="nsew")
         right_frame.grid_columnconfigure(1, weight=1) 
 
+        IMAGE_MAPPING = {        #TODO 重绘图标
+
+            "Arrow": "aero_arrow.png",
+            "Help": "aero_helpsel.png",
+            "AppStarting": "aero_working_xl.png",
+            "Wait": "aero_busy_xl.png",
+            "Crosshair": "cross_il.png",
+            "IBeam": "beam_rl.png",
+            "Handwriting": "aero_pen.png",
+            "No": "aero_unavail.png",
+            "SizeNS": "aero_ns.png",
+            "SizeWE": "aero_ew.png",
+            "SizeNWSE": "aero_nwse.png",
+            "SizeNESW": "aero_nesw.png",
+            "SizeAll": "aero_move.png",
+            "Hand": "aero_link.png",
+            "UpArrow": "aero_up.png"
+        }
+        
+        image_dir = "image"
+
+        self.cursor_preview_images = {} 
+
         header_frame = ctk.CTkFrame(right_frame, fg_color="transparent")
         header_frame.grid(row=0, column=0, columnspan=3, padx=10, pady=(10, 5), sticky="ew")
         header_frame.columnconfigure(1, weight=1) 
@@ -369,40 +392,51 @@ class WallpaperConfigPage(ctk.CTkFrame):
             font=ctk.CTkFont(weight="bold"), 
             justify="left",
             anchor="w",
-            wraplength=200 # 限制文字长度
+            wraplength=200 
         )
         self.mouse_group_name_label.grid(row=0, column=1, padx=0, pady=5, sticky="ew") 
 
         content_frame = ctk.CTkFrame(right_frame)
         content_frame.grid(row=1, column=0, columnspan=3, padx=10, pady=5, sticky="nsew") 
-        content_frame.columnconfigure(1, weight=1)
-        
+        content_frame.columnconfigure(2, weight=1)
         
         self.cursor_entry_widgets = {}
-        for i, (key, label) in enumerate(self.CURSOR_MAPPING):
-            ctk.CTkLabel(content_frame, text=f"{i+1}. {label}:").grid(row=i, column=0, padx=(10, 5), pady=4, sticky="w")
+        for i, (key, label_text) in enumerate(self.CURSOR_MAPPING):
+            ctk.CTkLabel(content_frame, text=f"{i+1}. {label_text}:").grid(row=i, column=0, padx=(10, 5), pady=4, sticky="w")
             
-            # 输入框
+            img_name = IMAGE_MAPPING.get(key)
+            img_path = os.path.join(image_dir, img_name) if img_name else ""
+            
+            icon_label = ctk.CTkLabel(content_frame, text="")
+            
+            if os.path.exists(img_path):
+                try:
+                    pil_img = Image.open(img_path)
+                    ctk_icon = ctk.CTkImage(light_image=pil_img, size=(24, 24))
+                    icon_label.configure(image=ctk_icon)
+                    self.cursor_preview_images[key] = ctk_icon 
+                except Exception as e:
+                    log.error(f"无法打开图片 {img_name}: {e}")
+            else:
+                log.error(f"未找到图片文件: {img_path}")
+            
+            icon_label.grid(row=i, column=1, padx=5, pady=4)
+
             entry = ctk.CTkEntry(content_frame, height=25)
-            entry.grid(row=i, column=1, padx=5, pady=4, sticky="ew")
-            # 字典的键使用英文，以匹配配置文件
+            entry.grid(row=i, column=2, padx=5, pady=4, sticky="ew")
             self.cursor_entry_widgets[key] = entry 
-            
             # 浏览按钮
             browse_btn = ctk.CTkButton(content_frame, text="浏览", width=60, 
                                              command=lambda name=key: self.浏览光标文件(name)) 
-            browse_btn.grid(row=i, column=2, padx=(0, 10), pady=4, sticky="e")
+            browse_btn.grid(row=i, column=3, padx=(0, 10), pady=4, sticky="e")
         
-        # 保存按钮
         save_btn = ctk.CTkButton(right_frame, text="保存并应用配置", command=self.保存并应用配置) 
         save_btn.grid(row=2, column=0, columnspan=3, padx=10, pady=10, sticky="ew") 
 
-        # 初始加载
         file_path, wallpaper_id, _, _ = current_data
         self.update_mouse_config_custom(file_path, wallpaper_id)
         
         right_frame.grid_rowconfigure(1, weight=1)
-    
     def get_all_cursor_paths(self) -> list:
         """
         获取所有光标路径输入框的内容，并按 self.CURSOR_ORDER 顺序返回一个列表。
@@ -471,7 +505,7 @@ class WallpaperConfigPage(ctk.CTkFrame):
         )
         
         # 选择文件
-        if file_path:
+        if file_path: #TODO 选择文件添加判断，支持选择inf文件一键读取，支持致美化
             normalized_path = os.path.normpath(file_path)
             # 更新对应的输入框
             entry.delete(0, ctk.END)

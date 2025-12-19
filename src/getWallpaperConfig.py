@@ -40,8 +40,10 @@ def 获取当前壁纸(config_path: str, user: str) -> list:
         return []
     
     result_list = []
-    
-    for monitor_key, monitor_data in selected_wallpapers.items():
+    # XXX 未验证多显示器适配方法 
+    for monitor_key in sorted(selected_wallpapers.keys(), key=lambda k: int(k) if str(k).isdigit() else str(k)):
+        monitor_data = selected_wallpapers[monitor_key]
+
         try:
             file_path = monitor_data.get('file')
             items_list = monitor_data.get('playlist', {}).get('items', [])
