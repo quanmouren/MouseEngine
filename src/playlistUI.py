@@ -6,25 +6,13 @@ import glob
 from PIL import Image
 import tkinter.messagebox as tk_messagebox 
 import threading 
-project_root = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.dirname(project_root)) 
-sys.path.append(os.path.join(os.path.dirname(project_root), "src")) 
-sys.path.append(project_root)
 
-try:
-    from Tlog import TLog
-    from getWallpaperConfig import 获取当前壁纸 
-    from mouses import add_wallpaper, delete_wallpaper 
-    from setMouse import 设置鼠标指针 
-except ImportError as e:
-    try:
-        from Tlog import TLog
-        from getWallpaperConfig import 获取当前壁纸
-        from mouses import add_wallpaper, delete_wallpaper
-        from setMouse import 设置鼠标指针
-    except ImportError as e2:
-        print(f"导入共享函数失败: {e2}")
-        sys.exit(1)
+
+from Tlog import TLog
+from getWallpaperConfig import 获取当前壁纸 
+from mouses import add_wallpaper, delete_wallpaper 
+from setMouse import 设置鼠标指针 
+
 
 log = TLog("PlaylistManagerUI") 
 CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.toml")

@@ -8,7 +8,7 @@ try:
     import portalocker
 except ImportError:
     portalocker = None
-    print("Warning: portalocker not installed. Concurrent file access issues may occur. Run 'pip install portalocker'")
+    print("警告：未安装 portalocker，可能出现并发文件访问问题.请运行 'pip install portalocker'")
 
 
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -16,14 +16,10 @@ if project_root not in sys.path:
     sys.path.append(project_root)
 
 
-try:
-    from src.Tlog import TLog
-    from src.getWallpaperConfig import 获取当前壁纸
-    from src.setMouse import 设置鼠标指针, CURSOR_ORDER_MAPPING 
-except ImportError:
-    from Tlog import TLog
-    from getWallpaperConfig import 获取当前壁纸
-    from setMouse import 设置鼠标指针, CURSOR_ORDER_MAPPING
+
+from Tlog import TLog
+from getWallpaperConfig import 获取当前壁纸
+from setMouse import 设置鼠标指针, CURSOR_ORDER_MAPPING
 
 from screeninfo import get_monitors
 import pyautogui

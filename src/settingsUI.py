@@ -9,26 +9,15 @@ import subprocess
 import tkinter.messagebox as tk_messagebox
 from tkinter import filedialog
 
-_project_root = os.path.dirname(os.path.abspath(__file__))
-_parent = os.path.dirname(_project_root)
-_src = os.path.join(_parent, "src")
+from Tlog import TLog
+from getWallpaperConfig import 获取当前壁纸
+from mouses import add_wallpaper, delete_wallpaper
+from setMouse import 设置鼠标指针
 
-for p in (_parent, _src, _project_root):
-    if p not in sys.path:
-        sys.path.append(p)
-
-try:
-    from Tlog import TLog
-    from getWallpaperConfig import 获取当前壁纸
-    from mouses import add_wallpaper, delete_wallpaper
-    from setMouse import 设置鼠标指针
-except ImportError:
-    raise
 
 log = TLog("SettingsUI")
 
 
-# ---- paths ----
 CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.toml")
 if not os.path.exists(CONFIG_PATH):
     CONFIG_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config.toml")
@@ -44,7 +33,7 @@ THIRD_PARTY_NOTICES_PATH = os.path.join(REPO_ROOT, "THIRD_PARTY_NOTICES.txt")
 DOCS_LICENSES_DIR = os.path.join(REPO_ROOT, "docs", "licenses")
 
 
-# ---- theme ----
+# ---- 主题 ----
 ctk.set_appearance_mode("System")
 ctk.set_default_color_theme("blue")
 

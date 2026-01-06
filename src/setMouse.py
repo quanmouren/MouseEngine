@@ -5,7 +5,7 @@ import toml
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from src.Tlog import TLog
+from Tlog import TLog
 log = TLog("设置鼠标指针")
 
 # 光标类型映射到Windows注册表键名

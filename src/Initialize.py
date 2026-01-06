@@ -1,9 +1,8 @@
 import os
 import sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from src.Tlog import TLog
+from Tlog import TLog
 log = TLog("初始化")
-from ui.WelcomeUI import get_wallpaper_engine_path_ui
+from WelcomeUI import get_wallpaper_engine_path_ui
 def initialize_config():
     config_path = "config.toml"
     if os.path.exists(config_path):

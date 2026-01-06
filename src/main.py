@@ -7,12 +7,12 @@ import getpass
 import toml
 import psutil
 import sys
-from src.Tlog import TLog
-from src.getWallpaperConfig import 获取当前壁纸
-from src.mouses import get_current_monitor_index_minimal
-from src.setMouse import 设置鼠标指针
-from ui.settings_ui import open_settings_window
-from src.Initialize import initialize_config
+from Tlog import TLog
+from getWallpaperConfig import 获取当前壁纸
+from mouses import get_current_monitor_index_minimal
+from setMouse import 设置鼠标指针
+from settingsUI import open_settings_window
+from Initialize import initialize_config
 initialize_config()
 
 try:
@@ -22,15 +22,11 @@ try:
 except ImportError:
     print("[ERROR] 缺少 pystray 或 Pillow 库。请运行 'pip install pystray Pillow' 来启用系统托盘。")
     TRAY_AVAILABLE = False
+
+from mainUI import App as ConfigApp 
+from playlistUI import App as PlaylistApp 
+UI_IMPORT_SUCCESS = True
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(PROJECT_ROOT)
-try:
-    from ui.main_gui import App as ConfigApp 
-    from ui.playlist_gui import App as PlaylistApp 
-    UI_IMPORT_SUCCESS = True
-except ImportError as e:
-    print(f"[ERROR] 无法导入 UI 模块。请确保 ui/main_gui.py 和 ui/playlist_gui.py 存在。\n错误信息: {e}")
-    UI_IMPORT_SUCCESS = False
 
 
 stop_flag = threading.Event() 

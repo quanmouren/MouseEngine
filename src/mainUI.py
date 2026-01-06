@@ -8,25 +8,13 @@ import glob
 import getpass
 from customtkinter import filedialog 
 
-project_root = os.path.dirname(os.path.abspath(__file__)) 
-sys.path.append(project_root)
-project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(project_root)
-try:
-    from src.Tlog import TLog
-    from src.getWallpaperConfig import 获取当前壁纸 
-    from src.mouses import 保存组配置, add_wallpaper, delete_wallpaper, wallpaper
-    from src.setMouse import 设置鼠标指针
-except ImportError as e:
-    try:
-        from Tlog import TLog
-        from getWallpaperConfig import 获取当前壁纸
-        from mouses import 保存组配置, wallpaper, delete_wallpaper, wallpaper
-        from setMouse import 设置鼠标指针
-        project_root = os.path.dirname(os.path.abspath(__file__))
-    except ImportError as e2:
-        print(f"导入本地函数失败: {e2}")
-        sys.exit(1)
+
+
+from Tlog import TLog
+from getWallpaperConfig import 获取当前壁纸
+from mouses import 保存组配置, wallpaper, delete_wallpaper, wallpaper
+from setMouse import 设置鼠标指针
+project_root = os.path.dirname(os.path.abspath(__file__))
 
 
 # 初始化日志和全局变量
