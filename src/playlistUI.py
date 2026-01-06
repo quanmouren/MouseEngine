@@ -5,8 +5,6 @@ import toml
 import glob
 from PIL import Image
 import tkinter.messagebox as tk_messagebox 
-import threading 
-
 
 from Tlog import TLog
 from getWallpaperConfig import 获取当前壁纸 
@@ -25,7 +23,11 @@ try:
 except KeyError:
     log.error("config.toml 中缺少 [path][wallpaper_engine_config] 键。")
     WALLPAPER_ENGINE_CONFIG_PATH = ""
-WIN_USERNAME = os.getlogin()
+try:
+    WIN_USERNAME = os.getlogin()
+except Exception:
+    import getpass
+    WIN_USERNAME = getpass.getuser()
 
 def load_wallpaper_bindings(path=CONFIG_PATH) -> dict:
     try:
@@ -170,7 +172,9 @@ class PlaylistManagerPage(ctk.CTkFrame):
             frame.grid_columnconfigure(0, weight=1)
             label = ctk.CTkLabel(frame, text="加载中...", font=("", 10))
             label.grid(row=0, column=0, padx=5, pady=(5, 2), sticky="n")
-            threading.Thread(target=self.load_image_async, args=(frame, label, item_path, i, wallpaper_id)).start()
+            
+            self.load_image_sync(label, item_path, i, wallpaper_id)
+            
             current_binding = self.wallpaper_bindings.get(wallpaper_id, "未绑定")
             group_options = ["未绑定"] + self.mouse_groups 
             if current_binding != "未绑定" and current_binding not in self.mouse_groups:
@@ -187,8 +191,10 @@ class PlaylistManagerPage(ctk.CTkFrame):
             
             ctk.CTkLabel(frame, text=f"ID: {wallpaper_id}", font=("", 15), text_color="gray").grid(row=2, column=0, padx=5, pady=(0, 5), sticky="n")
 
-    def load_image_async(self, parent_frame, label_widget, item_path, index, wallpaper_id):
-        """在后台线程中加载图片并更新 UI"""
+    def load_image_sync(self, label_widget, item_path, index, wallpaper_id):
+        """
+        同步加载图片并更新 UI。
+        """
         preview_path = find_preview_image_path(item_path)
         
         if preview_path:
@@ -196,19 +202,16 @@ class PlaylistManagerPage(ctk.CTkFrame):
                 img = Image.open(preview_path)
                 img.thumbnail((self.IMAGE_WIDTH, self.IMAGE_HEIGHT), Image.Resampling.LANCZOS)
                 
-                self.after(0, lambda: self.update_image_on_ui(label_widget, img, index))
+                playlist_image = ctk.CTkImage(light_image=img, size=(img.width, img.height))
+                self.playlist_images[index] = playlist_image 
+                
+                label_widget.configure(image=self.playlist_images[index], text="")
                 
             except Exception as e:
-                log.error(f"异步加载或处理预览图失败: {e}")
-                self.after(0, lambda: label_widget.configure(text=f"ID: {wallpaper_id}\n预览失败", image=None))
+                log.error(f"加载或处理预览图失败: {e}")
+                label_widget.configure(text=f"ID: {wallpaper_id}\n预览失败", image=None)
         else:
-            self.after(0, lambda: label_widget.configure(text=f"ID: {wallpaper_id}\n无预览图", image=None))
-
-    def update_image_on_ui(self, label_widget, img, index):
-        playlist_image = ctk.CTkImage(light_image=img, size=(img.width, img.height))
-        self.playlist_images[index] = playlist_image 
-        
-        label_widget.configure(image=self.playlist_images[index], text="")
+            label_widget.configure(text=f"ID: {wallpaper_id}\n无预览图", image=None)
 
 
     def update_display_data(self):

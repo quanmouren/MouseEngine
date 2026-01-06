@@ -2,17 +2,22 @@ import threading
 import time
 import inspect
 import os
-import time
 import getpass
 import toml
-import psutil
 import sys
+import subprocess
+try:
+    import psutil
+except Exception:
+    psutil = None
+
 from Tlog import TLog
 from getWallpaperConfig import 获取当前壁纸
 from mouses import get_current_monitor_index_minimal
 from setMouse import 设置鼠标指针
 from settingsUI import open_settings_window
 from Initialize import initialize_config
+
 initialize_config()
 
 try:
@@ -23,13 +28,11 @@ except ImportError:
     print("[ERROR] 缺少 pystray 或 Pillow 库。请运行 'pip install pystray Pillow' 来启用系统托盘。")
     TRAY_AVAILABLE = False
 
-from mainUI import App as ConfigApp 
-from playlistUI import App as PlaylistApp 
 UI_IMPORT_SUCCESS = True
+
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 
-
-stop_flag = threading.Event() 
+stop_flag = threading.Event()
 global_threads = []
 TRAY_ICON = None
 
@@ -42,13 +45,82 @@ CURSOR_ORDER_MAPPING = [
 ]
 
 log = TLog("main")
+active_ui_processes = {}  
+
+
+def _script_abs_path(filename: str) -> str:
+    return os.path.join(PROJECT_ROOT, filename)
+
+
+def _kill_process(p: subprocess.Popen, timeout_sec: float = 2.0):
+    """尽力结束子进程（Windows 上 terminate 就够用；必要时 kill）"""
+    try:
+        if p is None:
+            return
+        if p.poll() is not None:
+            return
+        p.terminate()
+        t0 = time.time()
+        while time.time() - t0 < timeout_sec:
+            if p.poll() is not None:
+                return
+            time.sleep(0.05)
+        try:
+            p.kill() # 强杀
+        except Exception:
+            pass
+    except Exception:
+        pass
+
+
+def run_ui_in_process(script_filename: str, title: str):
+    """用独立进程启动 UI，避免 Tk/CTk 在线程里反复创建导致越来越卡"""
+    if not UI_IMPORT_SUCCESS:
+        log.error("UI 启动失败: 模块导入不成功，请检查文件路径和依赖。")
+        return
+    old = active_ui_processes.get(title)
+    if old and old.poll() is None:
+        log.warning(f"UI '{title}' 已经在运行中，请勿重复点击。")
+        return
+
+    script_path = _script_abs_path(script_filename)
+    if not os.path.exists(script_path):
+        log.error(f"UI 脚本不存在：{script_path}")
+        return
+
+    try:
+        p = subprocess.Popen(
+            [sys.executable, script_path],
+            cwd=PROJECT_ROOT,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        active_ui_processes[title] = p
+        log.info(f"启动 UI 进程: {title} (pid={p.pid})")
+    except Exception as e:
+        log.error(f"启动 UI 进程失败 {title}: {e}")
+
+
+def open_config_mouse_gui(icon=None, item=None):
+    """打开 '配置鼠标组' UI"""
+    run_ui_in_process("mainUI.py", "配置鼠标组")
+
+
+def open_bind_mouse_gui(icon=None, item=None):
+    """打开 '绑定鼠标组' UI"""
+    run_ui_in_process("playlistUI.py", "绑定鼠标组")
+
+
+def open_settings_ui(icon=None, item=None):
+    open_settings_window()
 
 def start_thread(target_func, name):
     t = threading.Thread(target=target_func, name=name)
-    t.daemon = True 
+    t.daemon = True
     t.start()
     global_threads.append(t)
     return t
+
 
 def 获得函数名():
     frame = inspect.currentframe()
@@ -57,75 +129,58 @@ def 获得函数名():
     log.error("无法获取函数名")
     return None
 
-def run_ui_in_thread(UI_App_Class, title):
-    """在一个新线程中运行指定的UI应用程序类"""
-    if not UI_IMPORT_SUCCESS:
-        log.error(f"UI 启动失败: 模块导入不成功，请检查文件路径和依赖。")
-        return
-        
-    def ui_target():
-        log.info(f"启动 UI: {title}")
-        
-        try:
-            app = UI_App_Class()
-            app.mainloop() 
-            
-        except Exception as e:
-            log.error(f"启动 UI 线程 {title} 时发生错误: {e}")
-
-        log.info(f"UI 线程 {title} 退出。")
-
-    start_thread(ui_target, f"{title}_UI_Thread")
-
-def open_config_mouse_gui(icon="icon300.png", item=None):
-    """打开 '配置鼠标组' UI"""
-    run_ui_in_thread(ConfigApp, "配置鼠标组")
-
-def open_bind_mouse_gui(icon=None, item=None):
-    """打开 '绑定鼠标组' UI"""
-    run_ui_in_thread(PlaylistApp, "绑定鼠标组")
-
-def open_settings_ui(icon=None, item=None):
-    open_settings_window() 
 
 def on_exit_request(icon, item):
     """安全退出所有线程和程序"""
-    
     log.info("收到退出请求。开始安全关闭所有后台线程...")
     stop_flag.set()
 
-    if TRAY_ICON:
-        TRAY_ICON.stop()
+    # 停托盘
+    try:
+        if TRAY_ICON:
+            TRAY_ICON.stop()
+    except Exception:
+        pass
+
+    for title, p in list(active_ui_processes.items()):
+        try:
+            if p and p.poll() is None:
+                log.info(f"正在关闭 UI 进程: {title} (pid={p.pid})")
+                _kill_process(p)
+        except Exception:
+            pass
+        finally:
+            active_ui_processes.pop(title, None)
+
 
 def setup_pystray_icon():
     """设置 pystray 系统托盘图标和菜单"""
     global TRAY_ICON
-    
+
     if not TRAY_AVAILABLE:
         log.error("系统托盘功能未启用。主程序将通过 time.sleep 循环运行。")
         return None
-    
+
     icon_path = os.path.join(PROJECT_ROOT, "icon300.png")
     if not os.path.exists(icon_path):
-        log.error(f"图标文件未找到: {icon_path}。请在项目根目录放置一个 icon.png 文件。")
-        image = Image.new('RGB', (64, 64), color='black') 
+        log.error(f"图标文件未找到: {icon_path}。请在项目根目录放置 icon300.png。")
+        image = Image.new("RGB", (64, 64), color="black")
     else:
         image = Image.open(icon_path)
         try:
             image.thumbnail((64, 64), Image.Resampling.LANCZOS)
         except AttributeError:
-            image.thumbnail((64, 64), Image.ANTIALIAS) 
+            image.thumbnail((64, 64), Image.ANTIALIAS)
 
     menu = Menu(
-        MenuItem('配置鼠标组', open_config_mouse_gui, enabled=UI_IMPORT_SUCCESS),
-        MenuItem('绑定鼠标组', open_bind_mouse_gui, enabled=UI_IMPORT_SUCCESS),
-        #MenuItem('设置', open_settings_ui),
+        MenuItem("配置鼠标组", open_config_mouse_gui, enabled=UI_IMPORT_SUCCESS),
+        MenuItem("绑定鼠标组", open_bind_mouse_gui, enabled=UI_IMPORT_SUCCESS),
+        # MenuItem("设置", open_settings_ui),
         Menu.SEPARATOR,
-        MenuItem('退出', on_exit_request)
-        )
+        MenuItem("退出", on_exit_request),
+    )
 
     TRAY_ICON = Icon("MouseEngine", image, "壁纸鼠标主题切换器", menu)
-    
     return TRAY_ICON
 
 def 触发刷新():
@@ -144,7 +199,6 @@ def 触发刷新():
         log_func.error(f"读取主配置文件失败: {e}")
         return False
 
-
     monitor_index = get_current_monitor_index_minimal()
     log_func.debug(f"当前鼠标位于显示器索引: {monitor_index}")
 
@@ -161,9 +215,7 @@ def 触发刷新():
 
     log_func.debug(f"当前鼠标指针id: {当前鼠标指针id}")
 
-
     target_theme_name = None
-
     if 当前鼠标指针id:
         target_theme_name = wallpaper_map.get(str(当前鼠标指针id))
 
@@ -173,7 +225,6 @@ def 触发刷新():
     else:
         log_func.info(f"未找到壁纸 ID {当前鼠标指针id} 对应的自定义主题。")
         theme_config_path = None
-
 
     if theme_config_path and os.path.exists(theme_config_path):
         config_to_load = theme_config_path
@@ -211,6 +262,7 @@ def 触发刷新():
         log_func.error(f"处理鼠标主题配置或设置指针失败: {e}")
         return False
 
+
 def json监听():
     log_func = TLog(获得函数名())
     winUserName = getpass.getuser()
@@ -231,17 +283,17 @@ def json监听():
     except Exception as e:
         log_func.error(f"首次获取壁纸配置失败: {e}")
         return
-    
+
     current_state = {index: project[1] for index, project in enumerate(wallpaperConfig)}
 
     log_func.info("初始壁纸状态:")
     for index, project_id in current_state.items():
         log_func.info(f"显示器{index}: {project_id}")
 
-    触发刷新() # 首次刷新
+    触发刷新()  # 首次刷新
 
     try:
-        while not stop_flag.is_set(): # 检查停止标志
+        while not stop_flag.is_set():
             log_func.debug("正在监听...")
             latest_wallpaperConfig = 获取当前壁纸(config_path, winUserName)
 
@@ -252,7 +304,9 @@ def json监听():
                     previous_project_id = current_state[index]
 
                     if latest_project_id != previous_project_id:
-                        log_func.info(f"显示器 {index} 壁纸已更换 (ID: {previous_project_id} ->> {latest_project_id})")
+                        log_func.info(
+                            f"显示器 {index} 壁纸已更换 (ID: {previous_project_id} ->> {latest_project_id})"
+                        )
                         current_state[index] = latest_project_id
                         触发刷新()
                 else:
@@ -260,9 +314,7 @@ def json监听():
                     current_state[index] = latest_project_id
                     触发刷新()
 
-
             time.sleep(1)
-
 
     except Exception as e:
         log_func.info(f"监听过程中发生错误: {e}")
@@ -279,8 +331,9 @@ def 运行占用监控():
     monitor_log = TLog(获得函数名())
     last_metrics = None
     last_monitor_time = time.time()
+
     try:
-        while not stop_flag.is_set(): # 检查停止标志
+        while not stop_flag.is_set():
             current_time = time.time()
             if current_time - last_monitor_time >= MONITOR_INTERVAL:
                 try:
@@ -295,11 +348,11 @@ def 运行占用监控():
                         if last_val is None:
                             return ""
                         if current_val > last_val:
-                            return "<r" 
+                            return "<r"
                         elif current_val < last_val:
-                            return "<g" 
+                            return "<g"
                         else:
-                            return "" 
+                            return ""
 
                     if last_metrics is not None:
                         cpu_tag = get_color_tag(cpu_percent, last_metrics[0])
@@ -308,7 +361,9 @@ def 运行占用监控():
                     else:
                         cpu_tag, mem_tag, thread_tag = "", "", ""
 
-                    monitor_log.info(f"CPU 占用率: {cpu_tag}{cpu_percent:.2f}%>, 内存占用: {mem_tag}{mem_rss_mb:.2f} MB>, 线程数: {thread_tag}{num_threads}>")
+                    monitor_log.info(
+                        f"CPU 占用率: {cpu_tag}{cpu_percent:.2f}%>, 内存占用: {mem_tag}{mem_rss_mb:.2f} MB>, 线程数: {thread_tag}{num_threads}>"
+                    )
 
                     last_metrics = current_metrics
 
@@ -322,15 +377,15 @@ def 运行占用监控():
                 last_monitor_time = current_time
 
             if not stop_flag.is_set():
-                 time.sleep(max(0, 0.1)) 
+                time.sleep(0.1)
 
     except Exception as e:
         monitor_log.info(f"监控过程中发生错误: {e}")
 
     monitor_log.info("监控任务结束。")
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     # 启动后台线程
     t1 = start_thread(json监听, "JsonListener")
     t2 = start_thread(运行占用监控, "ResourceMonitor")
@@ -355,10 +410,18 @@ if __name__ == "__main__":
         except KeyboardInterrupt:
             log.info("主程序接收到 KeyboardInterrupt (Ctrl+C)。")
             stop_flag.set()
+
     log.info("等待后台线程结束...")
     for t in [t1, t2]:
         if t.is_alive():
             log.info(f"正在等待 {t.name} 退出...")
             t.join(timeout=5)
+
+    for title, p in list(active_ui_processes.items()):
+        try:
+            if p and p.poll() is None:
+                _kill_process(p)
+        except Exception:
+            pass
 
     log.info("程序已安全退出。")
