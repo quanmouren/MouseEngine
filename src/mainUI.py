@@ -14,14 +14,11 @@ from Tlog import TLog
 from getWallpaperConfig import 获取当前壁纸
 from mouses import 保存组配置, wallpaper, delete_wallpaper, wallpaper
 from setMouse import 设置鼠标指针
-project_root = os.path.dirname(os.path.abspath(__file__))
-
-
 # 初始化日志和全局变量
 log = TLog("WallpaperUI") 
 WIN_USERNAME = getpass.getuser()
-CONFIG_PATH = os.path.join(project_root, "config.toml")
-MOUSE_BASE_PATH = os.path.join(project_root, "mouses")
+CONFIG_PATH = "config.toml"
+MOUSE_BASE_PATH = "mouses"
 WALLPAPER_ENGINE_CONFIG_PATH = toml.load(CONFIG_PATH)["path"]["wallpaper_engine_config"]
 
 # 数据加载辅助函数
@@ -600,25 +597,31 @@ class App(ctk.CTk):
         super().__init__()
 
         self.title("Wallpaper Engine 扩展配置工具")
-        
-        self.geometry("900x910") 
-        
-        ctk.set_appearance_mode("System") 
-        ctk.set_default_color_theme("blue") 
+
+        # 设置窗口图标
+        try:
+            self.iconbitmap("icon300.ico")
+        except Exception:
+            pass 
+
+        self.geometry("900x910")
+
+        ctk.set_appearance_mode("System")
+        ctk.set_default_color_theme("blue")
         try:
             wallpaper_data = 获取当前壁纸(WALLPAPER_ENGINE_CONFIG_PATH, WIN_USERNAME)
-            
+
             if not wallpaper_data:
                 tk_messagebox.showerror("启动错误", "无法获取 Wallpaper Engine 壁纸配置，请检查路径和用户名。")
-                self.after(100, self.quit) 
+                self.after(100, self.quit)
                 return
 
         except Exception as e:
             log.error(f"启动错误：{e}")
             tk_messagebox.showerror("启动错误", f"加载壁纸配置失败: {e}")
-            self.after(100, self.quit) 
+            self.after(100, self.quit)
             return
-            
+
         if not 'wallpaper_data' in locals():
             self.quit()
             return
@@ -629,7 +632,7 @@ class App(ctk.CTk):
 
         # 添加页面
         self.wallpaper_page = WallpaperConfigPage(self, config_data=wallpaper_data)
-        self.wallpaper_page.grid(row=0, column=0, sticky="nsew") 
+        self.wallpaper_page.grid(row=0, column=0, sticky="nsew")
 
 if __name__ == "__main__":
     app = App()

@@ -10,9 +10,6 @@ import tkinter.messagebox as tk_messagebox
 from tkinter import filedialog
 
 from Tlog import TLog
-from getWallpaperConfig import 获取当前壁纸
-from mouses import add_wallpaper, delete_wallpaper
-from setMouse import 设置鼠标指针
 
 
 log = TLog("SettingsUI")
@@ -528,6 +525,11 @@ class SettingsApp(ctk.CTk, SettingsUIMixin):
         super().__init__()
         self.title("设置 MouseEngine")
         self.geometry("980x620")
+        # 设置窗口图标
+        try:
+            self.iconbitmap("icon300.ico")
+        except Exception:
+            pass 
         self.minsize(920, 560)
         self.protocol("WM_DELETE_WINDOW", self._on_close)
         self._build_settings_ui()

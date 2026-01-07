@@ -11,9 +11,6 @@ except ImportError:
     print("警告：未安装 portalocker，可能出现并发文件访问问题.请运行 'pip install portalocker'")
 
 
-project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if project_root not in sys.path:
-    sys.path.append(project_root)
 
 
 
@@ -26,8 +23,8 @@ import pyautogui
 
 log = TLog("mouses")
 
-CONFIG_PATH = os.path.join(project_root, "config.toml")
-MOUSE_BASE_PATH = os.path.join(project_root, "mouses")
+CONFIG_PATH = "config.toml"
+MOUSE_BASE_PATH = "mouses"
 
 def load_toml_config(path=CONFIG_PATH):
     """加载顶层 config.toml 文件"""

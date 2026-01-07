@@ -161,9 +161,9 @@ def setup_pystray_icon():
         log.error("系统托盘功能未启用。主程序将通过 time.sleep 循环运行。")
         return None
 
-    icon_path = os.path.join(PROJECT_ROOT, "icon300.png")
+    icon_path = os.path.join(PROJECT_ROOT, "icon300.ico")
     if not os.path.exists(icon_path):
-        log.error(f"图标文件未找到: {icon_path}。请在项目根目录放置 icon300.png。")
+        log.error(f"图标文件未找到: {icon_path}。缺失 icon300.ico文件")
         image = Image.new("RGB", (64, 64), color="black")
     else:
         image = Image.open(icon_path)
@@ -180,78 +180,87 @@ def setup_pystray_icon():
         MenuItem("退出", on_exit_request),
     )
 
-    TRAY_ICON = Icon("MouseEngine", image, "壁纸鼠标主题切换器", menu)
+    TRAY_ICON = Icon("MouseEngine", image, "光标引擎", menu)
     return TRAY_ICON
 
-def 触发刷新():
+def 触发刷新(target_wallpaper_id=None, changed_monitor_index=None):
     log_func = TLog("触发刷新")
-    winUserName = getpass.getuser()
-
     try:
-        main_config = toml.load(CONFIG_FILE_PATH)
-        config_path_we = main_config.get("path", {}).get("wallpaper_engine_config", "")
-        enable_default = main_config.get("config", {}).get("enable_default_icon_group", False)
-        wallpaper_map = main_config.get("wallpaper", {})
+        main_cfg = toml.load(CONFIG_FILE_PATH)
+        enable_default = bool(main_cfg.get("config", {}).get("enable_default_icon_group", False))
+        wallpaper_map = main_cfg.get("wallpaper", {}) or {}
     except FileNotFoundError:
-        log_func.error(f"读取主配置文件失败: {CONFIG_FILE_PATH} 未找到。")
+        log_func.error(f"读取主配置失败: {CONFIG_FILE_PATH} 未找到。")
         return False
     except Exception as e:
-        log_func.error(f"读取主配置文件失败: {e}")
+        log_func.error(f"读取主配置失败: {e}")
         return False
 
-    monitor_index = get_current_monitor_index_minimal()
-    log_func.debug(f"当前鼠标位于显示器索引: {monitor_index}")
-
-    try:
-        wallpaper_info = 获取当前壁纸(config_path_we, winUserName)
-        if 0 <= monitor_index < len(wallpaper_info):
-            当前鼠标指针id = wallpaper_info[monitor_index][1]
-        else:
-            log_func.error(f"获取当前壁纸信息失败，索引 {monitor_index} 超出范围。")
-            当前鼠标指针id = None
-    except Exception as e:
-        log_func.error(f"获取当前壁纸信息异常: {e}")
-        当前鼠标指针id = None
-
-    log_func.debug(f"当前鼠标指针id: {当前鼠标指针id}")
-
-    target_theme_name = None
-    if 当前鼠标指针id:
-        target_theme_name = wallpaper_map.get(str(当前鼠标指针id))
-
-    if target_theme_name:
-        log_func.info(f"找到对应主题名称: {target_theme_name}")
-        theme_config_path = os.path.join(MOUSE_THEMES_DIR, target_theme_name, "config.toml")
-    else:
-        log_func.info(f"未找到壁纸 ID {当前鼠标指针id} 对应的自定义主题。")
-        theme_config_path = None
-
-    if theme_config_path and os.path.exists(theme_config_path):
-        config_to_load = theme_config_path
-        log_func.debug(f"加载自定义主题配置: {config_to_load}")
-    elif enable_default:
-        config_to_load = os.path.join(MOUSE_THEMES_DIR, "默认", "config.toml")
-        log_func.info(f"启用默认图标组，加载默认配置: {config_to_load}")
-    else:
-        log_func.info("未找到主题配置，且未启用默认图标组，跳过设置。")
-        return True
-
-    if not os.path.exists(config_to_load):
-        log_func.error(f"配置文件不存在: {config_to_load}。无法设置鼠标指针。")
+    if target_wallpaper_id is None:
+        log_func.error("未提供 target_wallpaper_id，无法按“刷新事件”应用主题。")
         return False
 
+    target_id_str = str(target_wallpaper_id).strip()
+    if not target_id_str:
+        log_func.error("target_wallpaper_id 为空字符串，无法应用主题。")
+        return False
+
+    if changed_monitor_index is not None:
+        log_func.debug(f"收到刷新事件：显示器 {changed_monitor_index} - 壁纸ID {target_id_str}")
+    else:
+        log_func.debug(f"收到刷新事件：壁纸ID {target_id_str}")
+
+    theme_value = wallpaper_map.get(target_id_str)
+
+    if not theme_value:
+        log_func.info(f"未找到壁纸 ID {target_id_str} 对应的自定义主题。")
+        if not enable_default:
+            log_func.info("未启用默认图标组，跳过。")
+            return False
+        theme_dir = os.path.join("mouses", "默认")
+        log_func.info(f"启用默认图标组，加载默认配置: {theme_dir}\\config.toml")
+    else:
+        theme_dir = str(theme_value).strip().strip('"').strip("'")
+        theme_dir = theme_dir.replace("/", os.sep).replace("\\", os.sep)
+        if (os.sep not in theme_dir) and (not theme_dir.lower().startswith("mouses")):
+            theme_dir = os.path.join("mouses", theme_dir)
+
     try:
-        theme_config = toml.load(config_to_load)
-        mouse_config = theme_config.get("mouses", {})
+        group_config_path = os.path.join(theme_dir, "config.toml")
+        if not os.path.exists(group_config_path):
+            log_func.error(f"配置文件不存在: {group_config_path}（theme_dir={theme_dir}）")
+            return False
+
+        group_cfg = toml.load(group_config_path)
+
+        if "mouses" not in group_cfg or not isinstance(group_cfg["mouses"], dict):
+            log_func.error(f"配置缺少 [mouses] 段或格式错误: {group_config_path}")
+            return False
+
+        mouses_section = group_cfg["mouses"]
+
+        order = [
+            "Arrow", "Help", "AppStarting", "Wait", "Crosshair",
+            "IBeam", "Handwriting", "No", "SizeNS", "SizeWE",
+            "SizeNWSE", "SizeNESW", "SizeAll", "Hand", "UpArrow"
+        ]
 
         cursor_paths_list = []
-        for key in CURSOR_ORDER_MAPPING:
-            path = mouse_config.get(key, "")
-            cursor_paths_list.append(path)
+        for name in order:
+            raw = mouses_section.get(name, "")
+            rel = str(raw).strip().strip('"').strip("'") if raw is not None else ""
+            rel = rel.replace("/", os.sep).replace("\\", os.sep)
+
+            if not rel:
+                cursor_paths_list.append("")
+                continue
+
+            cursor_paths_list.append(rel)
 
         log_func.debug(f"生成的 cursor_paths 列表长度: {len(cursor_paths_list)}")
 
-        if 设置鼠标指针(cursor_paths_list):
+        ok = 设置鼠标指针(cursor_paths_list)
+        if ok:
             log_func.info("鼠标指针主题设置成功。")
             return True
         else:
@@ -261,6 +270,7 @@ def 触发刷新():
     except Exception as e:
         log_func.error(f"处理鼠标主题配置或设置指针失败: {e}")
         return False
+
 
 
 def json监听():
@@ -279,19 +289,26 @@ def json监听():
 
     # 首次加载壁纸信息
     try:
-        wallpaperConfig = 获取当前壁纸(config_path, winUserName)
+        latest_wallpaperConfig = 获取当前壁纸(config_path, winUserName)
     except Exception as e:
-        log_func.error(f"首次获取壁纸配置失败: {e}")
+        log_func.error(f"读取 Wallpaper Engine 配置失败: {e}")
         return
 
-    current_state = {index: project[1] for index, project in enumerate(wallpaperConfig)}
+    current_state = {}
+    for index, project in enumerate(latest_wallpaperConfig):
+        current_state[index] = project[1]
 
     log_func.info("初始壁纸状态:")
     for index, project_id in current_state.items():
         log_func.info(f"显示器{index}: {project_id}")
 
-    触发刷新()  # 首次刷新
+    first_id = current_state.get(0)
+    if first_id is None and len(current_state) > 0:
+        first_id = next(iter(current_state.values()))
+    if first_id is not None:
+        触发刷新(first_id, changed_monitor_index=0)
 
+    # 循环监听
     try:
         while not stop_flag.is_set():
             log_func.debug("正在监听...")
@@ -299,27 +316,19 @@ def json监听():
 
             for index, project in enumerate(latest_wallpaperConfig):
                 latest_project_id = project[1]
+                old_id = current_state.get(index)
 
-                if index in current_state:
-                    previous_project_id = current_state[index]
-
-                    if latest_project_id != previous_project_id:
-                        log_func.info(
-                            f"显示器 {index} 壁纸已更换 (ID: {previous_project_id} ->> {latest_project_id})"
-                        )
-                        current_state[index] = latest_project_id
-                        触发刷新()
-                else:
-                    log_func.info(f"发现新的显示器 {index}，项目ID: {latest_project_id}")
+                if old_id != latest_project_id:
+                    log_func.info(f"显示器 {index} 壁纸已更换 (ID: {old_id} -> {latest_project_id})")
                     current_state[index] = latest_project_id
-                    触发刷新()
+
+                    触发刷新(latest_project_id, changed_monitor_index=index)
 
             time.sleep(1)
 
     except Exception as e:
-        log_func.info(f"监听过程中发生错误: {e}")
-
-    log_func.info("json监听任务结束。")
+        log_func.error(f"监听循环异常: {e}")
+        return
 
 
 def 运行占用监控():
@@ -388,7 +397,8 @@ def 运行占用监控():
 if __name__ == "__main__":
     # 启动后台线程
     t1 = start_thread(json监听, "JsonListener")
-    t2 = start_thread(运行占用监控, "ResourceMonitor")
+    if log.on_DEBUG == True:
+        t2 = start_thread(运行占用监控, "ResourceMonitor")
 
     log.info("所有后台线程已启动。")
 

@@ -13,11 +13,8 @@ from setMouse import 设置鼠标指针
 
 
 log = TLog("PlaylistManagerUI") 
-CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.toml")
-if not os.path.exists(CONFIG_PATH):
-    CONFIG_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config.toml")
-
-MOUSE_BASE_PATH = os.path.join(os.path.dirname(CONFIG_PATH), "mouses")
+CONFIG_PATH = "config.toml"
+MOUSE_BASE_PATH = "mouses"
 try:
     WALLPAPER_ENGINE_CONFIG_PATH = toml.load(CONFIG_PATH)["path"]["wallpaper_engine_config"]
 except KeyError:
@@ -243,6 +240,12 @@ class App(ctk.CTk):
         self.geometry("1100x800") 
         ctk.set_appearance_mode("System") 
         ctk.set_default_color_theme("blue") 
+        
+        # 设置窗口图标
+        try:
+            self.iconbitmap("icon300.ico")
+        except Exception:
+            pass 
         
         if not WALLPAPER_ENGINE_CONFIG_PATH:
             self.after(100, self.quit)
