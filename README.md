@@ -40,7 +40,7 @@ MouseEngine 是一个 **基于 Wallpaper Engine 的 Windows 鼠标指针自动�
 
 ---
 
-## 🚀 快速部署（推荐）
+## 🚀 快速部署
 
 > 适合第一次使用 / 只想快速跑起来
 
@@ -51,31 +51,17 @@ git clone https://github.com/yourname/MouseEngine.git
 cd MouseEngine
 ```
 
-### 2) 创建并激活虚拟环境（推荐）
-
-```bash
-python -m venv venv
-.\venv\Scripts\activate
-```
-
-### 3) 安装依赖
-
-如果仓库已提供 `requirements.txt`：
+### 2) 安装依赖
 
 ```bash
 pip install -r requirements.txt
 ```
 
 
-（可选：用于并发文件锁，消除 Warning）
+### 3) 启动程序
 
 ```bash
-pip install portalocker
-```
-
-### 4) 启动程序
-
-```bash
+cd src
 python main.py
 ```
 
@@ -87,26 +73,33 @@ python main.py
 
 ```text
 MouseEngine/
-├─ main.py                  # 主程序（监听 + 托盘）
-├─ config.toml              # 主配置文件
-├─ ui/（可独立运行）
-│  ├─ main_gui.py           # 配置鼠标组 UI
-│  ├─ playlist_gui.py       # 绑定鼠标组 UI
-│  └─ settings_ui.py        # 设置 UI
-├─ mouses/
-│  ├─ 默认/
-│  │  └─ config.toml
-│  └─ 自定义主题/
-│     └─ config.toml
-├─ src/
-│  ├─ getWallpaperConfig.py
-│  ├─ setMouse.py
-│  └─ ...
-├─ docs/
-│  └─ licenses/             # 第三方许可证原文
+│
 ├─ LICENSE
+├─ README.md
+├─ requirements.txt
 ├─ THIRD_PARTY_NOTICES.txt
-└─ README.md
+│
+├─ docs/
+│  └─ licenses/              # 第三方依赖许可证原文
+│
+└─ src/                      # ⭐ 唯一运行目录
+   ├─ main.py                # 主入口（监听 / 托盘）
+   ├─ config.toml            # 主配置文件
+   ├─ Initialize.py          # 初始化与配置修复
+   ├─ Tlog.py                # 日志模块
+   │
+   ├─ getWallpaperConfig.py  # 壁纸配置解析
+   ├─ setMouse.py            # 鼠标指针切换逻辑
+   ├─ mouses.py              # 显示器与主题解析
+   │
+   ├─ mainUI.py              # 主界面
+   ├─ playlistUI.py          # 鼠标主题绑定界面
+   ├─ settingsUI.py          # 设置界面
+   ├─ WelcomeUI.py           # 欢迎界面
+   │
+   ├─ image/                 # 内置图像资源
+   └─ mouses/                # 鼠标指针目录
+
 ```
 
 ---
