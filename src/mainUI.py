@@ -587,6 +587,30 @@ class WallpaperConfigPage(ctk.CTkFrame):
         
         # 安排下一帧更新（每100毫秒）
         animation_data['after_id'] = self.after(100, lambda: self._animate_cursor(cursor_name))
+    
+    def _animate_playlist_item(self, item_index):
+        """
+        播放列表项目动画循环
+        """
+        if item_index not in self.playlist_animation_data:
+            return
+        
+        animation_data = self.playlist_animation_data[item_index]
+        frames = animation_data['frames']
+        current_frame = animation_data['current_frame']
+        total_frames = animation_data['total_frames']
+        label = animation_data['label']
+        
+        # 更新当前帧
+        if label and frames:
+            label.configure(image=frames[current_frame])
+        
+        # 计算下一帧
+        next_frame = (current_frame + 1) % total_frames
+        animation_data['current_frame'] = next_frame
+        
+        # 安排下一帧更新（每100毫秒）
+        animation_data['after_id'] = self.after(100, lambda: self._animate_playlist_item(item_index))
 
     def 浏览光标文件(self, cursor_name):
         """
@@ -647,6 +671,7 @@ class WallpaperConfigPage(ctk.CTkFrame):
             widget.destroy()
 
         self.playlist_images.clear() 
+        self.playlist_animation_data = {}  # 存储播放列表动画数据
 
         self.playlist_scroll_frame.configure(label_text=f"当前播放列表: {playlist_name} (共 {len(items_list)} 项)")
 
@@ -666,15 +691,42 @@ class WallpaperConfigPage(ctk.CTkFrame):
             if preview_path:
                 try:
                     img = Image.open(preview_path)
-                    img.thumbnail(IMAGE_SIZE) 
                     
-                    playlist_image = ctk.CTkImage(light_image=img, size=(img.width, img.height))
-                    self.playlist_images[i] = playlist_image 
-                    
-                    label = ctk.CTkLabel(frame, image=self.playlist_images[i], text="", cursor="hand2")
-                    label.pack(expand=True, fill="both", padx=5, pady=5) 
-                    
-                    label.bind("<Button-1>", lambda event, path=item_path: self.handle_playlist_item_click(path))
+                    # 检查是否是 gif 文件
+                    if preview_path.endswith('.gif'):
+                        # 获取所有帧
+                        gif_frames = []
+                        for gif_frame in ImageSequence.Iterator(img):
+                            frame_copy = gif_frame.copy()
+                            frame_copy.thumbnail(IMAGE_SIZE)
+                            if frame_copy.mode != 'RGBA':
+                                frame_copy = frame_copy.convert('RGBA')
+                            ctk_frame = ctk.CTkImage(light_image=frame_copy, size=(frame_copy.width, frame_copy.height))
+                            gif_frames.append(ctk_frame)
+                        
+                        # 创建标签
+                        label = ctk.CTkLabel(frame, text="", cursor="hand2")
+                        label.pack(expand=True, fill="both", padx=5, pady=5) 
+                        label.bind("<Button-1>", lambda event, path=item_path: self.handle_playlist_item_click(path))
+                        
+                        # 开始动画
+                        if gif_frames:
+                            self.playlist_animation_data[i] = {
+                                'frames': gif_frames,
+                                'current_frame': 0,
+                                'total_frames': len(gif_frames),
+                                'label': label
+                            }
+                            self._animate_playlist_item(i)
+                    else:
+                        # 静态图片处理
+                        img.thumbnail(IMAGE_SIZE) 
+                        playlist_image = ctk.CTkImage(light_image=img, size=(img.width, img.height))
+                        self.playlist_images[i] = playlist_image 
+                        
+                        label = ctk.CTkLabel(frame, image=self.playlist_images[i], text="", cursor="hand2")
+                        label.pack(expand=True, fill="both", padx=5, pady=5) 
+                        label.bind("<Button-1>", lambda event, path=item_path: self.handle_playlist_item_click(path))
                 except Exception:
                     ctk.CTkLabel(frame, text="预览失败", font=("", 8)).pack(expand=True)
             else:
