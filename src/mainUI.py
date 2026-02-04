@@ -11,7 +11,7 @@ from customtkinter import filedialog
 
 
 from Tlog import TLog
-from getWallpaperConfig import 获取当前壁纸
+from getWallpaperConfig import 获取当前壁纸列表
 from mouses import 保存组配置, wallpaper, delete_wallpaper, wallpaper
 from setMouse import 设置鼠标指针
 # 初始化日志和全局变量
@@ -64,7 +64,7 @@ def get_available_mouse_groups() -> list:
     return sorted(groups)
 
 def find_preview_image_path(file_path: str) -> str:
-    """根据壁纸文件路径查找 preview 图像文件"""#BUG 视频壁纸索引错误/预览图定位错误
+    """根据壁纸文件路径查找 preview 图像文件"""# BUG 视频壁纸索引错误/预览图定位错误
     if not file_path:
         return None
 
@@ -182,7 +182,7 @@ class WallpaperConfigPage(ctk.CTkFrame):
     def 刷新壁纸数据(self):
         """重新加载壁纸配置数据并更新 UI (保留逻辑)"""
         try:
-            new_data = 获取当前壁纸(WALLPAPER_ENGINE_CONFIG_PATH, WIN_USERNAME)
+            new_data = 获取当前壁纸列表(WALLPAPER_ENGINE_CONFIG_PATH, WIN_USERNAME)
             if new_data:
                 self.config_data = new_data
                 self.monitor_count = len(new_data)
@@ -609,7 +609,7 @@ class App(ctk.CTk):
         ctk.set_appearance_mode("System")
         ctk.set_default_color_theme("blue")
         try:
-            wallpaper_data = 获取当前壁纸(WALLPAPER_ENGINE_CONFIG_PATH, WIN_USERNAME)
+            wallpaper_data = 获取当前壁纸列表(WALLPAPER_ENGINE_CONFIG_PATH, WIN_USERNAME)
 
             if not wallpaper_data:
                 tk_messagebox.showerror("启动错误", "无法获取 Wallpaper Engine 壁纸配置，请检查路径和用户名。")

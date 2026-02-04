@@ -7,7 +7,7 @@ import getpass
 
 
 
-def 获取当前壁纸(config_path: str, user: str) -> list:
+def 获取当前壁纸列表(config_path: str, user: str) -> list:
     """
     从 Wallpaper Engine 的 config.json 文件中提取每个显示器当前的壁纸信息。
 
@@ -76,4 +76,6 @@ if __name__ == '__main__':
     log = TLog("获取当前壁纸路径")
     #config_path = toml.load("config.toml")["path"]["wallpaper_engine_config"]
     config_path = r"D:/Application/STEAM/steamapps/common/wallpaper_engine/config.json"
-    log.debug(f"当前壁纸路径{获取当前壁纸(config_path, winUserName)}")
+    _list = 获取当前壁纸列表(config_path, winUserName)
+    log.val(_list)
+    log.debug(f"{_list[0][1]}")

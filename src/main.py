@@ -6,13 +6,15 @@ import getpass
 import toml
 import sys
 import subprocess
+from getActiveWallpaper import get_active_ids
+#from test_测试句柄更新 import get_active_ids_optimized as get_active_ids
 try:
     import psutil
 except Exception:
     psutil = None
 
 from Tlog import TLog
-from getWallpaperConfig import 获取当前壁纸
+from getWallpaperConfig import 获取当前壁纸列表
 from mouses import get_current_monitor_index_minimal
 from setMouse import 设置鼠标指针
 from settingsUI import open_settings_window
@@ -53,7 +55,7 @@ def _script_abs_path(filename: str) -> str:
 
 
 def _kill_process(p: subprocess.Popen, timeout_sec: float = 2.0):
-    """尽力结束子进程（Windows 上 terminate 就够用；必要时 kill）"""
+    """尽力结束子进程"""
     try:
         if p is None:
             return
@@ -271,65 +273,116 @@ def 触发刷新(target_wallpaper_id=None, changed_monitor_index=None):
         log_func.error(f"处理鼠标主题配置或设置指针失败: {e}")
         return False
 
-
+LAST_JSON_TRIGGER_TIME = 0 # ram更新锁
 
 def json监听():
+    global LAST_JSON_TRIGGER_TIME
     log_func = TLog(获得函数名())
     winUserName = getpass.getuser()
 
+    # 加载配置路径
     try:
         config_data = toml.load(CONFIG_FILE_PATH)
         config_path = config_data.get("path", {}).get("wallpaper_engine_config", "")
     except FileNotFoundError:
-        log_func.error(f"错误：{CONFIG_FILE_PATH} 文件未找到。请检查路径。")
+        log_func.error(f"错误：{CONFIG_FILE_PATH} 未找到。")
         return
     except KeyError:
-        log_func.error("错误：config.toml 缺少必要的 'path' -> 'wallpaper_engine_config' 键。")
+        log_func.error("错误：config.toml 缺少必要的路径配置。")
         return
 
     # 首次加载壁纸信息
     try:
-        latest_wallpaperConfig = 获取当前壁纸(config_path, winUserName)
+        latest_wallpaperConfig = 获取当前壁纸列表(config_path, winUserName)
     except Exception as e:
-        log_func.error(f"读取 Wallpaper Engine 配置失败: {e}")
+        log_func.error(f"读取配置失败: {e}")
         return
 
     current_state = {}
     for index, project in enumerate(latest_wallpaperConfig):
         current_state[index] = project[1]
 
-    log_func.info("初始壁纸状态:")
-    for index, project_id in current_state.items():
-        log_func.info(f"显示器{index}: {project_id}")
-
-    first_id = current_state.get(0)
-    if first_id is None and len(current_state) > 0:
-        first_id = next(iter(current_state.values()))
-    if first_id is not None:
+    # 初始触发一次
+    if current_state:
+        first_id = current_state.get(0) or next(iter(current_state.values()))
+        log_func.info(f"Json初始状态触发: {first_id}")
+        LAST_JSON_TRIGGER_TIME = time.time()  # 更新时间戳
         触发刷新(first_id, changed_monitor_index=0)
 
     # 循环监听
     try:
         while not stop_flag.is_set():
-            log_func.debug("正在监听...")
-            latest_wallpaperConfig = 获取当前壁纸(config_path, winUserName)
+            latest_wallpaperConfig = 获取当前壁纸列表(config_path, winUserName)
 
             for index, project in enumerate(latest_wallpaperConfig):
                 latest_project_id = project[1]
                 old_id = current_state.get(index)
 
                 if old_id != latest_project_id:
-                    log_func.info(f"显示器 {index} 壁纸已更换 (ID: {old_id} -> {latest_project_id})")
+                    log_func.info(f"显示器 {index} (Json) 壁纸更换: {old_id} -> {latest_project_id}")
                     current_state[index] = latest_project_id
-
+                    
+                    # 更新全局时间戳，通知RAM监听器进入10s冷却期
+                    LAST_JSON_TRIGGER_TIME = time.time()
                     触发刷新(latest_project_id, changed_monitor_index=index)
 
             time.sleep(1)
-
     except Exception as e:
-        log_func.error(f"监听循环异常: {e}")
-        return
+        log_func.error(f"Json监听循环异常: {e}")
 
+
+def ram监听():
+    """
+    基于进程句柄监听播放列表状态
+    受Json触发后的10秒冷却保护
+    """
+    global LAST_JSON_TRIGGER_TIME
+    log_func = TLog(获得函数名())
+    log_func.info("初始化 RAM 监听器")
+
+    # 首次加载壁纸信息
+    try:
+        last_active_ids = get_active_ids()
+    except Exception as e:
+        log_func.error(f"首次获取 RAM 列表失败: {e}")
+        last_active_ids = set()
+
+    # 初始显示
+    if last_active_ids:
+        log_func.info(f"RAM初始检测到活跃 ID: {last_active_ids}")
+        # 如果json已经触发过，则只刷新状态
+        if time.time() - LAST_JSON_TRIGGER_TIME > 10:
+            initial_id = list(last_active_ids)[0]
+            触发刷新(initial_id, changed_monitor_index=0)
+
+    # 循环监听
+    try:
+        while not stop_flag.is_set():
+            current_ids = get_active_ids()
+            # 检测是否有新ID出现
+            new_ids = current_ids - last_active_ids
+            
+            if new_ids:
+                # 检查是否处于冷近期
+                cooldown_remaining = 10 - (time.time() - LAST_JSON_TRIGGER_TIME)
+                
+                if cooldown_remaining > 0:
+                    log_func.debug(f"处于Json冷却期(剩余 {cooldown_remaining:.1f}s)，跳过RAM触发: {new_ids}")
+                    # 同步状态，防止多次触发
+                    last_active_ids = current_ids
+                else:
+                    for latest_id in new_ids:
+                        log_func.info(f"检测到RAM活跃变更: {latest_id}")
+                        触发刷新(latest_id, changed_monitor_index=0)
+                    last_active_ids = current_ids
+            
+            # 对集合数量变化，同步集合状态
+            elif last_active_ids != current_ids:
+                last_active_ids = current_ids
+
+            time.sleep(10)
+    except Exception as e:
+        log_func.error(f"RAM监听循环异常: {e}")
 
 def 运行占用监控():
     if not psutil:
@@ -399,7 +452,8 @@ if __name__ == "__main__":
     t1 = start_thread(json监听, "JsonListener")
     if log.on_DEBUG == True:
         t2 = start_thread(运行占用监控, "ResourceMonitor")
-
+    t3 = start_thread(ram监听, "RamListener")
+    
     log.info("所有后台线程已启动。")
 
     # 启动系统托盘
@@ -422,7 +476,7 @@ if __name__ == "__main__":
             stop_flag.set()
 
     log.info("等待后台线程结束...")
-    for t in [t1, t2]:
+    for t in [t1, t2, t3]:
         if t.is_alive():
             log.info(f"正在等待 {t.name} 退出...")
             t.join(timeout=5)

@@ -7,7 +7,7 @@ from PIL import Image
 import tkinter.messagebox as tk_messagebox 
 
 from Tlog import TLog
-from getWallpaperConfig import 获取当前壁纸 
+from getWallpaperConfig import 获取当前壁纸列表 
 from mouses import add_wallpaper, delete_wallpaper 
 from setMouse import 设置鼠标指针 
 
@@ -252,7 +252,7 @@ class App(ctk.CTk):
             return
 
         try:
-            self.wallpaper_data = 获取当前壁纸(WALLPAPER_ENGINE_CONFIG_PATH, WIN_USERNAME)
+            self.wallpaper_data = 获取当前壁纸列表(WALLPAPER_ENGINE_CONFIG_PATH, WIN_USERNAME)
             
             if not self.wallpaper_data:
                 tk_messagebox.showerror("启动错误", "无法获取 Wallpaper Engine 壁纸配置，请检查路径和用户名。")

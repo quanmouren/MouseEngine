@@ -15,7 +15,7 @@ except ImportError:
 
 
 from Tlog import TLog
-from getWallpaperConfig import 获取当前壁纸
+from getWallpaperConfig import 获取当前壁纸列表
 from setMouse import 设置鼠标指针, CURSOR_ORDER_MAPPING
 
 from screeninfo import get_monitors
@@ -72,7 +72,7 @@ def 触发刷新(config_path, username, monitor=None):
         monitor_index = monitor - 1
 
     # 获取所有壁纸数据
-    all_wallpapers = 获取当前壁纸(config_path, username)
+    all_wallpapers = 获取当前壁纸列表(config_path, username)
     if not all_wallpapers:
         log.error("无法获取壁纸配置，触发刷新失败。")
         return False
