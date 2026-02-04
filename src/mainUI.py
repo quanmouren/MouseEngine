@@ -7,7 +7,8 @@ import tkinter.messagebox as tk_messagebox
 import glob
 import getpass
 from customtkinter import filedialog 
-
+from ani_to_gif import get_ani_frames
+from cur_to_png import get_cur_image
 
 
 from Tlog import TLog
@@ -269,6 +270,8 @@ class WallpaperConfigPage(ctk.CTkFrame):
                 path = cursor_paths.get(name, "")
                 entry.delete(0, ctk.END)
                 entry.insert(0, path)
+                # 更新预览
+                self.update_cursor_preview(name, path)
 
     # 主要功能区
     def create_wallpaper_info_area(self, current_data):
@@ -319,6 +322,8 @@ class WallpaperConfigPage(ctk.CTkFrame):
                 path = cursor_paths.get(name, "")
                 entry.delete(0, ctk.END)
                 entry.insert(0, path)
+                # 更新预览
+                self.update_cursor_preview(name, path)
 
         # 更新鼠标组名称标签
         self.mouse_group_name_label.configure(text=f"鼠标组: {group_name} (已加载配置)")
@@ -333,7 +338,7 @@ class WallpaperConfigPage(ctk.CTkFrame):
         right_frame.grid(row=0, column=1, padx=(5, 10), pady=10, sticky="nsew")
         right_frame.grid_columnconfigure(1, weight=1) 
 
-        IMAGE_MAPPING = {        #TODO 重绘图标
+        IMAGE_MAPPING = {
 
             "Arrow": "aero_arrow.png",
             "Help": "aero_helpsel.png",
@@ -354,7 +359,9 @@ class WallpaperConfigPage(ctk.CTkFrame):
         
         image_dir = "image"
 
-        self.cursor_preview_images = {} 
+        self.cursor_preview_images = {}  # 存储原始图标
+        self.cursor_current_images = {}  # 存储当前显示的图标
+        self.cursor_animation_data = {}  # 存储光标动画数据
 
         header_frame = ctk.CTkFrame(right_frame, fg_color="transparent")
         header_frame.grid(row=0, column=0, columnspan=3, padx=10, pady=(10, 5), sticky="ew")
@@ -386,6 +393,7 @@ class WallpaperConfigPage(ctk.CTkFrame):
         content_frame.columnconfigure(2, weight=1)
         
         self.cursor_entry_widgets = {}
+        self.cursor_icon_labels = {}  # 存储图标标签
         for i, (key, label_text) in enumerate(self.CURSOR_MAPPING):
             ctk.CTkLabel(content_frame, text=f"{i+1}. {label_text}:").grid(row=i, column=0, padx=(10, 5), pady=4, sticky="w")
             
@@ -399,13 +407,15 @@ class WallpaperConfigPage(ctk.CTkFrame):
                     pil_img = Image.open(img_path)
                     ctk_icon = ctk.CTkImage(light_image=pil_img, size=(24, 24))
                     icon_label.configure(image=ctk_icon)
-                    self.cursor_preview_images[key] = ctk_icon 
+                    self.cursor_preview_images[key] = ctk_icon  # 存储原始图标
+                    self.cursor_current_images[key] = ctk_icon  # 初始为原始图标
                 except Exception as e:
                     log.error(f"无法打开图片 {img_name}: {e}")
             else:
                 log.error(f"未找到图片文件: {img_path}")
             
             icon_label.grid(row=i, column=1, padx=5, pady=4)
+            self.cursor_icon_labels[key] = icon_label
 
             entry = ctk.CTkEntry(content_frame, height=25)
             entry.grid(row=i, column=2, padx=5, pady=4, sticky="ew")
@@ -465,6 +475,119 @@ class WallpaperConfigPage(ctk.CTkFrame):
             return result_list
 
 
+    def update_cursor_preview(self, cursor_name, cursor_path):
+        """
+        更新光标预览，替换原始图标位置
+        """
+        icon_label = self.cursor_icon_labels.get(cursor_name)
+        if not icon_label:
+            return
+        
+        # 停止之前的动画
+        if cursor_name in self.cursor_animation_data:
+            animation_data = self.cursor_animation_data[cursor_name]
+            if 'after_id' in animation_data:
+                self.after_cancel(animation_data['after_id'])
+            del self.cursor_animation_data[cursor_name]
+        
+        if not cursor_path or not os.path.exists(cursor_path):
+            # 恢复显示原始图标
+            original_icon = self.cursor_preview_images.get(cursor_name)
+            if original_icon:
+                icon_label.configure(image=original_icon)
+                self.cursor_current_images[cursor_name] = original_icon
+            return
+        
+        try:
+            # 根据文件类型获取图像
+            if cursor_path.endswith('.ani'):
+                # 获取动态光标的帧
+                frames = get_ani_frames(cursor_path)
+                if frames:
+                    # 调整所有帧的大小
+                    resized_frames = []
+                    for frame in frames:
+                        resized_frame = frame.copy()
+                        resized_frame.thumbnail((24, 24))
+                        if resized_frame.mode != 'RGBA':
+                            resized_frame = resized_frame.convert('RGBA')
+                        ctk_image = ctk.CTkImage(light_image=resized_frame, size=(24, 24))
+                        resized_frames.append(ctk_image)
+                    
+                    # 开始动画
+                    self.cursor_animation_data[cursor_name] = {
+                        'frames': resized_frames,
+                        'current_frame': 0,
+                        'total_frames': len(resized_frames)
+                    }
+                    self._animate_cursor(cursor_name)
+                else:
+                    # 恢复原始图标
+                    original_icon = self.cursor_preview_images.get(cursor_name)
+                    if original_icon:
+                        icon_label.configure(image=original_icon)
+                        self.cursor_current_images[cursor_name] = original_icon
+                    return
+            elif cursor_path.endswith('.cur'):
+                # 获取静态光标图像
+                img = get_cur_image(cursor_path)
+                if not img:
+                    # 恢复原始图标
+                    original_icon = self.cursor_preview_images.get(cursor_name)
+                    if original_icon:
+                        icon_label.configure(image=original_icon)
+                        self.cursor_current_images[cursor_name] = original_icon
+                    return
+                
+                # 调整图像大小为原始图标大小
+                img.thumbnail((24, 24))
+                # 确保图像有透明通道
+                if img.mode != 'RGBA':
+                    img = img.convert('RGBA')
+                # 创建 CTkImage 并存储引用
+                ctk_image = ctk.CTkImage(light_image=img, size=(24, 24))
+                self.cursor_current_images[cursor_name] = ctk_image  # 存储引用，避免被垃圾回收
+                icon_label.configure(image=ctk_image)
+            else:
+                # 恢复原始图标
+                original_icon = self.cursor_preview_images.get(cursor_name)
+                if original_icon:
+                    icon_label.configure(image=original_icon)
+                    self.cursor_current_images[cursor_name] = original_icon
+                return
+        except Exception as e:
+            log.error(f"更新光标预览失败: {e}")
+            # 出错时恢复原始图标
+            original_icon = self.cursor_preview_images.get(cursor_name)
+            if original_icon:
+                icon_label.configure(image=original_icon)
+                self.cursor_current_images[cursor_name] = original_icon
+    
+    def _animate_cursor(self, cursor_name):
+        """
+        光标动画循环
+        """
+        if cursor_name not in self.cursor_animation_data:
+            return
+        
+        animation_data = self.cursor_animation_data[cursor_name]
+        frames = animation_data['frames']
+        current_frame = animation_data['current_frame']
+        total_frames = animation_data['total_frames']
+        
+        # 更新当前帧
+        icon_label = self.cursor_icon_labels.get(cursor_name)
+        if icon_label and frames:
+            icon_label.configure(image=frames[current_frame])
+            self.cursor_current_images[cursor_name] = frames[current_frame]
+        
+        # 计算下一帧
+        next_frame = (current_frame + 1) % total_frames
+        animation_data['current_frame'] = next_frame
+        
+        # 安排下一帧更新（每100毫秒）
+        animation_data['after_id'] = self.after(100, lambda: self._animate_cursor(cursor_name))
+
     def 浏览光标文件(self, cursor_name):
         """
         处理浏览按钮点击事件，选择 .ani 或 .cur 文件。
@@ -496,6 +619,8 @@ class WallpaperConfigPage(ctk.CTkFrame):
             entry.delete(0, ctk.END)
             entry.insert(0, normalized_path)
             log.info(f"为 {cursor_name} 选择了光标文件: {normalized_path}")
+            # 更新预览
+            self.update_cursor_preview(cursor_name, normalized_path)
 
     def 保存并应用配置(self):
         wallpaper_id, selected_group = self.get_wallpaper_id_and_group_selection()
