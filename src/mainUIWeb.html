@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MouseEngine</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #ffffff;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        
+        /* 顶部导航栏 */
+        .header {
+            background: rgba(20, 30, 60, 0.9);
+            padding: 10px 20px;
+            border-bottom: 1px solid #334155;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header-left {
+            display: flex;
+            align-items: center;
+        }
+        
+        .header-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-right: 20px;
+        }
+        
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .header-btn {
+            padding: 4px 8px;
+            background: rgba(45, 55, 72, 0.7);
+            border: 1px solid #334155;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        /* 主内容区 */
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        /* 左侧壁纸网格 */
+        .content-left {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+        }
+        
+        .wallpaper-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 10px;
+        }
+        
+        .wallpaper-item {
+            background: rgba(45, 55, 72, 0.7);
+            border: 1px solid #334155;
+            border-radius: 4px;
+            overflow: hidden;
+            cursor: pointer;
+            position: relative;
+            transition: border-color 0.2s ease;
+        }
+        
+        .wallpaper-item:hover {
+            border-color: #4299e1;
+        }
+        
+        .wallpaper-thumb {
+            width: 100%;
+            aspect-ratio: 1/1;
+            background: linear-gradient(45deg, #334155, #1e293b);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .wallpaper-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+        
+        .wallpaper-thumb:hover img {
+            transform: scale(1.1);
+        }
+        
+        .wallpaper-info {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 8px;
+            font-size: 11px;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(2px);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        /* 右侧预览面板 */
+        .content-right {
+            width: 350px;
+            background: rgba(20, 30, 60, 0.9);
+            border-left: 1px solid #334155;
+            padding: 15px;
+            overflow-y: auto;
+        }
+        
+        .preview-container {
+            position: relative;
+            margin-bottom: 15px;
+        }
+        
+        .preview-image {
+            width: 100%;
+            aspect-ratio: 1/1;
+            background: transparent;
+            border: 1px solid #334155;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        
+        .preview-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .wallpaper-details {
+            margin-bottom: 15px;
+        }
+        
+        .wallpaper-title {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .wallpaper-subtitle {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-bottom: 5px;
+        }
+        
+        .details-list {
+            font-size: 11px;
+            color: #94a3b8;
+            margin-bottom: 10px;
+        }
+        
+        .details-list div {
+            margin-bottom: 2px;
+        }
+        
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .action-btn {
+            padding: 6px 12px;
+            background: rgba(45, 55, 72, 0.7);
+            border: 1px solid #334155;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+        
+        .action-btn.primary {
+            background: #ef4444;
+            border-color: #dc2626;
+        }
+        
+        .action-btn:hover {
+            background: rgba(66, 153, 225, 0.2);
+        }
+        
+        /* 底部播放列表 */
+        .footer {
+            background: rgba(20, 30, 60, 0.9);
+            border-top: 1px solid #334155;
+            padding: 10px 20px;
+        }
+        
+        .playlist-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        
+        .playlist-title {
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .playlist-content {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            margin-bottom: 10px;
+        }
+        
+        .playlist-item {
+            width: 60px;
+            height: 60px;
+            background: rgba(45, 55, 72, 0.7);
+            border: 1px solid #334155;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+        
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(45, 55, 72, 0.7);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: rgba(100, 116, 139, 0.7);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(148, 163, 184, 0.7);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 顶部导航栏 -->
+        <div class="header">
+            <div class="header-left">
+                <div class="header-title">MouseEngine</div>
+            </div>
+            <div class="header-right">
+                <div class="header-btn">设置</div>
+            </div>
+        </div>
+        
+        <!-- 主内容区 -->
+        <div class="main-content">
+            <!-- 左侧壁纸网格 -->
+            <div class="content-left">
+                <div class="wallpaper-grid" id="wallpaperGrid"></div>
+            </div>
+            
+            <!-- 右侧预览面板 -->
+            <div class="content-right">
+                <div class="preview-container">
+                    <div class="preview-image" id="previewImage">
+                        <img src="" alt="预览图" id="previewImg">
+                    </div>
+                </div>
+                <div class="wallpaper-details" id="wallpaperDetails">
+                    <div class="wallpaper-title" id="detailTitle">请选择壁纸</div>
+                    <div class="wallpaper-subtitle" id="detailSubtitle">暂无信息</div>
+                    <div class="details-list">
+                        <div id="detailType">类型：-</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 底部播放列表 留空占位 -->
+        <div class="footer">
+            <div class="playlist-header">
+                <div class="playlist-title">播放列表 (0)</div>
+            </div>
+            <div class="playlist-content">
+                <div class="playlist-item"></div>
+                <div class="playlist-item"></div>
+                <div class="playlist-item"></div>
+                <div class="playlist-item"></div>
+                <div class="playlist-item"></div>
+                <div class="playlist-item"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // 定义测试备用数据
+    const TEST_WALLPAPERS = [
+        ['3450085161', 'cache\\3450085161.gif', 'Liquid Metal ROG', 'video'],
+        ['3466484071', 'cache\\3466484071.jpg', 'Anime girl', 'video'],
+        ['3484246124', 'cache\\3484246124.gif', 'Summer Miku - WALLHACK', 'scene'],
+        ['3650880224', 'cache\\3650880224.gif', 'Blue Archive | Kei', 'Web']
+    ];
+
+    // 初始化函数：自动调用Python API，3秒超时使用测试数据
+    async function initApp() {
+        try {
+            console.log("1. 检查 pywebview 对象:", window.pywebview);
+            
+            if (!window.pywebview) {
+                console.log("2. 等待 pywebview 就绪...（3秒超时）");
+                await Promise.race([
+                    new Promise(resolve => {
+                        window.addEventListener('pywebviewready', resolve);
+                    }),
+                    // 3秒超时器
+                    new Promise((_, reject) => {
+                        setTimeout(() => reject(new Error("pywebview 3秒未就绪")), 3000);
+                    })
+                ]);
+            }
+            
+            console.log("3. pywebview API:", window.pywebview.api);
+            console.log("4. 调用 init 方法...");
+            
+            // 调用API获取数据
+            let wallpapers = await window.pywebview.api.init();
+            console.log("5. 获取到的API数据：", wallpapers);
+
+            // 如果API返回空/无效数据，则使用测试列表
+            if (!wallpapers || wallpapers.length === 0) {
+                console.log("API返回数据为空，使用测试备用数据");
+                wallpapers = TEST_WALLPAPERS;
+            }
+            
+            renderWallpapers(wallpapers);
+        } catch (error) {
+            // 捕获所有异常
+            console.error("初始化失败，切换到测试数据：", error);
+            renderWallpapers(TEST_WALLPAPERS);
+        }
+    }
+
+    // 初始化预览面板为默认状态
+    function initPreviewPanel() {
+        const previewImg = document.getElementById('previewImg');
+        previewImg.src = '';
+        previewImg.alt = '';
+        previewImg.style.display = 'none';
+        
+        document.getElementById('detailTitle').textContent = '请选择壁纸';
+        document.getElementById('detailSubtitle').textContent = '暂无信息';
+        document.getElementById('detailType').textContent = '类型：-';
+    }
+
+    // 更新右侧预览面板
+    function updatePreviewPanel(wallpaperData) {
+        const [id, imagePath, name, type] = wallpaperData;
+        
+        // 如果类型为web，不执行更新操作
+        if (type && type.toLowerCase() === 'web') {
+            return;
+        }
+        
+        // 更新预览图片
+        const previewImg = document.getElementById('previewImg');
+        if (imagePath) {
+            previewImg.src = imagePath.replace(/\\/g, '/');
+            previewImg.alt = name || '预览图';
+            previewImg.style.display = 'block';
+            // 图片加载失败时隐藏
+            previewImg.onerror = function() {
+                this.src = '';
+                this.style.display = 'none';
+            };
+        } else {
+            // 没有图片时隐藏
+            previewImg.src = '';
+            previewImg.alt = '';
+            previewImg.style.display = 'none';
+        }
+        
+        // 更新标题
+        document.getElementById('detailTitle').textContent = name || '未知壁纸';
+        
+        // 更新副标题
+        document.getElementById('detailSubtitle').textContent = `ID: ${id}`;
+        
+        // 更新类型
+        document.getElementById('detailType').textContent = `类型：${type || '未知'}`;
+    }
+
+    // 渲染壁纸列表
+    function renderWallpapers(wallpaperList) {
+        const grid = document.getElementById('wallpaperGrid');
+        grid.innerHTML = '';
+
+        if (!wallpaperList || wallpaperList.length === 0) {
+            grid.innerHTML = '<div class="error-placeholder">暂无壁纸数据</div>';
+            return;
+        }
+
+        wallpaperList.forEach(item => {
+            const [id, imagePath, name, type] = item;
+            
+            const itemEl = document.createElement('div');
+            itemEl.className = 'wallpaper-item';
+            
+            // 添加点击事件
+            itemEl.addEventListener('click', () => {
+                updatePreviewPanel(item);
+            });
+
+            // 缩略图容器
+            const thumbEl = document.createElement('div');
+            thumbEl.className = 'wallpaper-thumb';
+            if (imagePath) {
+                const img = document.createElement('img');
+                // 兼容Windows路径
+                img.src = imagePath.replace(/\\/g, '/');
+                img.alt = name || '壁纸';
+                // 图片加载失败的兜底
+                img.onerror = function() {
+                    this.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgZmlsbD0iIzMzNDE1NSIvPjx0ZXh0IHg9IjkwIiB5PSI5MCIgZm9udC1mYW1pbHk9IkxlZnQgVUlUIiwgZm9udC1zaXplPSIxMiIgZmlsbD0iIzlhYjNjOCIgbGV0dGVyLXNwYWNpbmc9Im5vcm1hbCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+5Zu+54mH5Lu25Lq6PC90ZXh0Pjwvc3ZnPg==';
+                };
+                thumbEl.appendChild(img);
+                
+                // 如果类型为web，添加半透明红色覆盖层
+                if (type && type.toLowerCase() === 'web') {
+                    const overlay = document.createElement('div');
+                    overlay.style.position = 'absolute';
+                    overlay.style.top = '0';
+                    overlay.style.left = '0';
+                    overlay.style.width = '100%';
+                    overlay.style.height = '100%';
+                    overlay.style.background = 'rgba(255, 0, 0, 0.5)';
+                    overlay.style.display = 'flex';
+                    overlay.style.alignItems = 'center';
+                    overlay.style.justifyContent = 'center';
+                    overlay.style.color = 'white';
+                    overlay.style.fontSize = '12px';
+                    overlay.style.fontWeight = 'bold';
+                    overlay.style.textAlign = 'center';
+                    overlay.style.padding = '10px';
+                    overlay.textContent = '暂不支持Web壁纸';
+                    thumbEl.appendChild(overlay);
+                }
+            } else {
+                thumbEl.innerHTML = '<span style="color:#94a3b8; font-size:12px;">无图片</span>';
+            }
+
+            // 壁纸名称
+            const infoEl = document.createElement('div');
+            infoEl.className = 'wallpaper-info';
+            infoEl.textContent = name || `壁纸-${id}`;
+
+            itemEl.appendChild(thumbEl);
+            itemEl.appendChild(infoEl);
+            grid.appendChild(itemEl);
+        });
+    }
+
+    // 页面加载后自动执行
+    window.addEventListener('load', function() {
+        initPreviewPanel();
+        initApp();
+    });
+</script>
+</body>
+</html>
