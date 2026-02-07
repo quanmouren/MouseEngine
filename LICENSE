@@ -1,28 +1,43 @@
-BSD 3-Clause License
+# Project Licensing Notice
 
-Copyright (c) 2025, CIF3
+Copyright (c) 2025, CIF3. All rights reserved.
 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
+This project is distributed under a combined licensing model:
 
-1. Redistributions of source code must retain the above copyright notice, this
-   list of conditions and the following disclaimer.
+## 1. Core Logic & Original Features
+The core functionality, original algorithms, and unique features of this software are licensed under:
+Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)
+https://creativecommons.org/licenses/by-nc-sa/4.0/
 
-2. Redistributions in binary form must reproduce the above copyright notice,
-   this list of conditions and the following disclaimer in the documentation
-   and/or other materials provided with the distribution.
+## 2. Wallpaper Engine Integration & API Modules
+The modules specifically designed for interacting with Wallpaper Engine, process monitoring (psutil-based logic), and system handle operations are licensed under:
+The BSD 3-Clause License
+https://opensource.org/licenses/BSD-3-Clause
 
-3. Neither the name of the copyright holder nor the names of its
-   contributors may be used to endorse or promote products derived from
-   this software without specific prior written permission.
+## 3. Third-Party Support or Miscellaneous Modules
+Certain files in this project are licensed under:
+The MIT License (MIT)
+https://opensource.org/licenses/MIT
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+(See individual file headers for the specific license governing each file.)
+
+---
+
+## BSD 3-Clause License Text (for Integration Modules)
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+
+---
+
+## Important Exceptions & Disclaimers
+- WALLPAPER CONTENT: This project identifies and retrieves metadata of wallpapers. All wallpaper assets, IDs, and media remain the property of their respective copyright holders on Steam Workshop.
+- THIRD-PARTY LIBRARIES: Libraries such as 'psutil' are subject to their own respective licenses.
+- NO ENDORSEMENT: This project is not affiliated with or endorsed by Wallpaper Engine or Steam.
+
+---
+
+Note: This project changed its license starting from Alpha2.0.
+Alpha2.0 and later: Licensed under CC BY-NC-SA 4.0 (Core) & BSD 3-Clause (Integration). Commercial use without authorization is prohibited.
+Alpha1.2 and earlier: Remains under BSD 3-Clause. Permissions granted under the previous license for older versions are still valid.

@@ -1,4 +1,5 @@
-import datetime
+# Copyright (c) 2025, CIF3
+# SPDX-License-Identifier: MIT
 import inspect
 import sys
 import re

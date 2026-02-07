@@ -1,3 +1,5 @@
+# Copyright (c) 2025, CIF3
+# SPDX-License-Identifier: BSD-3-Clause
 from Tlog import TLog
 import psutil
 import time

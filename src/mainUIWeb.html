@@ -117,6 +117,29 @@
             transform: scale(1.1);
         }
         
+        /* 鼠标组图标指示区域 */
+        .mouse-group-indicator {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 32px;
+            height: 32px;
+            background: rgba(0, 0, 0, 0.7);
+            border-bottom-left-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            display: none;
+            transition: all 0.1s ease;
+        }
+        
+        .mouse-group-indicator img {
+            width: 24px;
+            height: 24px;
+            object-fit: cover;
+        }
+        
         .wallpaper-info {
             position: absolute;
             bottom: 0;
@@ -192,6 +215,52 @@
             margin-bottom: 2px;
         }
         
+        /* 图标容器样式 */
+        .icons-container {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 6px;
+            margin-top: 8px;
+        }
+        
+        .icon-item {
+            aspect-ratio: 1/1;
+            background: rgba(45, 55, 72, 0.7);
+            border: 1px solid #334155;
+            border-radius: 4px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .icon-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        /* 下拉选择框样式 */
+        .select-container {
+            margin-top: 10px;
+        }
+        
+        .custom-select {
+            width: 100%;
+            padding: 6px 8px;
+            background: rgba(45, 55, 72, 0.7);
+            border: 1px solid #334155;
+            border-radius: 4px;
+            color: #ffffff;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        
+        .custom-select option {
+            background: rgba(20, 30, 60, 0.9);
+            color: #ffffff;
+        }
+        
         .action-buttons {
             display: flex;
             flex-direction: column;
@@ -235,6 +304,12 @@
         .playlist-title {
             font-size: 12px;
             font-weight: bold;
+            color: #ffffff;
+        }
+        
+        .playlist-loading {
+            font-size: 11px;
+            color: #94a3b8;
         }
         
         .playlist-content {
@@ -242,15 +317,65 @@
             gap: 8px;
             overflow-x: auto;
             margin-bottom: 10px;
+            padding-bottom: 5px;
+            scroll-behavior: smooth;
+        }
+        
+        .playlist-content::-webkit-scrollbar {
+            height: 6px;
+        }
+        
+        .playlist-content::-webkit-scrollbar-track {
+            background: rgba(45, 55, 72, 0.7);
+            border-radius: 3px;
+        }
+        
+        .playlist-content::-webkit-scrollbar-thumb {
+            background: rgba(100, 116, 139, 0.7);
+            border-radius: 3px;
+        }
+        
+        .playlist-content::-webkit-scrollbar-thumb:hover {
+            background: rgba(148, 163, 184, 0.7);
         }
         
         .playlist-item {
-            width: 60px;
-            height: 60px;
+            width: 70px;
+            height: 70px;
             background: rgba(45, 55, 72, 0.7);
             border: 1px solid #334155;
             border-radius: 4px;
             flex-shrink: 0;
+            cursor: pointer;
+            overflow: hidden;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+        
+        .playlist-item:hover {
+            border-color: #4299e1;
+            transform: translateY(-2px);
+        }
+        
+        .playlist-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+        
+        .playlist-item:hover img {
+            transform: scale(1.1);
+        }
+        
+        .playlist-item-no-image {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: #94a3b8;
+            text-align: center;
+            padding: 5px;
         }
         
         /* 滚动条样式 */
@@ -304,23 +429,46 @@
                     <div class="wallpaper-subtitle" id="detailSubtitle">暂无信息</div>
                     <div class="details-list">
                         <div id="detailType">类型：-</div>
+                        <div class="icons-container">
+                            <div class="icon-item"></div>
+                            <div class="icon-item"></div>
+                            <div class="icon-item"></div>
+                            <div class="icon-item"></div>
+                            <div class="icon-item"></div>
+                            <div class="icon-item"></div>
+                            <div class="icon-item"></div>
+                            <div class="icon-item"></div>
+                            <div class="icon-item"></div>
+                            <div class="icon-item"></div>
+                            <div class="icon-item"></div>
+                            <div class="icon-item"></div>
+                            <div class="icon-item"></div>
+                            <div class="icon-item"></div>
+                            <div class="icon-item"></div>
+                        </div>
+                        <div class="select-container">
+                            <select class="custom-select">
+                                <option value="">请选择</option>
+                                <option value="option1">选项1</option>
+                                <option value="option2">选项2</option>
+                                <option value="option3">选项3</option>
+                                <option value="option4">选项4</option>
+                                <option value="option5">选项5</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
         
-        <!-- 底部播放列表 留空占位 -->
+        <!-- 底部播放列表 -->
         <div class="footer">
             <div class="playlist-header">
-                <div class="playlist-title">播放列表 (0)</div>
+                <div class="playlist-title">当前播放列表: 加载中...</div>
+                <div class="playlist-loading" style="display: none;">加载中...</div>
             </div>
             <div class="playlist-content">
-                <div class="playlist-item"></div>
-                <div class="playlist-item"></div>
-                <div class="playlist-item"></div>
-                <div class="playlist-item"></div>
-                <div class="playlist-item"></div>
-                <div class="playlist-item"></div>
+                <!-- 播放列表项将通过 JavaScript 动态添加 -->
             </div>
         </div>
     </div>
@@ -333,6 +481,12 @@
         ['3484246124', 'cache\\3484246124.gif', 'Summer Miku - WALLHACK', 'scene'],
         ['3650880224', 'cache\\3650880224.gif', 'Blue Archive | Kei', 'Web']
     ];
+    
+    // 当前选中的壁纸 ID
+    let currentWallpaperId = null;
+    
+    // 鼠标组图标缓存
+    const mouseGroupIconsCache = {};
 
     // 初始化函数：自动调用Python API，3秒超时使用测试数据
     async function initApp() {
@@ -394,6 +548,9 @@
             return;
         }
         
+        // 保存当前选中的壁纸 ID
+        currentWallpaperId = id;
+        
         // 更新预览图片
         const previewImg = document.getElementById('previewImg');
         if (imagePath) {
@@ -420,6 +577,9 @@
         
         // 更新类型
         document.getElementById('detailType').textContent = `类型：${type || '未知'}`;
+        
+        // 加载鼠标组列表并更新选择框
+        loadMouseGroups();
     }
 
     // 渲染壁纸列表
@@ -437,6 +597,7 @@
             
             const itemEl = document.createElement('div');
             itemEl.className = 'wallpaper-item';
+            itemEl.dataset.id = id;
             
             // 添加点击事件
             itemEl.addEventListener('click', () => {
@@ -481,6 +642,12 @@
                 thumbEl.innerHTML = '<span style="color:#94a3b8; font-size:12px;">无图片</span>';
             }
 
+            // 右上角鼠标组图标区域
+            const mouseGroupIndicator = document.createElement('div');
+            mouseGroupIndicator.className = 'mouse-group-indicator';
+            mouseGroupIndicator.dataset.wallpaperId = id;
+            thumbEl.appendChild(mouseGroupIndicator);
+
             // 壁纸名称
             const infoEl = document.createElement('div');
             infoEl.className = 'wallpaper-info';
@@ -490,12 +657,402 @@
             itemEl.appendChild(infoEl);
             grid.appendChild(itemEl);
         });
+        
+        // 加载鼠标组图标
+        loadMouseGroupIndicators();
+    }
+
+    // 加载鼠标组列表并更新选择框
+    async function loadMouseGroups() {
+        if (!currentWallpaperId) {
+            return;
+        }
+        
+        try {
+            // 获取鼠标组列表
+            const mouseGroups = await window.pywebview.api.get_mouse_groups();
+            console.log('获取到鼠标组列表:', mouseGroups);
+            
+            // 获取当前壁纸的绑定状态
+            const currentBinding = await window.pywebview.api.get_wallpaper_binding(currentWallpaperId);
+            console.log('当前壁纸绑定状态:', currentBinding);
+            
+            // 更新选择框
+            const selectElement = document.querySelector('.custom-select');
+            if (selectElement) {
+                // 清空现有选项
+                selectElement.innerHTML = '';
+                
+                // 添加默认选项
+                const defaultOption = document.createElement('option');
+                defaultOption.value = '';
+                defaultOption.textContent = '请选择';
+                selectElement.appendChild(defaultOption);
+                
+                // 添加"未绑定"选项
+                const unbindOption = document.createElement('option');
+                unbindOption.value = '未绑定';
+                unbindOption.textContent = '未绑定';
+                selectElement.appendChild(unbindOption);
+                
+                // 添加鼠标组选项
+                mouseGroups.forEach(group => {
+                    const option = document.createElement('option');
+                    option.value = group;
+                    option.textContent = group;
+                    selectElement.appendChild(option);
+                });
+                
+                // 设置当前选中值
+                if (currentBinding) {
+                    selectElement.value = currentBinding;
+                    // 加载当前选中鼠标组的图标
+                    await loadMouseGroupIcons(currentBinding);
+                } else {
+                    // 清空图标容器
+                    const iconsContainer = document.querySelector('.icons-container');
+                    if (iconsContainer) {
+                        iconsContainer.innerHTML = '';
+                        for (let i = 0; i < 15; i++) {
+                            const iconItem = document.createElement('div');
+                            iconItem.className = 'icon-item';
+                            iconsContainer.appendChild(iconItem);
+                        }
+                    }
+                }
+                
+                // 添加事件监听器
+                selectElement.onchange = handleMouseGroupChange;
+            }
+        } catch (error) {
+            console.error('加载鼠标组失败:', error);
+        }
+    }
+    
+    // 加载鼠标组图标
+    async function loadMouseGroupIcons(groupName) {
+        if (!groupName || groupName === "未绑定") {
+            // 清空图标容器
+            const iconsContainer = document.querySelector('.icons-container');
+            if (iconsContainer) {
+                iconsContainer.innerHTML = '';
+                for (let i = 0; i < 15; i++) {
+                    const iconItem = document.createElement('div');
+                    iconItem.className = 'icon-item';
+                    iconsContainer.appendChild(iconItem);
+                }
+            }
+            return;
+        }
+        
+        try {
+            // 检查缓存
+            let icons;
+            if (mouseGroupIconsCache[groupName]) {
+                icons = mouseGroupIconsCache[groupName];
+                console.log('使用缓存的鼠标组图标:', groupName);
+            } else {
+                // 调用 API 获取鼠标组图标
+                icons = await window.pywebview.api.get_mouse_group_icons(groupName);
+                console.log('获取到鼠标组图标:', icons);
+                // 缓存图标数据
+                mouseGroupIconsCache[groupName] = icons;
+            }
+            
+            // 更新图标容器
+            const iconsContainer = document.querySelector('.icons-container');
+            if (iconsContainer) {
+                iconsContainer.innerHTML = '';
+                
+                icons.forEach(iconPath => {
+                    const iconItem = document.createElement('div');
+                    iconItem.className = 'icon-item';
+                    
+                    if (iconPath) {
+                        const img = document.createElement('img');
+                        img.src = iconPath;
+                        img.alt = '图标';
+                        img.style.width = '100%';
+                        img.style.height = '100%';
+                        img.style.objectFit = 'cover';
+                        img.onerror = function() {
+                            this.style.display = 'none';
+                        };
+                        iconItem.appendChild(img);
+                    }
+                    
+                    iconsContainer.appendChild(iconItem);
+                });
+            }
+        } catch (error) {
+            console.error('加载鼠标组图标失败:', error);
+        }
+    }
+    
+    // 处理鼠标组选择变化
+    async function handleMouseGroupChange(event) {
+        if (!currentWallpaperId) {
+            return;
+        }
+        
+        const selectedGroup = event.target.value;
+        if (!selectedGroup) {
+            return;
+        }
+        
+        // 立即更新 UI 状态，提高响应速度
+        if (selectedGroup === "未绑定") {
+            // 立即隐藏当前壁纸的小图标
+            const indicator = document.querySelector(`.mouse-group-indicator[data-wallpaper-id="${currentWallpaperId}"]`);
+            if (indicator) {
+                indicator.style.display = 'none';
+            }
+        }
+        
+        try {
+            // 调用 API 绑定鼠标组
+            const result = await window.pywebview.api.bind_mouse_group(currentWallpaperId, selectedGroup);
+            console.log('绑定鼠标组结果:', result);
+            
+            // 显示操作结果
+            if (result.success) {
+                console.log('操作成功:', result.message);
+                // 加载鼠标组图标
+                await loadMouseGroupIcons(selectedGroup);
+                // 重新加载鼠标组图标指示
+                await loadMouseGroupIndicators();
+            } else {
+                console.error('操作失败:', result.message);
+            }
+        } catch (error) {
+            console.error('绑定鼠标组失败:', error);
+        }
+    }
+
+    // 加载鼠标组图标指示
+    async function loadMouseGroupIndicators() {
+        try {
+            // 获取所有壁纸项
+            const indicators = document.querySelectorAll('.mouse-group-indicator');
+            
+            for (const indicator of indicators) {
+                const wallpaperId = indicator.dataset.wallpaperId;
+                if (!wallpaperId) continue;
+                
+                // 检查壁纸是否有对应的鼠标组绑定
+                const groupName = await window.pywebview.api.get_wallpaper_binding(wallpaperId);
+                
+                if (groupName && groupName !== "未绑定") {
+                    // 检查缓存
+                    let icons;
+                    if (mouseGroupIconsCache[groupName]) {
+                        icons = mouseGroupIconsCache[groupName];
+                    } else {
+                        // 获取鼠标组的 Arrow 图标
+                        icons = await window.pywebview.api.get_mouse_group_icons(groupName);
+                        // 缓存图标数据
+                        mouseGroupIconsCache[groupName] = icons;
+                    }
+                    
+                    if (icons && icons.length > 0 && icons[0]) {
+                        // 显示指示器
+                        indicator.style.display = 'flex';
+                        
+                        // 清空现有内容
+                        indicator.innerHTML = '';
+                        
+                        // 创建图标元素
+                        const img = document.createElement('img');
+                        img.src = icons[0]; // Arrow 图标在列表的第一个位置
+                        img.alt = '鼠标组图标';
+                        img.style.width = '24px';
+                        img.style.height = '24px';
+                        img.style.objectFit = 'cover';
+                        img.onerror = function() {
+                            this.style.display = 'none';
+                        };
+                        indicator.appendChild(img);
+                    } else {
+                        // 隐藏指示器
+                        indicator.style.display = 'none';
+                    }
+                } else {
+                    // 立即隐藏指示器，不等待
+                    indicator.style.display = 'none';
+                }
+            }
+        } catch (error) {
+            console.error('加载鼠标组图标指示失败:', error);
+        }
+    }
+
+    // 加载播放列表
+    async function loadPlaylist() {
+        console.log('loadPlaylist 函数被调用');
+        try {
+            // 显示加载状态
+            const playlistTitle = document.querySelector('.playlist-title');
+            const playlistLoading = document.querySelector('.playlist-loading');
+            if (playlistTitle) {
+                playlistTitle.textContent = '当前播放列表: 加载中...';
+            }
+            if (playlistLoading) {
+                playlistLoading.style.display = 'block';
+            }
+            
+            // 检查 pywebview 对象是否存在
+            console.log('开始加载播放列表');
+            console.log('pywebview 对象:', window.pywebview);
+            console.log('pywebview.api 对象:', window.pywebview ? window.pywebview.api : 'undefined');
+            console.log('get_playlist 方法:', window.pywebview && window.pywebview.api ? window.pywebview.api.get_playlist : 'undefined');
+            
+            // 调用 API 获取播放列表数据
+            const playlistData = await window.pywebview.api.get_playlist();
+            console.log('获取到播放列表数据:', playlistData);
+            
+            // 渲染播放列表
+            renderPlaylist(playlistData.items, playlistData.name);
+        } catch (error) {
+            console.error('加载播放列表失败:', error);
+            console.error('错误堆栈:', error.stack);
+            // 显示空播放列表
+            renderPlaylist([], '');
+        } finally {
+            // 隐藏加载状态
+            const playlistLoading = document.querySelector('.playlist-loading');
+            if (playlistLoading) {
+                playlistLoading.style.display = 'none';
+            }
+        }
+    }
+    
+    // 测试函数
+    function testPlaylist() {
+        console.log('测试播放列表加载');
+        loadPlaylist();
+    }
+    
+    // 暴露测试函数到全局
+    window.testPlaylist = testPlaylist;
+    
+    // 渲染播放列表
+    function renderPlaylist(items, name) {
+        const playlistContent = document.querySelector('.playlist-content');
+        const playlistTitle = document.querySelector('.playlist-title');
+        
+        if (!playlistContent || !playlistTitle) {
+            return;
+        }
+        
+        // 清空现有内容
+        playlistContent.innerHTML = '';
+        
+        // 更新播放列表标题和数量
+        const count = items.length;
+        playlistTitle.textContent = `当前播放列表: ${name || '未命名'} (共 ${count} 项)`;
+        
+        // 渲染播放列表项
+        items.forEach((item, index) => {
+            const [id, imagePath] = item;
+            
+            const playlistItem = document.createElement('div');
+            playlistItem.className = 'playlist-item';
+            playlistItem.dataset.id = id;
+            playlistItem.dataset.index = index;
+            
+            // 添加点击事件
+            playlistItem.addEventListener('click', () => {
+                // 查找对应的壁纸数据并更新预览面板
+                const wallpaperData = [id, imagePath, '', ''];
+                updatePreviewPanel(wallpaperData);
+            });
+            
+            // 如果有预览图，添加到播放列表项
+            if (imagePath) {
+                const img = document.createElement('img');
+                img.src = imagePath.replace(/\\/g, '/');
+                img.alt = `壁纸 ${id}`;
+                img.style.width = '100%';
+                img.style.height = '100%';
+                img.style.objectFit = 'cover';
+                img.onerror = function() {
+                    // 图片加载失败时显示默认内容
+                    this.parentElement.innerHTML = '<div class="playlist-item-no-image">无预览图</div>';
+                };
+                playlistItem.appendChild(img);
+            } else {
+                // 无预览图时显示默认内容
+                const noImageDiv = document.createElement('div');
+                noImageDiv.className = 'playlist-item-no-image';
+                noImageDiv.textContent = '无预览图';
+                playlistItem.appendChild(noImageDiv);
+            }
+            
+            playlistContent.appendChild(playlistItem);
+        });
+        
+        // 添加鼠标滚轮左右滚动功能
+        addMouseWheelScroll(playlistContent);
+    }
+    
+    // 添加鼠标滚轮左右滚动功能
+    function addMouseWheelScroll(element) {
+        let isScrolling = false;
+        let currentPosition = 0;
+        let targetPosition = 0;
+        let startTime = 0;
+        
+        element.addEventListener('wheel', (event) => {
+            event.preventDefault();
+            
+            // 计算目标滚动位置
+            targetPosition = element.scrollLeft + event.deltaY * 2; // 调整滚动速度
+            
+            // 限制滚动范围
+            targetPosition = Math.max(0, Math.min(targetPosition, element.scrollWidth - element.clientWidth));
+            
+            if (!isScrolling) {
+                currentPosition = element.scrollLeft;
+                startTime = performance.now();
+                isScrolling = true;
+                smoothScroll();
+            }
+        });
+        
+        // 平滑滚动函数
+        function smoothScroll(currentTime = performance.now()) {
+            const elapsed = currentTime - startTime;
+            const duration = 200; // 滚动动画持续时间（毫秒）
+            
+            // 使用缓动函数
+            const progress = Math.min(elapsed / duration, 1);
+            const easeProgress = 1 - Math.pow(1 - progress, 3); // 缓出效果
+            
+            // 计算当前滚动位置
+            const newPosition = currentPosition + (targetPosition - currentPosition) * easeProgress;
+            element.scrollLeft = newPosition;
+            
+            // 检查是否需要继续滚动
+            if (progress < 1 && Math.abs(newPosition - targetPosition) > 1) {
+                requestAnimationFrame(smoothScroll);
+            } else {
+                // 确保滚动到精确位置
+                element.scrollLeft = targetPosition;
+                isScrolling = false;
+            }
+        }
     }
 
     // 页面加载后自动执行
     window.addEventListener('load', function() {
         initPreviewPanel();
         initApp();
+        // 延迟加载播放列表，确保 pywebview 完全初始化
+        console.log('页面加载完成，准备加载播放列表');
+        setTimeout(function() {
+            console.log('执行 loadPlaylist 函数');
+            loadPlaylist();
+        }, 1000); // 加载播放列表
     });
 </script>
 </body>

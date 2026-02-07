@@ -1,3 +1,5 @@
+# Copyright (c) 2025, CIF3
+# SPDX-License-Identifier: BSD-3-Clause
 import json
 import os
 import sys
@@ -6,6 +8,7 @@ import toml
 import getpass
 
 
+log = TLog("获取当前壁纸列表")
 
 def 获取当前壁纸列表(config_path: str, user: str) -> list:
     """

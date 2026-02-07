@@ -1,3 +1,5 @@
+# Copyright (c) 2025, CIF3
+# SPDX-License-Identifier: BSD-3-Clause
 import struct
 import io
 from PIL import Image
