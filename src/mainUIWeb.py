@@ -310,7 +310,10 @@ class Api:
     def init(self):
         wallpapers = all_wallpapers()
         wallpapers = 图片加缓存(wallpapers)
-        log.debug(f"初始化返回壁纸列表：{wallpapers}")
+        try:
+            log.debug(f"初始化返回壁纸列表：{len(wallpapers)} 项")
+        except Exception:
+            pass
         return wallpapers
     
     def get_mouse_groups(self):
@@ -461,7 +464,10 @@ class Api:
                 
                 processed_items.append([wallpaper_id, preview_path])
             
-            log.debug(f"返回播放列表数据：{playlist_name}, {len(processed_items)}项")
+            try:
+                log.debug(f"返回播放列表数据：{len(processed_items)} 项")
+            except Exception:
+                pass
             return {"items": processed_items, "name": playlist_name}
         except Exception as e:
             log.error(f"获取播放列表失败：{e}")
@@ -497,6 +503,20 @@ win = webview.create_window(
     #resizable=False,  # 禁止用户调整窗口大小
     easy_drag=True    # 支持通过任意区域拖动窗口
 )
+
+# 安全退出功能
+def safe_exit():
+    """安全退出 Web UI"""
+    try:
+        if win:
+            win.destroy()
+        log.info("Web UI 已安全退出")
+    except Exception as e:
+        log.error(f"退出 Web UI 时出错：{e}")
+
+# 在 Api 类中添加退出方法
+api.exit_app = safe_exit
+
 webview.start(
     debug=True,
     http_server=True
