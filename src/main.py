@@ -107,21 +107,22 @@ def run_ui_in_process(script_filename: str, title: str):
 
 def open_config_mouse_gui(icon=None, item=None):
     """打开 '配置鼠标组' UI"""
-    run_ui_in_process("mainUI.py", "配置鼠标组")
+    run_ui_in_process("mouseUI.py", "配置鼠标组")
 
 
-def open_bind_mouse_gui(icon=None, item=None):
+def open_bind_mouse_gui(icon="icon300.ico", item=None):
     """打开 '绑定鼠标组' UI"""
     run_ui_in_process("playlistUI.py", "绑定鼠标组")
 
 
-def open_bind_mouse_gui_test(icon=None, item=None):
-    """打开 '绑定鼠标组 - 测试' UI"""
-    run_ui_in_process("mainUIWeb.py", "绑定鼠标组 - 测试")
+def open_bind_mouse_gui_test(icon="icon300.ico", item=None):
+    """打开 '绑定鼠标组' UI"""
+    run_ui_in_process("mainUIWeb.py", "绑定鼠标组")
 
 
 def open_settings_ui(icon=None, item=None):
-    open_settings_window()
+    """打开 '设置' UI"""
+    run_ui_in_process("settingsUI.py", "设置")
 
 def start_thread(target_func, name):
     t = threading.Thread(target=target_func, name=name)
@@ -183,9 +184,8 @@ def setup_pystray_icon():
 
     menu = Menu(
         MenuItem("配置鼠标组", open_config_mouse_gui, enabled=UI_IMPORT_SUCCESS),
-        MenuItem("绑定鼠标组", open_bind_mouse_gui, enabled=UI_IMPORT_SUCCESS),
-        MenuItem("绑定鼠标组 - 测试", open_bind_mouse_gui_test, enabled=UI_IMPORT_SUCCESS),
-        # MenuItem("设置", open_settings_ui),
+        MenuItem("绑定鼠标组", open_bind_mouse_gui_test, enabled=UI_IMPORT_SUCCESS),
+        MenuItem("设置", open_settings_ui, enabled=UI_IMPORT_SUCCESS),
         Menu.SEPARATOR,
         MenuItem("退出", on_exit_request),
     )

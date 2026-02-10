@@ -14,6 +14,27 @@ from tkinter import filedialog
 from Tlog import TLog
 
 
+def _kill_process(p: subprocess.Popen, timeout_sec: float = 2.0):
+    """尽力结束子进程"""
+    try:
+        if p is None:
+            return
+        if p.poll() is not None:
+            return
+        p.terminate()
+        t0 = time.time()
+        while time.time() - t0 < timeout_sec:
+            if p.poll() is not None:
+                return
+            time.sleep(0.05)
+        try:
+            p.kill() # 强杀
+        except Exception:
+            pass
+    except Exception:
+        pass
+
+
 log = TLog("SettingsUI")
 
 
@@ -509,7 +530,11 @@ class SettingsUIMixin:
             self.var_enable_default_icon_group.set(not v)
 
     def _on_close(self):
-        self.destroy()
+        """安全关闭窗口"""
+        try:
+            self.destroy()
+        except Exception as e:
+            log.error(f"关闭窗口时发生错误: {e}")
 
 
 class SettingsWindow(ctk.CTkToplevel, SettingsUIMixin):

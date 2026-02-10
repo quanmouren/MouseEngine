@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><link rel="icon" type="image/x-icon" href="/icon300.ico">
+
+<meta charset="UTF-8">
+<style>
+body {
+    margin: 0;
+    font-family: "Segoe UI", sans-serif;
+    background: #1a1a2e;
+    color: white;
+    overflow: hidden;
+}
+.modal-content {
+    background: #16213e;
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+.modal-header {
+    padding: 20px;
+    font-size: 20px;
+    font-weight: bold;
+}
+.divider {
+    height: 1px;
+    background: #334155;
+    margin: 0 20px;
+}
+.modal-body {
+    padding: 20px;
+    flex: 1;
+    overflow-y: auto;
+}
+
+/* 顶部 */
+.header-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    position: relative;
+}
+.combobox-input {
+    background: #0f172a;
+    border: 1px solid #334155;
+    color: white;
+    padding: 10px;
+    border-radius: 4px;
+    width: 220px;
+}
+.dropdown-container {
+    position: absolute;
+    top: 45px;
+    left: 0;
+    width: 220px;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 4px;
+    display: none;
+    z-index: 10;
+}
+.dropdown-option {
+    padding: 10px;
+    cursor: pointer;
+}
+.dropdown-option:hover {
+    background: #3b82f6;
+}
+.save-button {
+    background: #3b82f6;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* 列表 */
+.position-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+.thumb-preview {
+    width: 32px;
+    height: 32px;
+    background: #0f172a;
+    border: 1px solid #334155;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    overflow: hidden;
+}
+.thumb-preview img {
+    max-width: 28px;
+    max-height: 28px;
+    object-fit: contain;
+}
+.position-input {
+    flex: 1;
+    background: rgba(15, 23, 42, 0.5);
+    border: 1px solid #334155;
+    color: #94a3b8;
+    padding: 0px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    height: 32px;
+}
+.browse-button {
+    background: #334155;
+    color: white;
+    border: none;
+    padding: 0 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    height: 32px;
+    font-size: 12px;
+}
+.browse-button:hover {
+    background: #475569;
+}
+</style>
+</head>
+
+<body>
+<div class="modal-content">
+    <div class="modal-header">编辑鼠标组</div>
+    <div class="divider"></div>
+
+    <div class="modal-body">
+        <div class="header-row">
+            <input
+                id="groupNameInput"
+                class="combobox-input"
+                placeholder="输入组名或选择已有组"
+                onfocus="showDropdown()"
+            >
+            <div id="groupDropdown" class="dropdown-container"></div>
+            <button class="save-button" onclick="saveData()">保存当前组</button>
+        </div>
+
+        <div id="cursorList"></div>
+    </div>
+</div>
+
+<script>
+const CURSOR_KEYS = [
+    "Arrow","Help","AppStarting","Wait","Crosshair",
+    "IBeam","Handwriting","No","SizeNS","SizeWE",
+    "SizeNWSE","SizeNESW","SizeAll","Hand","UpArrow"
+];
+
+const DEFAULT_IMAGES = {
+    Arrow:        "image/aero_arrow.png",
+    Help:         "image/aero_helpsel.png",
+    AppStarting:  "image/aero_working_xl.png",
+    Wait:         "image/aero_busy_xl.png",
+    Crosshair:    "image/cross_il.png",
+    IBeam:        "image/beam_rl.png",
+    Handwriting: "image/aero_pen.png",
+    No:           "image/aero_unavail.png",
+    SizeNS:       "image/aero_ns.png",
+    SizeWE:       "image/aero_ew.png",
+    SizeNWSE:     "image/aero_nwse.png",
+    SizeNESW:     "image/aero_nesw.png",
+    SizeAll:      "image/aero_move.png",
+    Hand:         "image/aero_link.png",
+    UpArrow:      "image/aero_up.png",
+};
+
+let currentOriginalGroup = null;
+
+window.addEventListener('pywebviewready', async () => {
+    renderRows();
+    await refreshGroups();
+});
+
+function renderRows() {
+    const container = document.getElementById('cursorList');
+    container.innerHTML = CURSOR_KEYS.map(k => `
+        <div class="position-row">
+            <div class="thumb-preview" id="prev-${k}">
+                <img src="${DEFAULT_IMAGES[k]}">
+            </div>
+            <input id="input-${k}" class="position-input" readonly placeholder="${k}">
+            <button class="browse-button" onclick="handleBrowse('${k}')">浏览</button>
+        </div>
+    `).join('');
+}
+
+async function refreshGroups() {
+    const groups = await pywebview.api.get_existing_groups();
+    const dropdown = document.getElementById('groupDropdown');
+    dropdown.innerHTML = '';
+
+    const newOpt = document.createElement('div');
+    newOpt.className = 'dropdown-option';
+    newOpt.innerText = '新建鼠标组';
+    newOpt.onclick = () => selectGroup(null);
+    dropdown.appendChild(newOpt);
+
+    groups.forEach(g => {
+        const opt = document.createElement('div');
+        opt.className = 'dropdown-option';
+        opt.innerText = g;
+        opt.onclick = () => selectGroup(g);
+        dropdown.appendChild(opt);
+    });
+}
+
+async function selectGroup(name) {
+    currentOriginalGroup = name;
+    document.getElementById('groupDropdown').style.display = 'none';
+
+    const input = document.getElementById('groupNameInput');
+
+    CURSOR_KEYS.forEach(k => {
+        document.getElementById(`input-${k}`).value = '';
+        document.getElementById(`prev-${k}`).innerHTML =
+            `<img src="${DEFAULT_IMAGES[k]}">`;
+    });
+
+    if (!name) {
+        input.value = '';
+        input.placeholder = '请输入新组名';
+        return;
+    }
+
+    input.value = name;
+    const data = await pywebview.api.load_group_config(name);
+
+    for (const k of CURSOR_KEYS) {
+        if (data[k]) {
+            document.getElementById(`input-${k}`).value = data[k];
+            updatePreview(k, data[k]);
+        }
+    }
+}
+
+async function handleBrowse(key) {
+    const path = await pywebview.api.open_file_dialog();
+    if (!path) return;
+    document.getElementById(`input-${key}`).value = path;
+    updatePreview(key, path);
+}
+
+async function updatePreview(key, path) {
+    const b64 = await pywebview.api.get_preview_base64(path);
+    if (b64) {
+        document.getElementById(`prev-${key}`).innerHTML =
+            `<img src="${b64}">`;
+    }
+}
+
+async function saveData() {
+    const name = document.getElementById('groupNameInput').value.trim();
+    if (!name) return alert("请输入组名");
+
+    const data = {};
+    CURSOR_KEYS.forEach(k => {
+        data[k] = document.getElementById(`input-${k}`).value;
+    });
+
+    const res = await pywebview.api.save_group_config(
+        name, data, currentOriginalGroup
+    );
+    alert(res.msg);
+    await refreshGroups();
+    currentOriginalGroup = name;
+}
+
+function showDropdown() {
+    document.getElementById('groupDropdown').style.display = 'block';
+}
+
+document.addEventListener('click', e => {
+    if (!e.target.closest('.header-row')) {
+        document.getElementById('groupDropdown').style.display = 'none';
+    }
+});
+</script>
+</body>
+</html>

@@ -15,6 +15,8 @@ import shutil
 import glob
 from PIL import Image
 
+log.on_DEBUG = False
+
 # 鼠标组基础路径
 MOUSE_BASE_PATH = "mouses"
 
