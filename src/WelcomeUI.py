@@ -4,7 +4,6 @@ import customtkinter
 import os
 from tkinter import filedialog, messagebox 
 import platform
-import sys
 import re 
 import threading 
 try:

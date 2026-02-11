@@ -1,11 +1,8 @@
 # Copyright (c) 2025, CIF3
 # SPDX-License-Identifier: BSD-3-Clause
-import sys
 import os
 import shutil
 import toml
-import time
-import getpass
 try:
     import portalocker
 except ImportError:

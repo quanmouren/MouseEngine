@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 import customtkinter as ctk
 import os
-import sys
 import toml
 import time
 import threading

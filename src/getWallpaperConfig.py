@@ -2,9 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 import json
 import os
-import sys
 from Tlog import TLog
-import toml
 import getpass
 
 

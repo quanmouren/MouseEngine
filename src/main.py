@@ -458,6 +458,7 @@ def 运行占用监控():
 if __name__ == "__main__":
     # 启动后台线程
     t1 = start_thread(json监听, "JsonListener")
+    t2 = None
     if log.on_DEBUG == True:
         t2 = start_thread(运行占用监控, "ResourceMonitor")
     t3 = start_thread(ram监听, "RamListener")
@@ -485,7 +486,7 @@ if __name__ == "__main__":
 
     log.info("等待后台线程结束...")
     for t in [t1, t2, t3]:
-        if t.is_alive():
+        if t and t.is_alive():
             log.info(f"正在等待 {t.name} 退出...")
             t.join(timeout=5)
 
