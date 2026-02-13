@@ -173,7 +173,7 @@ Wait = "wait.ani"
 
 ### Q1：系统托盘没有显示？
 - 确认已安装 `pystray` 和 `Pillow`
-- 确认在“有桌面会话”的环境运行（不是无桌面 / 远程服务环境）
+- 确认在“有桌面会话”的环境运行
 - 使用同一个 Python/venv 运行 `main.py`
 
 ### Q2：提示 `portalocker not installed`？
