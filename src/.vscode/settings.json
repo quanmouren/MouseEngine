@@ -1,0 +1,15 @@
+{
+    "Lua.diagnostics.globals": [
+        "set_canvas",
+        "set_hotspot",
+        "fps",
+        "load_png",
+        "add_image",
+        "draw_rect",
+        "total_frames",
+        "on_render"
+    ],
+    "Lua.workspace.library": [
+        "${workspaceFolder}/cur2d_api.d.lua"
+    ]
+}
