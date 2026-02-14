@@ -3,6 +3,8 @@
 MouseEngine 是一个 **基于 Wallpaper Engine 的 Windows 鼠标指针自动切换工具**。
 它能够根据当前显示器所使用的壁纸，**自动切换对应的鼠标指针主题**，默认回退、系统托盘常驻运行。
 
+![Logo](./docs/images/1.jpg "MouseEngine Logo")
+
 ---
 
 ## ✨ 功能特性
@@ -171,7 +173,7 @@ Wait = "wait.ani"
 
 ### Q1：系统托盘没有显示？
 - 确认已安装 `pystray` 和 `Pillow`
-- 确认在“有桌面会话”的环境运行（不是无桌面 / 远程服务环境）
+- 确认在“有桌面会话”的环境运行
 - 使用同一个 Python/venv 运行 `main.py`
 
 ### Q2：提示 `portalocker not installed`？
