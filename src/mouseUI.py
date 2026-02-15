@@ -137,7 +137,7 @@ if __name__ == "__main__":
     api = EditMouseApi()
     window = webview.create_window(
         "鼠标组编辑器",
-        "mouseUI.html",
+        "html/mouseUI.html",
         js_api=api,
         width=580,
         height=850

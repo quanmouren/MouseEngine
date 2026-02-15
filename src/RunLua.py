@@ -9,7 +9,8 @@ from PIL import Image, ImageTk, ImageDraw
 from lupa import LuaRuntime
 import tomllib
 
-# 渲染引擎
+from ui.lua_editor import LuaCodeEditor
+
 class RenderEngine:
     def __init__(self):
         self.canvas = None
@@ -17,7 +18,7 @@ class RenderEngine:
         self.bg_pattern = None
         self.global_hotspot = [0, 0]
         self.show_debug_lines = True
-        self.project_root = "" # 动态项目根目录
+        self.project_root = ""
 
     def set_canvas(self, w, h):
         self.canvas = Image.new('RGBA', (int(w), int(h)), (0, 0, 0, 0))
@@ -81,7 +82,6 @@ class RenderEngine:
             draw.rectangle([hx-1, hy-1, hx+1, hy+1], fill=line_color)
         return preview
 
-# 编辑器
 class MouseEngineEditor:
     def __init__(self, root, project_name):
         self.root = root
@@ -132,40 +132,33 @@ class MouseEngineEditor:
         self.paned.add(self.left_frame, width=400)
 
         self.right_frame = tk.Frame(self.paned, bg="#1e1e1e")
-        code_font = font.Font(family="Consolas", size=12)
-        self.code_text = tk.Text(self.right_frame, bg="#1e1e1e", fg="#d4d4d4",
-                                insertbackground="white", font=code_font, undo=True,
-                                padx=10, pady=10, borderwidth=0)
-        self.code_text.pack(fill=tk.BOTH, expand=True)
+        self.code_editor = LuaCodeEditor(self.right_frame)
+        self.code_editor.pack(fill=tk.BOTH, expand=True)
         self.paned.add(self.right_frame)
 
         self.status_bar = tk.Label(self.root, text="就绪", bd=1, relief=tk.SUNKEN, anchor=tk.W,
                                   bg="#007acc", fg="white", font=("Segoe UI", 10))
         self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
 
-        self.code_text.bind("<<Modified>>", self.on_code_modified)
-        self.code_text.bind("<Tab>", self.handle_tab)
-
-    def handle_tab(self, event):
-        self.code_text.insert(tk.INSERT, "    ")
-        return 'break'
+        # 绑定事件到导入的编辑器组件
+        self.code_editor.bind("<<Modified>>", self.on_code_modified)
 
     def on_code_modified(self, event=None):
-        if self.code_text.edit_modified():
+        if self.code_editor.edit_modified():
             if self.reload_job:
                 self.root.after_cancel(self.reload_job)
             self.reload_job = self.root.after(500, self.save_and_reload)
-            self.code_text.edit_modified(False)
+            self.code_editor.edit_modified(False)
 
     def load_code_from_file(self):
         if os.path.exists(self.lua_path):
-            self.code_text.delete("1.0", tk.END)
             with open(self.lua_path, 'r', encoding='utf-8') as f:
-                self.code_text.insert("1.0", f.read())
-            self.code_text.edit_modified(False)
+                code = f.read()
+            self.code_editor.set_code(code)
+            self.code_editor.edit_modified(False)
 
     def save_and_reload(self):
-        code = self.code_text.get("1.0", tk.END)
+        code = self.code_editor.get_code()
         os.makedirs(os.path.dirname(self.lua_path), exist_ok=True)
         with open(self.lua_path, 'w', encoding='utf-8') as f:
             f.write(code)
@@ -183,7 +176,7 @@ class MouseEngineEditor:
             g.fps = 60
             g.total_frames = 0
             
-            self.lua.execute(self.code_text.get("1.0", tk.END))
+            self.lua.execute(self.code_editor.get_code())
             self.error_msg = None
             self.status_bar.config(bg="#007acc", text=f"Active Project: {self.project_name}")
         except Exception as e:
@@ -226,8 +219,6 @@ class MouseEngineEditor:
 
 if __name__ == "__main__":
     target = "test_mouse"
-    
-
     root = tk.Tk()
     app = MouseEngineEditor(root, "test_mouse")
     root.mainloop()

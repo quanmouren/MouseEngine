@@ -1,0 +1,118 @@
+body {
+    margin: 0;
+    font-family: "Segoe UI", sans-serif;
+    background: #1a1a2e;
+    color: white;
+    overflow: hidden;
+}
+.modal-content {
+    background: #16213e;
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+.modal-header {
+    padding: 20px;
+    font-size: 20px;
+    font-weight: bold;
+}
+.divider {
+    height: 1px;
+    background: #334155;
+    margin: 0 20px;
+}
+.modal-body {
+    padding: 20px;
+    flex: 1;
+    overflow-y: auto;
+}
+
+/* 顶部 */
+.header-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    position: relative;
+}
+.combobox-input {
+    background: #0f172a;
+    border: 1px solid #334155;
+    color: white;
+    padding: 10px;
+    border-radius: 4px;
+    width: 220px;
+}
+.dropdown-container {
+    position: absolute;
+    top: 45px;
+    left: 0;
+    width: 220px;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 4px;
+    display: none;
+    z-index: 10;
+}
+.dropdown-option {
+    padding: 10px;
+    cursor: pointer;
+}
+.dropdown-option:hover {
+    background: #3b82f6;
+}
+.save-button {
+    background: #3b82f6;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* 列表 */
+.position-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+.thumb-preview {
+    width: 32px;
+    height: 32px;
+    background: #0f172a;
+    border: 1px solid #334155;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    overflow: hidden;
+}
+.thumb-preview img {
+    max-width: 28px;
+    max-height: 28px;
+    object-fit: contain;
+}
+.position-input {
+    flex: 1;
+    background: rgba(15, 23, 42, 0.5);
+    border: 1px solid #334155;
+    color: #94a3b8;
+    padding: 0px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    height: 32px;
+}
+.browse-button {
+    background: #334155;
+    color: white;
+    border: none;
+    padding: 0 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    height: 32px;
+    font-size: 12px;
+}
+.browse-button:hover {
+    background: #475569;
+}

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MouseEngine</title>
+    <link rel="stylesheet" href="css/mainUIWeb.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 顶部导航栏 -->
+        <div class="header">
+            <div class="header-left">
+                <div class="header-title">MouseEngine</div>
+            </div>
+            <div class="header-right">
+                <div class="header-btn">设置</div>
+            </div>
+        </div>
+        
+        <!-- 主内容区 -->
+        <div class="main-content">
+            <!-- 左侧壁纸网格 -->
+            <div class="content-left">
+                <div class="wallpaper-grid" id="wallpaperGrid"></div>
+            </div>
+            
+            <!-- 右侧预览面板 -->
+            <div class="content-right">
+                <div class="preview-container">
+                    <div class="preview-image" id="previewImage">
+                        <img src="" alt="预览图" id="previewImg">
+                    </div>
+                </div>
+                <div class="wallpaper-details" id="wallpaperDetails">
+                    <div class="wallpaper-title" id="detailTitle">请选择壁纸</div>
+                    <div class="wallpaper-subtitle" id="detailSubtitle">暂无信息</div>
+                    <div class="details-list">
+                        <div id="detailType">类型：-</div>
+                        <div class="icons-container">
+                            <div class="icon-item"></div>
+                            <div class="icon-item"></div>
+                            <div class="icon-item"></div>
+                            <div class="icon-item"></div>
+                            <div class="icon-item"></div>
+                            <div class="icon-item"></div>
+                            <div class="icon-item"></div>
+                            <div class="icon-item"></div>
+                            <div class="icon-item"></div>
+                            <div class="icon-item"></div>
+                            <div class="icon-item"></div>
+                            <div class="icon-item"></div>
+                            <div class="icon-item"></div>
+                            <div class="icon-item"></div>
+                            <div class="icon-item"></div>
+                        </div>
+                        <div class="select-container">
+                            <select class="custom-select">
+                                <option value="">请选择</option>
+                                <option value="option1">选项1</option>
+                                <option value="option2">选项2</option>
+                                <option value="option3">选项3</option>
+                                <option value="option4">选项4</option>
+                                <option value="option5">选项5</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 底部播放列表 -->
+        <div class="footer">
+            <div class="playlist-header">
+                <div class="playlist-title">当前播放列表: 加载中...</div>
+                <div class="playlist-loading" style="display: none;">加载中...</div>
+            </div>
+            <div class="playlist-content">
+                <!-- 播放列表项将通过 JavaScript 动态添加 -->
+            </div>
+        </div>
+    </div>
+
+    <script src="js/mainUIWeb.js"></script>
+</body>
+</html>

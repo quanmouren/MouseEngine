@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <link rel="icon" type="image/x-icon" href="/icon300.ico">
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="css/mouseUI.css">
+</head>
+
+<body>
+<div class="modal-content">
+    <div class="modal-header">编辑鼠标组</div>
+    <div class="divider"></div>
+
+    <div class="modal-body">
+        <div class="header-row">
+            <input
+                id="groupNameInput"
+                class="combobox-input"
+                placeholder="输入组名或选择已有组"
+                onfocus="showDropdown()"
+            >
+            <div id="groupDropdown" class="dropdown-container"></div>
+            <button class="save-button" onclick="saveData()">保存当前组</button>
+        </div>
+
+        <div id="cursorList"></div>
+    </div>
+</div>
+
+<script src="js/mouseUI.js"></script>
+</body>
+</html>

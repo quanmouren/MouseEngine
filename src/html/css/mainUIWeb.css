@@ -1,0 +1,391 @@
+* {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #ffffff;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        
+        /* 顶部导航栏 */
+        .header {
+            background: rgba(20, 30, 60, 0.9);
+            padding: 10px 20px;
+            border-bottom: 1px solid #334155;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header-left {
+            display: flex;
+            align-items: center;
+        }
+        
+        .header-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-right: 20px;
+        }
+        
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .header-btn {
+            padding: 4px 8px;
+            background: rgba(45, 55, 72, 0.7);
+            border: 1px solid #334155;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        /* 主内容区 */
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        /* 左侧壁纸网格 */
+        .content-left {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+        }
+        
+        .wallpaper-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 10px;
+        }
+        
+        .wallpaper-item {
+            background: rgba(45, 55, 72, 0.7);
+            border: 1px solid #334155;
+            border-radius: 4px;
+            overflow: hidden;
+            cursor: pointer;
+            position: relative;
+            transition: border-color 0.2s ease;
+        }
+        
+        .wallpaper-item:hover {
+            border-color: #4299e1;
+        }
+        
+        .wallpaper-thumb {
+            width: 100%;
+            aspect-ratio: 1/1;
+            background: linear-gradient(45deg, #334155, #1e293b);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .wallpaper-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+        
+        .wallpaper-thumb:hover img {
+            transform: scale(1.1);
+        }
+        
+        /* 鼠标组图标指示区域 */
+        .mouse-group-indicator {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 32px;
+            height: 32px;
+            background: rgba(0, 0, 0, 0.7);
+            border-bottom-left-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            display: none;
+            transition: all 0.1s ease;
+        }
+        
+        .mouse-group-indicator img {
+            width: 24px;
+            height: 24px;
+            object-fit: cover;
+        }
+        
+        .wallpaper-info {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 8px;
+            font-size: 11px;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(2px);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        /* 右侧预览面板 */
+        .content-right {
+            width: 350px;
+            background: rgba(20, 30, 60, 0.9);
+            border-left: 1px solid #334155;
+            padding: 15px;
+            overflow-y: auto;
+        }
+        
+        .preview-container {
+            position: relative;
+            margin-bottom: 15px;
+        }
+        
+        .preview-image {
+            width: 100%;
+            aspect-ratio: 1/1;
+            background: transparent;
+            border: 1px solid #334155;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        
+        .preview-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .wallpaper-details {
+            margin-bottom: 15px;
+        }
+        
+        .wallpaper-title {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .wallpaper-subtitle {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-bottom: 5px;
+        }
+        
+        .details-list {
+            font-size: 11px;
+            color: #94a3b8;
+            margin-bottom: 10px;
+        }
+        
+        .details-list div {
+            margin-bottom: 2px;
+        }
+        
+        /* 图标容器样式 */
+        .icons-container {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 6px;
+            margin-top: 8px;
+        }
+        
+        .icon-item {
+            aspect-ratio: 1/1;
+            background: rgba(45, 55, 72, 0.7);
+            border: 1px solid #334155;
+            border-radius: 4px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .icon-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        /* 下拉选择框样式 */
+        .select-container {
+            margin-top: 10px;
+        }
+        
+        .custom-select {
+            width: 100%;
+            padding: 6px 8px;
+            background: rgba(45, 55, 72, 0.7);
+            border: 1px solid #334155;
+            border-radius: 4px;
+            color: #ffffff;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        
+        .custom-select option {
+            background: rgba(20, 30, 60, 0.9);
+            color: #ffffff;
+        }
+        
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .action-btn {
+            padding: 6px 12px;
+            background: rgba(45, 55, 72, 0.7);
+            border: 1px solid #334155;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+        
+        .action-btn.primary {
+            background: #ef4444;
+            border-color: #dc2626;
+        }
+        
+        .action-btn:hover {
+            background: rgba(66, 153, 225, 0.2);
+        }
+        
+        /* 底部播放列表 */
+        .footer {
+            background: rgba(20, 30, 60, 0.9);
+            border-top: 1px solid #334155;
+            padding: 10px 20px;
+        }
+        
+        .playlist-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        
+        .playlist-title {
+            font-size: 12px;
+            font-weight: bold;
+            color: #ffffff;
+        }
+        
+        .playlist-loading {
+            font-size: 11px;
+            color: #94a3b8;
+        }
+        
+        .playlist-content {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            scroll-behavior: smooth;
+        }
+        
+        .playlist-content::-webkit-scrollbar {
+            height: 6px;
+        }
+        
+        .playlist-content::-webkit-scrollbar-track {
+            background: rgba(45, 55, 72, 0.7);
+            border-radius: 3px;
+        }
+        
+        .playlist-content::-webkit-scrollbar-thumb {
+            background: rgba(100, 116, 139, 0.7);
+            border-radius: 3px;
+        }
+        
+        .playlist-content::-webkit-scrollbar-thumb:hover {
+            background: rgba(148, 163, 184, 0.7);
+        }
+        
+        .playlist-item {
+            width: 70px;
+            height: 70px;
+            background: rgba(45, 55, 72, 0.7);
+            border: 1px solid #334155;
+            border-radius: 4px;
+            flex-shrink: 0;
+            cursor: pointer;
+            overflow: hidden;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+        
+        .playlist-item:hover {
+            border-color: #4299e1;
+            transform: translateY(-2px);
+        }
+        
+        .playlist-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+        
+        .playlist-item:hover img {
+            transform: scale(1.1);
+        }
+        
+        .playlist-item-no-image {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: #94a3b8;
+            text-align: center;
+            padding: 5px;
+        }
+        
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(45, 55, 72, 0.7);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: rgba(100, 116, 139, 0.7);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(148, 163, 184, 0.7);
+        }

@@ -141,7 +141,7 @@ def all_wallpapers():
 
     return final_list
 
-def 图片加缓存(original_list, cache_folder="cache"):
+def 图片加缓存(original_list, cache_folder="html/cache"):
     try:
         os.makedirs(cache_folder, exist_ok=True)
     except Exception as e:
@@ -158,7 +158,7 @@ def 图片加缓存(original_list, cache_folder="cache"):
         file_ext = os.path.splitext(original_path)[1]
         cache_filename = f"{item_id}{file_ext}"
         cache_full_path = os.path.join(cache_folder, cache_filename)
-        cache_relative_path = os.path.join(cache_folder, cache_filename)
+        cache_relative_path = os.path.join("cache", cache_filename)
         
         if not os.path.exists(cache_full_path):
             try:
@@ -214,7 +214,7 @@ def get_mouse_group_icons(group_name):
         mouse_config = config.get('mouses', {})
         
         # 确保缓存文件夹存在
-        cache_folder = "cache"
+        cache_folder = "html/cache"
         os.makedirs(cache_folder, exist_ok=True)
         
         # 光标名称顺序
@@ -260,7 +260,7 @@ def get_mouse_group_icons(group_name):
                                 loop=0,
                                 disposal=2
                             )
-                            icons.append(cache_path.replace('\\', '/'))
+                            icons.append(os.path.join("cache", cache_filename).replace('\\', '/'))
                         else:
                             icons.append("")
                     else:
@@ -271,7 +271,7 @@ def get_mouse_group_icons(group_name):
                         if img:
                             img.thumbnail((64, 64))
                             img.save(cache_path, 'PNG')
-                            icons.append(cache_path.replace('\\', '/'))
+                            icons.append(os.path.join("cache", os.path.basename(cache_path)).replace('\\', '/'))
                         else:
                             icons.append("")
                     else:
@@ -279,7 +279,7 @@ def get_mouse_group_icons(group_name):
                 else:
                     # 其他格式直接复制到缓存
                     shutil.copy2(cursor_path, cache_path)
-                    icons.append(cache_path.replace('\\', '/'))
+                    icons.append(os.path.join("cache", os.path.basename(cache_path)).replace('\\', '/'))
             except Exception as e:
                 log.error(f"转换图标失败 {cursor_path}：{e}")
                 icons.append("")
@@ -453,10 +453,10 @@ class Api:
                 # 处理预览图路径，添加到缓存
                 if preview_path:
                     try:
-                        os.makedirs("cache", exist_ok=True)
+                        os.makedirs("html/cache", exist_ok=True)
                         file_ext = os.path.splitext(preview_path)[1]
                         cache_filename = f"{wallpaper_id}{file_ext}"
-                        cache_full_path = os.path.join("cache", cache_filename)
+                        cache_full_path = os.path.join("html/cache", cache_filename)
                         if not os.path.exists(cache_full_path):
                             import shutil
                             shutil.copy2(preview_path, cache_full_path)
@@ -498,7 +498,7 @@ class Api:
 api = Api()
 win = webview.create_window(
     "MouseEngine",
-    "mainUIWeb.html",
+    "html/mainUIWeb.html",
     js_api=api,
     width=1000,
     height=900,

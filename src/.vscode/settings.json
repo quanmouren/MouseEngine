@@ -11,5 +11,6 @@
     ],
     "Lua.workspace.library": [
         "${workspaceFolder}/cur2d_api.d.lua"
-    ]
+    ],
+    "liveServer.settings.port": 5501
 }
