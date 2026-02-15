@@ -1,4 +1,4 @@
-set_canvas(200, 200)
+set_canvas(64, 64)
 set_hotspot(20, 1)
 
 fps = 15
@@ -10,8 +10,7 @@ load_png("2", "image\\aero_arrow.png")
 function on_render(frame)
     
     local pulse = math.sin(frame / fps * 2 * math.pi) 
-    local y_offset = pulse * 5
-    
+    local y_offset = pulse * 10   
     add_image("2", 0+6, y_offset)
     
 
