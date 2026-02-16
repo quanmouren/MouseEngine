@@ -11,3 +11,5 @@ dist/
 src/cache/
 src/动画测试.py
 src/html/cache/
+crates/*/target/
+crates/*/Cargo.lock
