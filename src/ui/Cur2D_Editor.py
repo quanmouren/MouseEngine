@@ -285,8 +285,24 @@ class MouseEngineEditor:
 
         preview = self.engine.get_preview_image()
         if preview:
-            self.tk_img = ImageTk.PhotoImage(preview)
-            self.canvas_widget.config(width=preview.width, height=preview.height)
+            original_w, original_h = preview.size
+            min_display_size = 250  
+            scale_factor = 1
+            if original_w < min_display_size or original_h < min_display_size:
+                scale_factor = max(1, min_display_size // min(original_w, original_h))
+                while original_w * scale_factor < min_display_size and original_h * scale_factor < min_display_size:
+                    scale_factor += 1
+
+            new_w = original_w * scale_factor
+            new_h = original_h * scale_factor
+
+            scaled_preview = preview.resize(
+                (new_w, new_h),
+                Image.Resampling.NEAREST if hasattr(Image, 'Resampling') else Image.NEAREST
+            )
+
+            self.tk_img = ImageTk.PhotoImage(scaled_preview)
+            self.canvas_widget.config(width=new_w, height=new_h)
             self.canvas_widget.create_image(0, 0, anchor=tk.NW, image=self.tk_img)
 
         if not self.error_msg:
