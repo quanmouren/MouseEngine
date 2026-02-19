@@ -14,3 +14,4 @@ src/html/cache/
 crates/*/target/
 crates/*/Cargo.lock
 crates/zig/*
+src/temp_storage.toml

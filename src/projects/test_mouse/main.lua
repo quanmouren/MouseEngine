@@ -168,9 +168,44 @@ end
 
 
 function on_render(frame)
-    Diamond_Sword("#33ebcb")
+    -- 获取主题色
+    local color = get_win_theme_color_hex()
     
-
+    if color ~= nil then
+        if color == "#000000" or color == "#ffffff" then
+            color = "#33ebcb"
+        else
+            local r = tonumber(string.sub(color, 2, 3), 16)
+            local g = tonumber(string.sub(color, 4, 5), 16)
+            local b = tonumber(string.sub(color, 6, 7), 16)
+            local brightness = 0.299 * r + 0.587 * g + 0.114 * b
+            
+            -- 设定亮度阈值
+            local low_threshold = 64
+            local high_threshold = 2000
+            
+            -- 调整亮度
+            if brightness < low_threshold then
+                local increment = 30
+                r = math.min(255, r + increment) 
+                g = math.min(255, g + increment)
+                b = math.min(255, b + increment)
+            elseif brightness > high_threshold then
+                local decrement = 30
+                r = math.max(0, r - decrement)
+                g = math.max(0, g - decrement)
+                b = math.max(0, b - decrement)
+            end
+            color = string.format("#%02x%02x%02x", r, g, b)
+        end
+    else
+        color = "#33ebcb"
+    end
+    
+    Diamond_Sword(color)
 end
+
+
+
 
 

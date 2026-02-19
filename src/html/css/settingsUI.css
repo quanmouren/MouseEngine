@@ -1,0 +1,338 @@
+.main-content {
+    display: flex;
+    flex-direction: row;
+    flex: 1;
+    overflow: hidden;
+    background: #0f172a;
+}
+
+.settings-navbar {
+    display: flex;
+    flex-direction: column;
+    width: 160px;
+    background: rgba(15, 23, 42, 0.8);
+    border-right: 1px solid rgba(51, 65, 85, 0.5);
+    padding: 20px 10px;
+    gap: 4px;
+    box-shadow: none;
+}
+
+.settings-nav-item {
+    padding: 10px 16px;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    position: relative;
+}
+
+.settings-nav-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #f8fafc;
+    transform: none;
+}
+
+.settings-nav-item.active {
+    background: rgba(66, 153, 225, 0.1);
+    color: #3b82f6;
+}
+
+.settings-nav-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 20%;
+    height: 60%;
+    width: 3px;
+    background: #3b82f6;
+    border-radius: 0 4px 4px 0;
+}
+
+.settings-nav-item::after, .settings-nav-item::before {
+    display: none;
+}
+
+.settings-nav-item.active::before {
+    display: block;
+}
+
+.settings-container {
+    flex: 1;
+    padding: 30px 40px;
+    overflow-y: auto;
+    background: transparent;
+}
+
+.settings-content {
+    padding: 10px 0;
+}
+
+.settings-title {
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 15px;
+    color: #ffffff;
+}
+
+.settings-section {
+    background: rgba(45, 55, 72, 0.7);
+    border: 1px solid #334155;
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.settings-section-title {
+    font-size: 12px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: #94a3b8;
+}
+
+.settings-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+}
+
+.settings-item:last-child {
+    border-bottom: none;
+}
+
+.settings-label {
+    font-size: 12px;
+    color: #ffffff;
+}
+
+.settings-control {
+    display: flex;
+    align-items: center;
+}
+
+.settings-control input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background: rgba(30, 41, 59, 0.8);
+    border: 1px solid rgba(51, 65, 85, 0.6);
+    border-radius: 4px;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.settings-control input[type="checkbox"]:hover {
+    border-color: #4299e1;
+    background: rgba(45, 55, 72, 0.9);
+}
+
+.settings-control input[type="checkbox"]:checked {
+    background: rgba(66, 153, 225, 0.3);
+    border-color: #4299e1;
+}
+
+.settings-control input[type="checkbox"]:checked::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #3b82f6;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.settings-value {
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+.custom-input {
+    padding: 8px 12px;
+    background: rgba(30, 41, 59, 0.8);
+    border: 1px solid rgba(51, 65, 85, 0.6);
+    border-radius: 4px;
+    color: #ffffff;
+    font-size: 12px;
+    outline: none;
+    transition: all 0.2s ease;
+    width: 200px;
+    margin-right: 8px;
+}
+
+.custom-input:focus {
+    border-color: #4299e1;
+    background: rgba(45, 55, 72, 0.9);
+    box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.2);
+}
+
+.custom-input::placeholder {
+    color: #64748b;
+}
+
+.settings-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.settings-btn {
+    padding: 8px 12px;
+    background: rgba(30, 41, 59, 0.8);
+    border: 1px solid rgba(51, 65, 85, 0.6);
+    border-radius: 4px;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s ease;
+}
+
+.settings-btn:hover {
+    background: rgba(45, 55, 72, 0.9);
+    border-color: #4299e1;
+    color: #f8fafc;
+}
+
+.settings-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.settings-item-double-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 0;
+}
+
+.settings-label-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    justify-content: flex-start;
+    text-align: left;
+    width: 100%;
+}
+
+.settings-label {
+    text-align: left;
+    flex-shrink: 0;
+}
+
+.settings-sub-label {
+    font-size: 11px;
+    color: #64748b;
+    font-weight: normal;
+}
+
+.settings-control-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.custom-input-stretch {
+    flex: 1;
+    width: auto;
+    min-width: 200px;
+    margin-right: 0;
+}
+
+.settings-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(51, 65, 85, 0.5), transparent);
+    margin: 16px 0;
+    border: none;
+}
+
+.settings-link {
+    color: #3b82f6;
+    cursor: pointer;
+    text-decoration: underline;
+    transition: color 0.2s ease;
+}
+
+.settings-link:hover {
+    color: #60a5fa;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+}
+
+.modal-content {
+    background: rgba(15, 23, 42, 0.95);
+    margin: 15% auto;
+    padding: 20px;
+    border: 1px solid rgba(51, 65, 85, 0.8);
+    border-radius: 8px;
+    width: 80%;
+    max-width: 600px;
+    color: #ffffff;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+}
+
+.modal-title {
+    font-size: 16px;
+    font-weight: bold;
+    color: #3b82f6;
+}
+
+.close {
+    color: #94a3b8;
+    float: right;
+    font-size: 24px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.close:hover {
+    color: #f8fafc;
+}
+
+.modal-body {
+    max-height: 400px;
+    overflow-y: auto;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #94a3b8;
+}
+
+.modal-body pre {
+    white-space: pre-wrap;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    background: rgba(30, 41, 59, 0.8);
+    padding: 12px;
+    border-radius: 4px;
+    margin: 10px 0;
+    overflow-x: auto;
+}

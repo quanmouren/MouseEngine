@@ -283,6 +283,37 @@ def 触发刷新(target_wallpaper_id=None, changed_monitor_index=None):
 
 LAST_JSON_TRIGGER_TIME = 0 # ram更新锁
 
+# 保存活跃壁纸ID到temp_storage.toml文件
+def save_active_wallpaper_id(wallpaper_id, log_func):
+    """
+    保存活跃壁纸ID到temp_storage.toml文件
+    Args:
+        wallpaper_id: 壁纸ID
+        log_func: 日志函数
+    """
+    temp_storage_path = os.path.join(PROJECT_ROOT, 'temp_storage.toml')
+    
+    try:
+        # 读取现有内容或创建新内容
+        if os.path.exists(temp_storage_path):
+            with open(temp_storage_path, 'r', encoding='utf-8') as f:
+                data = toml.load(f)
+        else:
+            data = {}
+        
+        # 确保 [Wallpaper Engine] 部分存在
+        if 'Wallpaper Engine' not in data:
+            data['Wallpaper Engine'] = {}
+        
+        # 保存 active 项
+        data['Wallpaper Engine']['active'] = wallpaper_id
+        
+        # 写回文件
+        with open(temp_storage_path, 'w', encoding='utf-8') as f:
+            toml.dump(data, f)
+    except Exception as e:
+        log_func.error(f"保存文件失败: {e}")
+
 def json监听():
     global LAST_JSON_TRIGGER_TIME
     log_func = TLog(获得函数名())
@@ -314,6 +345,10 @@ def json监听():
     if current_state:
         first_id = current_state.get(0) or next(iter(current_state.values()))
         log_func.info(f"Json初始状态触发: {first_id}")
+        
+        # 保存到 temp_storage.toml 文件
+        save_active_wallpaper_id(first_id, log_func)
+        
         LAST_JSON_TRIGGER_TIME = time.time()  # 更新时间戳
         触发刷新(first_id, changed_monitor_index=0)
 
@@ -329,6 +364,9 @@ def json监听():
                 if old_id != latest_project_id:
                     log_func.info(f"显示器 {index} (Json) 壁纸更换: {old_id} -> {latest_project_id}")
                     current_state[index] = latest_project_id
+                    
+                    # 保存到 temp_storage.toml 文件
+                    save_active_wallpaper_id(latest_project_id, log_func)
                     
                     # 更新全局时间戳，通知RAM监听器进入10s冷却期
                     LAST_JSON_TRIGGER_TIME = time.time()
@@ -381,6 +419,10 @@ def ram监听():
                 else:
                     for latest_id in new_ids:
                         log_func.info(f"检测到RAM活跃变更: {latest_id}")
+                        
+                        # 保存到 temp_storage.toml 文件
+                        save_active_wallpaper_id(latest_id, log_func)
+                        
                         触发刷新(latest_id, changed_monitor_index=0)
                     last_active_ids = current_ids
             

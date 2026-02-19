@@ -10,6 +10,7 @@ from PIL import Image, ImageTk, ImageDraw
 from lupa import LuaRuntime
 import tomllib
 from tkinterdnd2 import TkinterDnD
+import winreg
 try:
     from ui.widgets.lua_editor import LuaCodeEditor
     from ui.widgets.file_manager import ProjectResourceBrowser, LogPanel
@@ -23,6 +24,29 @@ if sys.platform == "win32":
         windll.shcore.SetProcessDpiAwareness(1)
     except:
         pass
+
+def get_win_theme_color_hex():
+    """返回Windows主题色的十六进制"""
+    try:
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\DWM")
+        accent_color = winreg.QueryValueEx(key, "AccentColor")[0]
+        winreg.CloseKey(key)
+        if accent_color == 0:
+            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\DWM")
+            accent_color = winreg.QueryValueEx(key, "ColorizationColor")[0]
+            winreg.CloseKey(key)
+        r = accent_color & 0xFF
+        g = (accent_color >> 8) & 0xFF
+        b = (accent_color >> 16) & 0xFF
+        hex_color = f"#{r:02x}{g:02x}{b:02x}"
+        if hex_color == "#000000":
+            return None
+        if hex_color == "#ffffff":
+            return None
+        return hex_color
+    except Exception as e:
+        pass
+    return None
 
 class RenderEngine:
     def __init__(self):
@@ -256,6 +280,7 @@ class MouseEngineEditor:
             g.add_image = self.engine.add_image
             g.set_hotspot = self.engine.set_hotspot
             g.draw_rect = self.engine.draw_rectangle
+            g.get_win_theme_color_hex = get_win_theme_color_hex
             g.fps = 60
             g.total_frames = 0
             
