@@ -49,3 +49,7 @@ total_frames = 0
 ---@param current_frame number 当前渲染的帧数
 ---@return nil 无返回值
 function on_render(current_frame) end
+
+--- 获取 Windows 主题颜色的十六进制值
+---@return string 主题颜色的十六进制值
+function get_win_theme_color_hex() end

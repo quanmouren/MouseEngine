@@ -7,7 +7,8 @@
         "add_image",
         "draw_rect",
         "total_frames",
-        "on_render"
+        "on_render",
+        "get_win_theme_color_hex"
     ],
     "Lua.workspace.library": [
         "${workspaceFolder}/cur2d_api.d.lua"

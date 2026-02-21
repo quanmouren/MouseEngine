@@ -61,6 +61,16 @@ class TLog:
             ts, _, _ = self._get_info(inspect.currentframe().f_back)
             print(f"\033[0;34m{ts}\033[0;32m{self.title} \033[1;32m>\033[0m{self.__color_text(text)}")
 
+    def warning(self, text):
+        if self.on and self.level >= 2:
+            frame = inspect.currentframe().f_back
+            ts, line, df = self._get_info(frame)
+            print(f"\033[0;34m{ts}\033[0;32m{self.title}\033[0m\033[1;33m WARNING [{line}]{df} >\033[0m\033[0;33m{self.__color_text(text)}\033[0m")
+            
+            if inspect.getframeinfo(frame).function != "<module>":
+                filtered = {k: v for k, v in frame.f_locals.items() if not k.startswith("__") and k != 'self' and not inspect.ismodule(v) and not inspect.isfunction(v) and not inspect.isclass(v)}
+                if filtered: print(f"    \033[0;33m└─ Local Vars:\033[0m {filtered}")
+
     def debug(self, text):
         if self.on and self.on_DEBUG and self.level >= 3:
             ts, line, df = self._get_info(inspect.currentframe().f_back)
@@ -95,6 +105,7 @@ class TLog:
     INFO = info
     DEBUG = debug
     ERROR = error
+    WARNING = warning
 
 
 import re
@@ -103,7 +114,8 @@ if __name__ == "__main__":
     log.INFO('兼容测试：<-删除线> <_下划线> <i斜体> <g绿色> <r红色>')
     log.INFO('占位符 时间检测:<time')
     log.error("test")
-    log.debug("test")
+    log.warning("test")
+    log.DEBUG("test")
     log.val(log)
     def test():
         pass
