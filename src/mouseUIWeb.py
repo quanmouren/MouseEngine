@@ -48,6 +48,15 @@ class EditMouseApi:
         empty = {k: "" for k in CURSOR_KEYS}
 
         if not os.path.exists(path):
+            # 检查是否为默认组，如果是，尝试加载默认组配置
+            if group_name == "默认组":
+                default_path = os.path.join(MOUSE_BASE_PATH, "默认", "config.toml")
+                if os.path.exists(default_path):
+                    try:
+                        data = toml.load(default_path).get("mouses", {})
+                        return {k: data.get(k, "") for k in CURSOR_KEYS}
+                    except Exception:
+                        return empty
             return empty
 
         try:
@@ -69,14 +78,34 @@ class EditMouseApi:
             return ""
 
         try:
-            img_io = io.BytesIO()
+            import hashlib
+            # 缓存文件夹
+            cache_folder = "html/cache"
+            os.makedirs(cache_folder, exist_ok=True)
+            
+            # 生成基于文件路径的唯一哈希值
+            file_hash = hashlib.md5(file_path.encode()).hexdigest()
             ext = os.path.splitext(file_path)[1].lower()
-
+            
+            # 根据文件类型确定缓存文件格式
+            if ext == ".ani":
+                cache_filename = f"preview_{file_hash}.gif"
+            else:
+                cache_filename = f"preview_{file_hash}.png"
+            
+            cache_path = os.path.join(cache_folder, cache_filename)
+            cache_relative_path = os.path.join("cache", cache_filename).replace('\\', '/')
+            
+            # 如果缓存文件已存在，直接返回路径
+            if os.path.exists(cache_path):
+                return cache_relative_path
+            
+            # 处理不同类型的光标文件
             if ext == ".ani" and get_ani_frames:
                 frames = get_ani_frames(file_path)
                 if frames:
                     frames[0].save(
-                        img_io,
+                        cache_path,
                         format="GIF",
                         save_all=True,
                         append_images=frames[1:],
@@ -84,17 +113,18 @@ class EditMouseApi:
                         loop=0,
                         disposal=2
                     )
-                    return "data:image/gif;base64," + base64.b64encode(img_io.getvalue()).decode()
+                    return cache_relative_path
 
             if ext == ".cur" and get_cur_image:
                 img = get_cur_image(file_path)
                 if img:
-                    img.save(img_io, format="PNG")
-                    return "data:image/png;base64," + base64.b64encode(img_io.getvalue()).decode()
+                    img.save(cache_path, format="PNG")
+                    return cache_relative_path
 
+            # 处理其他图像格式
             img = Image.open(file_path).convert("RGBA")
-            img.save(img_io, format="PNG")
-            return "data:image/png;base64," + base64.b64encode(img_io.getvalue()).decode()
+            img.save(cache_path, format="PNG")
+            return cache_relative_path
 
         except Exception as e:
             log.debug(f"预览生成失败: {e}")
@@ -139,8 +169,8 @@ if __name__ == "__main__":
         "鼠标组编辑器",
         "html/mouseUI.html",
         js_api=api,
-        width=580,
-        height=850
+        width=900,
+        height=765
     )
     api.set_window(window)
     

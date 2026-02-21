@@ -1,32 +1,61 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <link rel="icon" type="image/x-icon" href="/icon300.ico">
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>mouseUI</title>
     <link rel="stylesheet" href="css/mouseUI.css">
 </head>
-
 <body>
-<div class="modal-content">
-    <div class="modal-header">编辑鼠标组</div>
-    <div class="divider"></div>
-
-    <div class="modal-body">
-        <div class="header-row">
-            <input
-                id="groupNameInput"
-                class="combobox-input"
-                placeholder="输入组名或选择已有组"
-                onfocus="showDropdown()"
-            >
-            <div id="groupDropdown" class="dropdown-container"></div>
-            <button class="save-button" onclick="saveData()">保存当前组</button>
+    <div class="container">
+        <div class="header">
+            <div class="header-left">
+                <div class="header-title">EditMouse</div>
+            </div>
+            <div class="header-right">
+                <div class="header-btn" onclick="createEmptyGroup()">新建组</div>
+            </div>
         </div>
+        
+        <!-- 主内容 -->
+        <div class="main-content">
+            <div class="content-left">
+                <div class="wallpaper-grid" id="previewGrid"></div>
+            </div>
+            
+            <div class="content-right">
 
-        <div id="cursorList"></div>
+
+                <!-- 鼠标编辑器核心 -->
+                <div class="mouse-editor-section">
+                    <div class="editor-header">
+                        <div class="editor-title" id="editorTitle">编辑鼠标组</div>
+                        <button class="save-button" onclick="saveData()">保存当前组</button>
+                    </div>
+
+                    <div class="header-row" onclick="showDropdown()">
+                        <div id="groupDropdown" class="dropdown-container"></div>
+                    </div>
+
+                    <div id="cursorList">
+                        </div>
+                </div>
+            </div>
+        </div>
     </div>
-</div>
 
-<script src="js/mouseUI.js"></script>
+    <!-- 组名输入悬浮窗 -->
+    <div id="groupNameModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>新建鼠标组</h3>
+            <input type="text" id="groupNameInput" placeholder="请输入组名" class="modal-input">
+            <div class="modal-buttons">
+                <button id="cancelBtn" class="modal-button cancel">取消</button>
+                <button id="confirmBtn" class="modal-button confirm">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/mouseUI.js"></script>
 </body>
 </html>
