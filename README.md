@@ -88,20 +88,33 @@ MouseEngine/
    ├─ Tlog.py                # 日志模块
    ├─ ani_to_gif.py          # 处理ani格式转换
    ├─ cur_to_png.py          # 处理cur格式转换
-   │
    ├─ getActiveWallpaper.py  # 获取活跃壁纸
    ├─ getWallpaperConfig.py  # 壁纸配置解析
    ├─ setMouse.py            # 鼠标指针切换逻辑
    ├─ mouses.py              # 显示器与主题解析
-   │
-   ├─ mainUI.py              # 主界面
-   ├─ playlistUI.py          # 鼠标主题绑定界面
-   ├─ settingsUI.py          # 设置界面
+   ├─ mainUIWeb.py           # 主界面
+   ├─ settingsUIWeb.py       # 设置界面
    ├─ WelcomeUI.py           # 欢迎界面
-   ├─ mainUIWeb.py           # 正在测试的新界面
+   ├─ mouseUI.py             # 鼠标主题界面
    │
-   ├─ image/                 # 内置图像资源
-   └─ mouses/                # 鼠标指针目录
+   ├─ mouses/                # 鼠标组文件夹
+   │
+   ├─ html/                  # Web界面资源
+   │
+   ├─ lib/                   # 库文件
+   │  ├─ INFParser.py        # 解析inf文件快速添加组
+   │  └─ imgObj_to_cur.py    # 2D编辑器
+   │
+   ├─ projects/              # 编辑器项目目录
+   │  └─ test_mouse/         # 示例项目
+   │     ├─ image/
+   │     ├─ main.lua
+   │     └─ project.toml
+   └─ ui/                    # UI相关文件
+      ├─ widgets/            # 自定义控件
+      │  ├─ file_manager.py
+      │  └─ lua_editor.py
+      ├─ Cur2D_Editor.py     #2D编辑器
 
 ```
 
@@ -122,18 +135,7 @@ wallpaper_engine_config = "D:/Steam/steamapps/common/wallpaper_engine/config.jso
 
 ---
 
-### 2) 默认鼠标指针回退
-
-当当前壁纸 ID 未映射到任何自定义主题时，是否回退到 `mouses/默认/`：
-
-```toml
-[config]
-enable_default_icon_group = true
-```
-
----
-
-### 3) 壁纸 ID → 鼠标主题映射
+### 2) 壁纸 ID → 鼠标主题映射
 
 ```toml
 [wallpaper]
@@ -199,7 +201,6 @@ pip install portalocker
 - EXE 类型壁纸（暂无支持计划）
 
 ### 🛠 核心开发任务
-- 使用 WebView 重构全量 UI 界面
 - 核心功能模块（对的，还没写）
 
 ---
@@ -267,3 +268,12 @@ pip install portalocker
 
 欢迎提交 Issue / Pull Request。  
 如果你遇到问题，建议附上运行日志与 `config.toml`（注意隐藏隐私路径）。
+
+---
+
+## ⭐ Star 历史趋势
+
+<div align="center">
+  <img src="https://api.star-history.com/svg?repos=quanmouren/MouseEngine&type=Date" width="100%">
+</div>
+
