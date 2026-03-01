@@ -77,7 +77,6 @@ def _kill_process(p: subprocess.Popen, timeout_sec: float = 2.0):
 
 
 def run_ui_in_process(script_filename: str, title: str):
-    """用独立进程启动 UI，避免 Tk/CTk 在线程里反复创建导致越来越卡"""
     if not UI_IMPORT_SUCCESS:
         log.error("UI 启动失败: 模块导入不成功，请检查文件路径和依赖。")
         return
@@ -95,15 +94,13 @@ def run_ui_in_process(script_filename: str, title: str):
         p = subprocess.Popen(
             [sys.executable, script_path],
             cwd=PROJECT_ROOT,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stdout=None,  
+            stderr=None,
         )
         active_ui_processes[title] = p
         log.info(f"启动 UI 进程: {title} (pid={p.pid})")
     except Exception as e:
         log.error(f"启动 UI 进程失败 {title}: {e}")
-
-
 def open_config_mouse_gui(icon=None, item=None):
     """打开 '配置鼠标组' UI"""
     run_ui_in_process("mouseUI.py", "配置鼠标组")
