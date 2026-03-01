@@ -188,5 +188,9 @@ if __name__ == "__main__":
     signal.signal(signal.SIGTERM, signal_handler)
     
     log.info("鼠标组编辑器已启动")
-    webview.start(debug=True)
+    if log.on_DEBUG:
+        webview.start(debug=True)
+    else:
+        webview.start()
+
     log.info("鼠标组编辑器已退出")

@@ -15,3 +15,4 @@ crates/*/target/
 crates/*/Cargo.lock
 crates/zig/*
 src/temp_storage.toml
+软著v1.0/

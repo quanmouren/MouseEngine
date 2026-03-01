@@ -518,9 +518,14 @@ def safe_exit():
 
 # 在 Api 类中添加退出方法
 api.exit_app = safe_exit
-
-webview.start(
-    debug=True,
-    http_server=True
+if log.on_DEBUG:
+    webview.start(
+        debug=True,
+        http_server=True
+    )
+else:
+    webview.start(
+        debug=False,
+        http_server=True
 )
 

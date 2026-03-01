@@ -19,7 +19,6 @@ from Tlog import TLog
 from getWallpaperConfig import 获取当前壁纸列表
 from mouses import get_current_monitor_index_minimal
 from setMouse import 设置鼠标指针
-from settingsUI import open_settings_window
 from Initialize import initialize_config
 
 initialize_config()
@@ -122,7 +121,7 @@ def open_bind_mouse_gui_test(icon="icon300.ico", item=None):
 
 def open_settings_ui(icon=None, item=None):
     """打开 '设置' UI"""
-    run_ui_in_process("settingsUI.py", "设置")
+    run_ui_in_process("settingsUIWeb.py", "设置")
 
 def start_thread(target_func, name):
     t = threading.Thread(target=target_func, name=name)
@@ -354,7 +353,7 @@ def json监听():
 
     # 循环监听
     try:
-        while not stop_flag.is_set():
+        while not stop_flag.is_set():#TODO 暂未对json做全屏暂停
             latest_wallpaperConfig = 获取当前壁纸列表(config_path, winUserName)
 
             for index, project in enumerate(latest_wallpaperConfig):
@@ -398,12 +397,34 @@ def ram监听():
         log_func.info(f"RAM初始检测到活跃 ID: {last_active_ids}")
         # 如果json已经触发过，则只刷新状态
         if time.time() - LAST_JSON_TRIGGER_TIME > 10:
-            initial_id = list(last_active_ids)[0]
-            触发刷新(initial_id, changed_monitor_index=0)
+            # 检查是否启用全屏暂停
+            try:
+                main_cfg = toml.load(CONFIG_FILE_PATH)
+                pause_on_fullscreen = bool(main_cfg.get("config", {}).get("pause_on_fullscreen", False))
+                if pause_on_fullscreen and is_fullscreen_app_running():
+                    log_func.info("检测到全屏应用，跳过初始触发")
+                else:
+                    initial_id = list(last_active_ids)[0]
+                    触发刷新(initial_id, changed_monitor_index=0)
+            except Exception as e:
+                log_func.error(f"读取配置失败: {e}")
+                initial_id = list(last_active_ids)[0]
+                触发刷新(initial_id, changed_monitor_index=0)
 
     # 循环监听
     try:
         while not stop_flag.is_set():
+            # 检查是否启用全屏暂停
+            try:
+                main_cfg = toml.load(CONFIG_FILE_PATH)
+                pause_on_fullscreen = bool(main_cfg.get("config", {}).get("pause_on_fullscreen", False))
+                if pause_on_fullscreen and is_fullscreen_app_running():
+                    log_func.debug("检测到全屏应用，跳过RAM检测")
+                    time.sleep(10)
+                    continue
+            except Exception as e:
+                log_func.error(f"读取配置失败: {e}")
+            
             current_ids = get_active_ids()
             # 检测是否有新ID出现
             new_ids = current_ids - last_active_ids
@@ -433,6 +454,28 @@ def ram监听():
             time.sleep(10)
     except Exception as e:
         log_func.error(f"RAM监听循环异常: {e}")
+
+def is_fullscreen_app_running():
+    """
+    检测是否有应用程序在全屏运行
+    """
+    try:
+        import win32gui
+        import win32api
+        
+        def callback(hwnd, extra):
+            if win32gui.IsWindowVisible(hwnd):
+                rect = win32gui.GetWindowRect(hwnd)
+                if rect[2] - rect[0] == win32api.GetSystemMetrics(0) and rect[3] - rect[1] == win32api.GetSystemMetrics(1):
+                    extra.append(hwnd)
+        
+        fullscreen_windows = []
+        win32gui.EnumWindows(callback, fullscreen_windows)
+        
+        return len(fullscreen_windows) > 0
+    except Exception as e:
+        log.error(f"检测全屏应用失败: {e}")
+        return False
 
 def 运行占用监控():
     if not psutil:
