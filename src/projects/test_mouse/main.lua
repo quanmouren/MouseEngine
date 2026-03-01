@@ -2,6 +2,7 @@ set_canvas(16, 16)
 set_hotspot(0, 0)
 
 fps = 15
+total_frames = 1
 
 -- 斜线
 function draw_diagonal(start_x, start_y, steps, color, direction)

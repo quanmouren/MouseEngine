@@ -35,13 +35,14 @@ function set_hotspot(x, y) end
 ---@return nil 无返回值
 function draw_rect(x, y, w, h, color, radius) end
 
---- 帧率控制（编辑器渲染循环的基础帧率）
----@type number 默认值 15，可自定义修改
+--- 帧率控制
+--- 控制编辑器预览时的刷新速度，值越高预览越流畅，但可能增加 CPU 占用
+---@type number 
 fps = 15
 
---- 总帧数（循环渲染的最大帧数，超过后重置为 1）
---- 此功能已被废弃
----@type number 默认值 15，可自定义修改
+--- 总帧数
+---@type number
+---@deprecated
 total_frames = 0
 
 --- 渲染回调函数（编辑器每帧调用）
