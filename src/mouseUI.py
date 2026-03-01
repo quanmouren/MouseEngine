@@ -7,8 +7,9 @@ import toml
 import base64
 import io
 import signal
+import threading
 from PIL import Image
-
+from lib.INFParser import INFParser
 from mouses import 保存组配置, CURSOR_ORDER_MAPPING
 from Tlog import TLog
 
@@ -157,6 +158,42 @@ class EditMouseApi:
         except Exception as e:
             log.error(f"保存组失败: {e}")
             return {"status": "error", "msg": str(e)}
+    
+    def 导入组(self):
+        import threading
+        done = threading.Event() 
+        result_box = [None]
+        def worker():
+            try:
+                # 打开文件对话框选择 INF 文件
+                inf_path = self._window.create_file_dialog(
+                    webview.OPEN_DIALOG,
+                    allow_multiple=False,
+                    file_types=('INF Files (*.inf)',)
+                )
+                inf_path = inf_path[0] if inf_path else ""
+                
+                # 解析 INF 文件
+                parser = INFParser(inf_path)
+                cursor_paths, scheme_name = parser.get_cursor_paths_in_order()
+                log.val(f"cursor_paths: {cursor_paths}")
+                log.val(f"scheme_name: {scheme_name}")
+                if scheme_name and cursor_paths != ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '']:
+                    保存组配置(scheme_name, "mouses", cursor_paths)
+                    success = True
+                    result_box[0] = success
+                else:
+                    log.error(f"导入组失败: 为空组")
+                    success = False
+                    result_box[0] = success
+            except Exception as e:
+                log.error(f"导入组失败: {e}")
+                result_box[0] = False
+            finally:
+                done.set()           # 通知主线程：结果已就绪
+        threading.Thread(target=worker, daemon=True).start()
+        done.wait()                  # 阻塞等待线程完成
+        return result_box[0]
 
 
 def on_window_closed():

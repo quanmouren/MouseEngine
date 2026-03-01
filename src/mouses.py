@@ -325,4 +325,5 @@ def 删除鼠标组(group_name, base_path=MOUSE_BASE_PATH):
 
 if __name__ == "__main__":
     add_wallpaper("表1", "testdfghj")
+    保存组配置("表1", MOUSE_BASE_PATH, ['C:\\Users\\woshi\\Desktop\\辉夜\\Normal.ani', 'C:\\Users\\woshi\\Desktop\\辉夜\\Help.ani', 'C:\\Users\\woshi\\Desktop\\辉夜\\Working.ani', 'C:\\Users\\woshi\\Desktop\\辉夜\\Busy.ani', 'C:\\Users\\woshi\\Desktop\\辉夜\\Precision.ani', 'C:\\Users\\woshi\\Desktop\\辉夜\\Text.ani', 'C:\\Users\\woshi\\Desktop\\辉夜\\Handwriting.ani', 'C:\\Users\\woshi\\Desktop\\辉夜\\Unavailable.ani', 'C:\\Users\\woshi\\Desktop\\辉夜\\Vertical.ani', 'C:\\Users\\woshi\\Desktop\\辉夜\\Horizontal.ani', 'C:\\Users\\woshi\\Desktop\\辉夜\\Diagonal1.ani', 'C:\\Users\\woshi\\Desktop\\辉夜\\Diagonal2.ani', 'C:\\Users\\woshi\\Desktop\\辉夜\\Move.ani', 'C:\\Users\\woshi\\Desktop\\辉夜\\Link.ani', 'C:\\Users\\woshi\\Desktop\\辉夜\\Alternate.ani'])
     pass

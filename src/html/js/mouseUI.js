@@ -478,6 +478,27 @@ function createEmptyGroup() {
     showGroupNameModal();
 }
 
+// 导入组
+async function importGroup() {
+    if (!window.pywebview) {
+        alert('此功能仅在应用内可用');
+        return;
+    }
+
+    try {
+        const result = await pywebview.api.导入组();
+        if (result) {
+            // 如果返回true，刷新组列表
+            await refreshGroups();
+            await renderPreviewGrid();
+        }
+        // 如果返回false，跳过刷新
+    } catch (e) {
+        console.error('导入组失败', e);
+        alert('导入组失败，请重试');
+    }
+}
+
 // 初始化悬浮窗事件监听器
 function initModalListeners() {
     const modal = document.getElementById('groupNameModal');
