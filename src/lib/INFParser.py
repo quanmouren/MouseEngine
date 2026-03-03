@@ -1,4 +1,8 @@
 import os
+import sys
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from path_utils import resolve_path
 
 CURSOR_ORDER_MAPPING = [
     "Arrow",          # 0: 正常选择
@@ -38,8 +42,8 @@ CURSOR_TO_STRING_KEY = {
 
 class INFParser:
     def __init__(self, file_path):
-        self.file_path = file_path
-        self.base_dir = os.path.dirname(file_path)
+        self.file_path = resolve_path(file_path)
+        self.base_dir = os.path.dirname(self.file_path)
         self.sections = {}
         self.strings = {}
         self.current_section = None

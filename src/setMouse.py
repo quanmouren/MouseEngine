@@ -7,6 +7,7 @@ import toml
 import os
 import sys
 from Tlog import TLog
+from path_utils import resolve_path
 
 log = TLog("设置鼠标指针")
 CURSOR_ORDER_MAPPING = [
@@ -33,9 +34,9 @@ def APP_ROOT() -> str:
     return os.path.dirname(os.path.abspath(__file__))
 
 PROJECT_ROOT = APP_ROOT()
-CONFIG_PATH = os.path.join(PROJECT_ROOT, "config.toml")
+CONFIG_PATH = resolve_path("config.toml")
 
-MOUSES_DIR = os.path.join(PROJECT_ROOT, "mouses")
+MOUSES_DIR = resolve_path("mouses")
 DEFAULT_GROUP_NAME = "默认"
 DEFAULT_GROUP_DIR = os.path.join(MOUSES_DIR, DEFAULT_GROUP_NAME)
 DEFAULT_GROUP_CONFIG = os.path.join(DEFAULT_GROUP_DIR, "config.toml")
@@ -43,6 +44,7 @@ DEFAULT_GROUP_CONFIG = os.path.join(DEFAULT_GROUP_DIR, "config.toml")
 
 def _safe_toml_load(path: str) -> dict:
     try:
+        path = resolve_path(path)
         if not os.path.exists(path):
             log.error(f"TOML 不存在: {path}")
             return {}
@@ -65,7 +67,7 @@ def _abs_from_project(path_str: str) -> str:
         return ""
     if os.path.isabs(s):
         return os.path.abspath(s)
-    return os.path.abspath(os.path.join(PROJECT_ROOT, s))
+    return resolve_path(s)
 
 
 def 获取默认图标路径(index: int) -> str | None:

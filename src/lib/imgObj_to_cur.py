@@ -4,6 +4,11 @@ import struct
 import io
 from PIL import Image
 from pathlib import Path
+import sys
+import os
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from path_utils import resolve_path
 
 def generate_cur_from_image(img_obj, hotspot_x=0, hotspot_y=0, save_path=None):
     """
@@ -38,6 +43,7 @@ def generate_cur_from_image(img_obj, hotspot_x=0, hotspot_y=0, save_path=None):
     cur_data = header + entry + final_dib
 
     if save_path is not None:
+        save_path = resolve_path(save_path)
         save_path = Path(save_path)
         save_path.parent.mkdir(parents=True, exist_ok=True)
         with open(save_path, "wb") as f:

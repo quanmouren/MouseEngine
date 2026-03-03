@@ -4,6 +4,7 @@ import json
 import os
 from Tlog import TLog
 import getpass
+from path_utils import resolve_path
 
 
 log = TLog("获取当前壁纸列表")
@@ -20,6 +21,7 @@ def 获取当前壁纸列表(config_path: str, user: str) -> list:
         list: 包含每个显示器壁纸信息的列表。
               结构为: [[当前加载, id, 播放列表, 加载列表名], ...]
     """
+    config_path = resolve_path(config_path)
     try:
         with open(config_path, 'r', encoding='utf-8') as f:
             config_data = json.load(f)

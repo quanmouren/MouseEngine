@@ -5,8 +5,9 @@ import sys
 from Tlog import TLog
 log = TLog("初始化")
 from WelcomeUI import get_wallpaper_engine_path_ui
+from path_utils import resolve_path
 def initialize_config():
-    config_path = "config.toml"
+    config_path = resolve_path("config.toml")
     if os.path.exists(config_path):
         return
     wallpaper_path = get_wallpaper_engine_path_ui()

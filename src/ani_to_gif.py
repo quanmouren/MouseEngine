@@ -3,12 +3,15 @@
 import struct
 import io
 from PIL import Image
+from path_utils import resolve_path
 
 def convert_ani_to_gif(ani_path, output_gif_path, duration=100):
     """
     ani_path: .ani 文件路径
     output_gif_path: 输出 .gif 路径
     """
+    ani_path = resolve_path(ani_path)
+    output_gif_path = resolve_path(output_gif_path)
     with open(ani_path, 'rb') as f:
         header = f.read(12)
         if header[:4] != b'RIFF' or header[8:12] != b'ACON':
@@ -73,6 +76,7 @@ def get_ani_frames(ani_path):
     """
     解析 .ani 文件并返回 PIL Image 对象列表
     """
+    ani_path = resolve_path(ani_path)
     with open(ani_path, 'rb') as f:
         header = f.read(12)
         if header[:4] != b'RIFF' or header[8:12] != b'ACON':

@@ -13,6 +13,7 @@ try:
         winreg = None
 except ImportError:
     winreg = None
+from path_utils import resolve_path
 
 customtkinter.set_appearance_mode("Light") 
 customtkinter.set_default_color_theme("blue") 

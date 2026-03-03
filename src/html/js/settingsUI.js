@@ -29,22 +29,34 @@ async function startLoadingSequence() {
     console.log("开始按序加载设置...");
 
     try {
-        // 1. 获取自启动状态
+        // 获取自启动状态
         const autoStart = await pywebview.api.get_auto_start();
         const autoStartEl = document.getElementById('autoStart');
-        if (autoStartEl) autoStartEl.checked = autoStart;
+        if (autoStartEl) {
+            autoStartEl.checked = autoStart;
+            // 添加 change 事件监听器
+            autoStartEl.addEventListener('change', function() {
+                handleAutoStartChange(this.checked);
+            });
+        }
 
-        // 2. 获取路径
+        // 获取路径
         const wpPath = await pywebview.api.get_wp_path();
         const pathInput = document.querySelector('.custom-input-stretch');
         if (pathInput) pathInput.value = wpPath;
 
-        // 3. 获取光标设置
-        const cursorStatus = await pywebview.api.get_cursor_status();
+        // 获取光标设置
+        const cursorStatus = await pywebview.api.get_enable_default_icon_group();
         const cursorEl = document.getElementById('enableDefaultCursor');
-        if (cursorEl) cursorEl.checked = cursorStatus;
+        if (cursorEl) {
+            cursorEl.checked = cursorStatus;
+            // 添加 change 事件监听器
+            cursorEl.addEventListener('change', function() {
+                handleEnableDefaultCursorChange(this.checked);
+            });
+        }
         
-        // 4. 获取全屏暂停状态
+        // 获取全屏暂停状态
         const fullscreenPauseStatus = await pywebview.api.全屏暂停状态();
         const fullscreenPauseEl = document.getElementById('enableFullscreenPause');
         if (fullscreenPauseEl) fullscreenPauseEl.checked = fullscreenPauseStatus;
@@ -94,7 +106,7 @@ function renderBasicSettings(container) {
         <div class="settings-section-title">应用设置</div>
         <div class="settings-item">
             <div class="settings-label">启动时自动运行</div>
-            <div class="settings-control"><input type="checkbox" id="autoStart"></div>
+            <div class="settings-control"><input type="checkbox" id="autoStart" onchange="handleAutoStartChange(this.checked)"></div>
         </div>
         <div class="settings-item settings-item-double-row">
             <div class="settings-label-row"><div class="settings-label">Wallpaper Engine路径</div></div>
@@ -108,7 +120,7 @@ function renderBasicSettings(container) {
         </div>
         <div class="settings-item">
             <div class="settings-label">启用默认光标</div>
-            <div class="settings-control"><input type="checkbox" id="enableDefaultCursor"></div>
+            <div class="settings-control"><input type="checkbox" id="enableDefaultCursor" onchange="handleEnableDefaultCursorChange(this.checked)"></div>
         </div>
         <div class="settings-item">
             <div class="settings-label">启动全屏暂停</div>
@@ -134,7 +146,7 @@ function renderAboutSettings(container) {
         <div class="settings-section-title">关于 MouseEngine</div>
         <div class="settings-item">
             <div class="settings-label">版本</div>
-            <div class="settings-value">Alpha2.2</div>
+            <div class="settings-value">Beta1</div>
         </div>
         <div class="settings-item">
             <div class="settings-label">开发者</div>
@@ -142,11 +154,15 @@ function renderAboutSettings(container) {
         </div>
         <div class="settings-item">
             <div class="settings-label">版权</div>
-            <div class="settings-value">© 2026 CIF3</div>
+            <div class="settings-value">© 2025-${new Date().getFullYear()} CIF3</div>
         </div>
         <div class="settings-item">
             <div class="settings-label">许可证</div>
             <div class="settings-value settings-link" onclick="showModal('license')">查看</div>
+        </div>
+        <div class="settings-item">
+            <div class="settings-label">第三方库</div>
+            <div class="settings-value settings-link" onclick="showModal('thirdparty')">查看</div>
         </div>
     `;
 }
@@ -221,6 +237,24 @@ async function handleFullscreenPauseChange(checked) {
     }
 }
 
+async function handleEnableDefaultCursorChange(checked) {
+    try {
+        await pywebview.api.set_enable_default_icon_group(checked);
+        console.log("默认图标组状态已更新为:", checked);
+    } catch (e) {
+        console.error("更新默认图标组状态失败:", e);
+    }
+}
+
+async function handleAutoStartChange(checked) {
+    try {
+        await pywebview.api.set_auto_start(checked);
+        console.log("自启动状态已更新为:", checked);
+    } catch (e) {
+        console.error("更新自启动状态失败:", e);
+    }
+}
+
 async function handleClearCache(button) {
     // 保存原始文本
     const originalText = button.textContent;
@@ -248,7 +282,105 @@ async function handleClearCache(button) {
 }
 
 function showModal(type) {
-    // 简单实现模态框逻辑
-    const content = type === 'license' ? "MIT License..." : "Third Party...";
-    alert(content); 
+    // 创建模态框元素
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    
+    // 创建模态框内容
+    const modalContent = document.createElement('div');
+    modalContent.className = 'modal-content';
+    
+    // 设置模态框内容
+    if (type === 'license') {
+        modalContent.innerHTML = `
+            <div class="modal-header">
+                <h3>许可证</h3>
+            </div>
+            <div class="modal-body scrollable">
+                <h3># Project Licensing Notice</h3>
+                <p></p>
+                <p>Copyright (c) 2025, CIF3. All rights reserved.</p>
+                <p></p>
+                <p>This project is distributed under a combined licensing model:</p>
+                <p></p>
+                <h4>## 1. Core Logic & Original Features</h4>
+                <p>The core functionality, original algorithms, and unique features of this software are licensed under:</p>
+                <p>Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)</p>
+                <p><code>https://creativecommons.org/licenses/by-nc-sa/4.0/</code></p>
+                <p></p>
+                <h4>## 2. Wallpaper Engine Integration & API Modules</h4>
+                <p>The modules specifically designed for interacting with Wallpaper Engine, process monitoring (psutil-based logic), and system handle operations are licensed under:</p>
+                <p>The BSD 3-Clause License</p>
+                <p><code>https://opensource.org/licenses/BSD-3-Clause</code></p>
+                <p></p>
+                <h4>## 3. Third-Party Support or Miscellaneous Modules</h4>
+                <p>Certain files in this project are licensed under:</p>
+                <p>The MIT License (MIT)</p>
+                <p><code>https://opensource.org/licenses/MIT</code></p>
+                <p></p>
+                <p>(See individual file headers for the specific license governing each file.)</p>
+                <p></p>
+                <h4>---</h4>
+                <p></p>
+                <h4>## BSD 3-Clause License Text (for Integration Modules)</h4>
+                <p>Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:</p>
+                <p>1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.</p>
+                <p>2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.</p>
+                <p>3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.</p>
+                <p></p>
+                <h4>---</h4>
+                <p></p>
+                <h4>## Important Exceptions & Disclaimers</h4>
+                <p>- WALLPAPER CONTENT: This project identifies and retrieves metadata of wallpapers. All wallpaper assets, IDs, and media remain the property of their respective copyright holders on Steam Workshop.</p>
+                <p>- THIRD-PARTY LIBRARIES: Libraries such as 'psutil' are subject to their own respective licenses.</p>
+                <p>- NO ENDORSEMENT: This project is not affiliated with or endorsed by Wallpaper Engine or Steam.</p>
+                <p></p>
+                <h4>---</h4>
+                <p></p>
+                <p>Note: This project changed its license starting from Alpha2.0.</p>
+                <p>Alpha2.0 and later: Licensed under CC BY-NC-SA 4.0 (Core) & BSD 3-Clause (Integration). Commercial use without authorization is prohibited.</p>
+                <p>Alpha1.2 and earlier: Remains under BSD 3-Clause. Permissions granted under the previous license for older versions are still valid.</p>
+            </div>
+        `;
+    } else if (type === 'thirdparty') {
+        modalContent.innerHTML = `
+            <div class="modal-header">
+                <h3>第三方库</h3>
+            </div>
+            <div class="modal-body scrollable" id="thirdPartyContent">
+                <p>加载中...</p>
+            </div>
+        `;
+        
+        // 加载第三方库许可证信息
+        if (typeof pywebview !== 'undefined' && pywebview.api) {
+            pywebview.api.get_third_party_notices().then(content => {
+                const contentDiv = document.getElementById('thirdPartyContent');
+                if (contentDiv) {
+                    // 将文本内容转换为HTML，保留换行
+                    const htmlContent = content.replace(/\n/g, '<br>');
+                    contentDiv.innerHTML = `<pre style="white-space: pre-wrap; font-family: monospace;">${content}</pre>`;
+                }
+            }).catch(error => {
+                console.error('获取第三方库信息失败:', error);
+                const contentDiv = document.getElementById('thirdPartyContent');
+                if (contentDiv) {
+                    contentDiv.innerHTML = '<p>获取第三方库信息失败</p>';
+                }
+            });
+        }
+    }
+    
+    // 将内容添加到模态框
+    modal.appendChild(modalContent);
+    
+    // 添加到文档
+    document.body.appendChild(modal);
+    
+    // 点击模态框外部关闭
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            document.body.removeChild(modal);
+        }
+    });
 }

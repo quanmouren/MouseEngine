@@ -52,7 +52,9 @@ active_ui_processes = {}
 
 
 def _script_abs_path(filename: str) -> str:
-    return os.path.join(PROJECT_ROOT, filename)
+    path = os.path.join(PROJECT_ROOT, filename)
+    log.val(f"filename={filename}, path={path}")
+    return path
 
 
 def _kill_process(p: subprocess.Popen, timeout_sec: float = 2.0):
@@ -168,6 +170,7 @@ def setup_pystray_icon():
         return None
 
     icon_path = os.path.join(PROJECT_ROOT, "icon300.ico")
+    log.val(f"icon_path={icon_path}")
     if not os.path.exists(icon_path):
         log.error(f"图标文件未找到: {icon_path}。缺失 icon300.ico文件")
         image = Image.new("RGB", (64, 64), color="black")
@@ -179,10 +182,10 @@ def setup_pystray_icon():
             image.thumbnail((64, 64), Image.ANTIALIAS)
 
     menu = Menu(
-        MenuItem("配置鼠标组", open_config_mouse_gui, enabled=UI_IMPORT_SUCCESS),
-        MenuItem("绑定鼠标组", open_bind_mouse_gui_test, enabled=UI_IMPORT_SUCCESS),
-        MenuItem("设置", open_settings_ui, enabled=UI_IMPORT_SUCCESS),
-        Menu.SEPARATOR,
+        #MenuItem("配置鼠标组", open_config_mouse_gui, enabled=UI_IMPORT_SUCCESS),
+        #MenuItem("绑定鼠标组", open_bind_mouse_gui_test, enabled=UI_IMPORT_SUCCESS),
+        #MenuItem("设置", open_settings_ui, enabled=UI_IMPORT_SUCCESS),
+        #Menu.SEPARATOR,
         MenuItem("退出", on_exit_request),
     )
 
@@ -192,6 +195,7 @@ def setup_pystray_icon():
 def 触发刷新(target_wallpaper_id=None, changed_monitor_index=None):
     log_func = TLog("触发刷新")
     try:
+        log_func.val(f"CONFIG_FILE_PATH={CONFIG_FILE_PATH}")
         main_cfg = toml.load(CONFIG_FILE_PATH)
         enable_default = bool(main_cfg.get("config", {}).get("enable_default_icon_group", False))
         wallpaper_map = main_cfg.get("wallpaper", {}) or {}
@@ -221,18 +225,21 @@ def 触发刷新(target_wallpaper_id=None, changed_monitor_index=None):
     if not theme_value:
         log_func.info(f"未找到壁纸 ID {target_id_str} 对应的自定义主题。")
         if not enable_default:
-            log_func.info("未启用默认图标组，跳过。")
+            log_func.error("未启用默认图标组，跳过。")
             return False
         theme_dir = os.path.join("mouses", "默认")
+        log_func.val(f"theme_dir={theme_dir}")
         log_func.info(f"启用默认图标组，加载默认配置: {theme_dir}\\config.toml")
     else:
         theme_dir = str(theme_value).strip().strip('"').strip("'")
         theme_dir = theme_dir.replace("/", os.sep).replace("\\", os.sep)
         if (os.sep not in theme_dir) and (not theme_dir.lower().startswith("mouses")):
             theme_dir = os.path.join("mouses", theme_dir)
+        log_func.val(f"theme_dir={theme_dir}")
 
     try:
         group_config_path = os.path.join(theme_dir, "config.toml")
+        log_func.val(f"group_config_path={group_config_path}")
         if not os.path.exists(group_config_path):
             log_func.error(f"配置文件不存在: {group_config_path}（theme_dir={theme_dir}）")
             return False
@@ -288,6 +295,7 @@ def save_active_wallpaper_id(wallpaper_id, log_func):
         log_func: 日志函数
     """
     temp_storage_path = os.path.join(PROJECT_ROOT, 'temp_storage.toml')
+    log.val(f"temp_storage_path={temp_storage_path}")
     
     try:
         # 读取现有内容或创建新内容
@@ -317,8 +325,10 @@ def json监听():
 
     # 加载配置路径
     try:
+        log_func.val(f"CONFIG_FILE_PATH={CONFIG_FILE_PATH}")
         config_data = toml.load(CONFIG_FILE_PATH)
         config_path = config_data.get("path", {}).get("wallpaper_engine_config", "")
+        log_func.val(f"config_path={config_path}")
     except FileNotFoundError:
         log_func.error(f"错误：{CONFIG_FILE_PATH} 未找到。")
         return

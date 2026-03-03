@@ -3,8 +3,11 @@
 import struct
 import io
 from PIL import Image
+from path_utils import resolve_path
 
 def convert_cur_to_png(input_file, output_file):
+    input_file = resolve_path(input_file)
+    output_file = resolve_path(output_file)
     with open(input_file, 'rb') as f:
         header = f.read(6)
         if len(header) < 6: return
@@ -40,6 +43,7 @@ def convert_cur_to_png(input_file, output_file):
 def get_cur_image(input_file):
     """解析 CUR 文件并返回 PIL Image 对象"""
     try:
+        input_file = resolve_path(input_file)
         with open(input_file, 'rb') as f:
             header = f.read(6)
             if len(header) < 6: return None

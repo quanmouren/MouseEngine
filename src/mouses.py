@@ -8,6 +8,7 @@ try:
 except ImportError:
     portalocker = None
     print("警告：未安装 portalocker，可能出现并发文件访问问题.请运行 'pip install portalocker'")
+from path_utils import resolve_path
 
 
 
@@ -27,6 +28,7 @@ MOUSE_BASE_PATH = "mouses"
 
 def load_toml_config(path=CONFIG_PATH):
     """加载顶层 config.toml 文件"""
+    path = resolve_path(path)
     try:
         with open(path, 'r', encoding='utf-8') as f:
             return toml.load(f)
@@ -71,7 +73,7 @@ def 触发刷新(config_path, username, monitor=None):
         monitor_index = monitor - 1
 
     # 获取所有壁纸数据
-    all_wallpapers = 获取当前壁纸列表(config_path, username)
+    all_wallpapers = 获取当前壁纸列表(resolve_path(config_path), username)
     if not all_wallpapers:
         log.error("无法获取壁纸配置，触发刷新失败。")
         return False
@@ -134,6 +136,7 @@ def 保存组配置(name, folder_path, file_list):
         log.error(f"file_list 长度不符: {len(file_list)} (期望 15)")
         raise ValueError(f"file_list must contain exactly 15 items")
 
+    folder_path = resolve_path(folder_path)
     target_folder = os.path.join(folder_path, name)
     os.makedirs(target_folder, exist_ok=True)
     log.debug(f"目标文件夹路径: {target_folder}")
@@ -174,7 +177,13 @@ def 保存组配置(name, folder_path, file_list):
             else:
                 log.debug(f"文件已存在且相同，跳过复制: {file_name}")
             
-            mouse_config[cursor_name] = target_path
+            # 保存相对路径，相对于项目根目录
+            from path_utils import get_project_root
+            project_root = get_project_root()
+            relative_path = os.path.relpath(target_path, project_root)
+            # 将路径分隔符统一为反斜杠
+            relative_path = relative_path.replace('/', '\\')
+            mouse_config[cursor_name] = relative_path
 
         except Exception as e:
             log.error(f"处理文件 {cursor_name} 失败: {e}")
