@@ -17,3 +17,5 @@ crates/zig/*
 src/temp_storage.toml
 软著v1.0/
 src/*.spec
+src/build
+打包版本/

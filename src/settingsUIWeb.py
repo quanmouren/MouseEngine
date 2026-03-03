@@ -10,10 +10,13 @@ from path_utils import resolve_path, get_project_root
 try:
     if platform.system() == "Windows":
         import winreg
+        import win32com.client
     else:
         winreg = None
+        win32com = None
 except ImportError:
     winreg = None
+    win32com = None
 
 log = TLog("SettingsUI")
 
@@ -91,33 +94,29 @@ class SettingsApi:
     def get_auto_start(self):
         log.info("获取自启动状态")
         try:
-            if platform.system() != "Windows" or winreg is None:
+            if platform.system() != "Windows":
                 return False
             
-            # 检查自启动注册表项
-            key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
-            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_READ)
-            try:
-                # 尝试读取 MouseEngine 项
-                value, _ = winreg.QueryValueEx(key, "MouseEngine")
-                log.val(f"自启动项值: {value}")
-                return True
-            except FileNotFoundError:
-                return False
-            finally:
-                winreg.CloseKey(key)
+            # 获取启动文件夹路径
+            startup_folder = os.path.join(os.environ['APPDATA'], 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup')
+            shortcut_path = os.path.join(startup_folder, 'MouseEngine.lnk')
+            
+            # 检查快捷方式是否存在
+            exists = os.path.exists(shortcut_path)
+            log.val(f"自启动快捷方式存在: {exists}")
+            return exists
         except Exception as e:
             log.error(f"获取自启动状态失败: {e}")
             return False
     
     def set_auto_start(self, enabled):
         try:
-            if platform.system() != "Windows" or winreg is None:
+            if platform.system() != "Windows" or win32com is None:
                 return False
             
-            # 打开自启动注册表项
-            key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
-            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_SET_VALUE)
+            # 获取启动文件夹路径
+            startup_folder = os.path.join(os.environ['APPDATA'], 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup')
+            shortcut_path = os.path.join(startup_folder, 'MouseEngine.lnk')
             
             if enabled:
                 # 尝试多个可能的路径查找 MouseEngine.exe
@@ -140,22 +139,24 @@ class SettingsApi:
                 
                 if not exe_path:
                     log.error(f"未找到 MouseEngine.exe。尝试的路径: {possible_paths}")
-                    winreg.CloseKey(key)
                     return False
                 
-                # 设置自启动项
-                winreg.SetValueEx(key, "MouseEngine", 0, winreg.REG_SZ, f'"{exe_path}"')
-                log.info(f"已设置自启动: {exe_path}")
+                # 创建快捷方式
+                shell = win32com.client.Dispatch('WScript.Shell')
+                shortcut = shell.CreateShortcut(shortcut_path)
+                shortcut.TargetPath = exe_path
+                shortcut.WorkingDirectory = os.path.dirname(exe_path)
+                shortcut.Description = "MouseEngine 自启动"
+                shortcut.Save()
+                log.info(f"已创建自启动快捷方式: {shortcut_path}")
             else:
-                # 删除自启动项
-                try:
-                    winreg.DeleteValue(key, "MouseEngine")
-                    log.info("已取消自启动")
-                except FileNotFoundError:
-                    # 项不存在，无需处理
-                    pass
+                # 删除快捷方式
+                if os.path.exists(shortcut_path):
+                    os.remove(shortcut_path)
+                    log.info(f"已删除自启动快捷方式: {shortcut_path}")
+                else:
+                    log.info("自启动快捷方式不存在，无需删除")
             
-            winreg.CloseKey(key)
             return True
         except Exception as e:
             log.error(f"设置自启动失败: {e}")
