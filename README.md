@@ -1,5 +1,7 @@
 # MouseEngine
 
+[**README_en.md**](./docs/README_en.md)
+
 MouseEngine 是一个 **基于 Wallpaper Engine 的 Windows 鼠标指针自动切换工具**。
 它能够根据当前显示器所使用的壁纸，**自动切换对应的鼠标指针主题**，默认回退、系统托盘常驻运行。
 
@@ -138,6 +140,7 @@ MouseEngine/
    ├─ settingsUIWeb.py       # 设置界面
    ├─ WelcomeUI.py           # 欢迎界面
    ├─ mouseUI.py             # 鼠标主题界面
+   ├─ path_utils.py          # 统一路径管理
    │
    ├─ mouses/                # 鼠标组文件夹
    │
@@ -238,7 +241,7 @@ pip install portalocker
 ## 🚧 开发进度和问题
 ### 🔄 开发中功能
 - 适配 Web 类型壁纸（当前开发中，暂未支持）
-- 应用白名单（设定例外应用规则和特定应用规则）
+- ~~应用白名单（设定例外应用规则和特定应用规则）~~ 已完成
 - 计时器，进一步降低占用
 - 多显示器适配
 - 使用Rust重构有关句柄的内容，进一步降低占用
