@@ -38,6 +38,7 @@ PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 stop_flag = threading.Event()
 global_threads = []
 TRAY_ICON = None
+initial_loading_done = False
 
 CONFIG_FILE_PATH = "config.toml"
 MOUSE_THEMES_DIR = "mouses"
@@ -294,7 +295,8 @@ def save_active_wallpaper_id(wallpaper_id, log_func):
         wallpaper_id: 壁纸ID
         log_func: 日志函数
     """
-    temp_storage_path = os.path.join(PROJECT_ROOT, 'temp_storage.toml')
+    from path_utils import resolve_path
+    temp_storage_path = resolve_path('temp_storage.toml')
     log.val(f"temp_storage_path={temp_storage_path}")
     
     try:
@@ -320,6 +322,7 @@ def save_active_wallpaper_id(wallpaper_id, log_func):
 
 def json监听():
     global LAST_JSON_TRIGGER_TIME
+    global initial_loading_done
     log_func = TLog(获得函数名())
     winUserName = getpass.getuser()
 
@@ -347,8 +350,8 @@ def json监听():
     for index, project in enumerate(latest_wallpaperConfig):
         current_state[index] = project[1]
 
-    # 初始触发一次
-    if current_state:
+    # 当RAM首次加载失败时初始触发一次
+    if current_state and not initial_loading_done:
         first_id = current_state.get(0) or next(iter(current_state.values()))
         log_func.info(f"Json初始状态触发: {first_id}")
         
@@ -357,6 +360,8 @@ def json监听():
         
         LAST_JSON_TRIGGER_TIME = time.time()  # 更新时间戳
         触发刷新(first_id, changed_monitor_index=0)
+        initial_loading_done = True
+        log_func.info("首次加载成功")
 
     # 循环监听
     try:
@@ -389,6 +394,7 @@ def ram监听():
     受Json触发后的10秒冷却保护
     """
     global LAST_JSON_TRIGGER_TIME
+    global initial_loading_done
     log_func = TLog(获得函数名())
     log_func.info("初始化 RAM 监听器")
 
@@ -400,23 +406,27 @@ def ram监听():
         last_active_ids = set()
 
     # 初始显示
-    if last_active_ids:
+    if last_active_ids and not initial_loading_done:
         log_func.info(f"RAM初始检测到活跃 ID: {last_active_ids}")
-        # 如果json已经触发过，则只刷新状态
-        if time.time() - LAST_JSON_TRIGGER_TIME > 10:
-            # 检查是否启用全屏暂停
-            try:
-                main_cfg = toml.load(CONFIG_FILE_PATH)
-                pause_on_fullscreen = bool(main_cfg.get("config", {}).get("pause_on_fullscreen", False))
-                if pause_on_fullscreen and is_fullscreen_app_running():
-                    log_func.info("检测到全屏应用，跳过初始触发")
-                else:
-                    initial_id = list(last_active_ids)[0]
-                    触发刷新(initial_id, changed_monitor_index=0)
-            except Exception as e:
-                log_func.error(f"读取配置失败: {e}")
+        # 检查是否启用全屏暂停
+        try:
+            main_cfg = toml.load(CONFIG_FILE_PATH)
+            pause_on_fullscreen = bool(main_cfg.get("config", {}).get("pause_on_fullscreen", False))
+            if pause_on_fullscreen and is_fullscreen_app_running():
+                log_func.info("检测到全屏应用，跳过初始触发")
+            else:
                 initial_id = list(last_active_ids)[0]
+                save_active_wallpaper_id(initial_id, log_func)
                 触发刷新(initial_id, changed_monitor_index=0)
+                initial_loading_done = True
+                log_func.info("首次加载成功（使用RAM）")
+        except Exception as e:
+            log_func.error(f"读取配置失败: {e}")
+            initial_id = list(last_active_ids)[0]
+            save_active_wallpaper_id(initial_id, log_func)
+            触发刷新(initial_id, changed_monitor_index=0)
+            initial_loading_done = True
+            log_func.info("首次加载成功")
 
     # 循环监听
     try:
