@@ -806,4 +806,20 @@ if __name__ == "__main__":
         except Exception:
             pass
 
+    # 退出前设置为默认鼠标组
+    try:
+        from path_utils import resolve_path
+        import toml
+        MOUSE_BASE_PATH = resolve_path("mouses")
+        default_config_path = os.path.join(MOUSE_BASE_PATH, "默认", "config.toml")
+        if os.path.exists(default_config_path):
+            config = toml.load(default_config_path)
+            mouse_values = [config['mouses'].get(k, "") for k in CURSOR_ORDER_MAPPING]
+            设置鼠标指针(mouse_values)
+            log.info("已恢复为默认鼠标组")
+        else:
+            log.debug("默认鼠标组配置文件不存在，跳过恢复操作")
+    except Exception as e:
+        log.error(f"恢复默认鼠标组失败: {e}")
+
     log.info("程序已安全退出。")
