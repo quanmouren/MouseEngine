@@ -4,7 +4,7 @@
 
 MouseEngine is a **Windows mouse cursor auto-switching tool based on Wallpaper Engine**. It can **automatically switch mouse cursor themes** according to the wallpaper currently used on the display, with default fallback and system tray resident operation.
 
-!\[Logo]\(./images/1.jpg MouseEngine Logo)
+![Logo](./images/1.jpg "MouseEngine Logo")
 
 ***
 
@@ -47,7 +47,7 @@ First, obtain the software package: click the link [MouseEngine-Beta1](https://g
 
 Find `MouseEngine.exe` in the extracted directory and double-click to launch it.
 
-!\[Welcome Wizard UI]\(./images/UI1.png null)
+![Welcome Wizard UI](./images/UI1.png)
 
 After the program starts, it will automatically detect and obtain the Wallpaper Engine installation path on your computer, and automatically fill it into the corresponding input box; after confirming the path is correct, click the "Confirm and Continue" button, and the program will enter silent running state (running in the background, no visible window, you can check the process status in Task Manager).
 
@@ -55,7 +55,7 @@ After the program starts, it will automatically detect and obtain the Wallpaper 
 
 Launch the `MouseGroupSettings.exe` program in the extracted directory
 
-!\[UI]\(./images/UI2.png null)
+![UI](./images/UI2.png)
 
 This tool is used for quick cursor group configuration:
 
@@ -66,7 +66,7 @@ This tool is used for quick cursor group configuration:
 
 Run the `WallpaperListSettings.exe` program
 
-!\[UI]\(./images/UI3.png null)
+![UI](./images/UI3.png)
 
 Bind specified cursor groups to wallpapers:
 
@@ -78,7 +78,7 @@ Bind specified cursor groups to wallpapers:
 
 Open the `settings.exe` program
 
-!\[UI]\(./images/UI4.png null)
+![UI](./images/UI4.png)
 
 You can configure program operation related settings, here you can set the program to start automatically, after checking the corresponding option, the program will run automatically when the system starts.
 
