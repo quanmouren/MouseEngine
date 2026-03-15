@@ -22,6 +22,8 @@ wallpaper_engine_config = "{wallpaper_path.replace('\\', '/')}/config.json"
 [config]
 enable_default_icon_group = true
 pause_on_fullscreen = false
+
+[program_whitelist]
 """
     try:
         with open(config_path, "w", encoding="utf-8") as f:

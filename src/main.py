@@ -8,6 +8,8 @@ import getpass
 import toml
 import sys
 import subprocess
+import win32gui
+import win32process
 from getActiveWallpaper import get_active_ids
 #from test_测试句柄更新 import get_active_ids_optimized as get_active_ids
 try:
@@ -39,6 +41,7 @@ stop_flag = threading.Event()
 global_threads = []
 TRAY_ICON = None
 initial_loading_done = False
+last_in_whitelist = None  # 跟踪上一次焦点窗口是否在白名单中
 
 CONFIG_FILE_PATH = "config.toml"
 MOUSE_THEMES_DIR = "mouses"
@@ -50,7 +53,23 @@ CURSOR_ORDER_MAPPING = [
 
 log = TLog("main")
 active_ui_processes = {}  
-
+def get_process_name():
+    """获取当前焦点窗口的进程名"""
+    try:
+        # 获取当前前台窗口句柄
+        hwnd = win32gui.GetForegroundWindow()
+        if hwnd:
+            # 获取进程ID
+            _, pid = win32process.GetWindowThreadProcessId(hwnd)
+            try:
+                # 获取进程名
+                proc = psutil.Process(pid)
+                proc_name = proc.name()
+                return proc_name
+            except psutil.NoSuchProcess:
+                return "N/A"
+    except Exception as e:
+        return "N/A"
 
 def _script_abs_path(filename: str) -> str:
     path = os.path.join(PROJECT_ROOT, filename)
@@ -200,6 +219,7 @@ def 触发刷新(target_wallpaper_id=None, changed_monitor_index=None):
         main_cfg = toml.load(CONFIG_FILE_PATH)
         enable_default = bool(main_cfg.get("config", {}).get("enable_default_icon_group", False))
         wallpaper_map = main_cfg.get("wallpaper", {}) or {}
+        program_whitelist = main_cfg.get("program_whitelist", {}) or {}
     except FileNotFoundError:
         log_func.error(f"读取主配置失败: {CONFIG_FILE_PATH} 未找到。")
         return False
@@ -207,9 +227,85 @@ def 触发刷新(target_wallpaper_id=None, changed_monitor_index=None):
         log_func.error(f"读取主配置失败: {e}")
         return False
 
+    # 程序白名单检查
+    current_process_name = get_process_name()
+    if current_process_name:
+        log_func.debug(f"当前焦点程序: {current_process_name}")
+        whitelist_theme = program_whitelist.get(current_process_name)
+        if whitelist_theme:
+            theme_dir = str(whitelist_theme).strip().strip('"').strip("'")
+            theme_dir = theme_dir.replace("/", os.sep).replace("\\", os.sep)
+            if (os.sep not in theme_dir) and (not theme_dir.lower().startswith("mouses")):
+                theme_dir = os.path.join("mouses", theme_dir)
+            log_func.info(f"程序白名单匹配: {current_process_name} -> {theme_dir}")
+            log_func.val(f"theme_dir={theme_dir}")
+            
+            # 直接使用白名单主题，跳过壁纸ID匹配
+            try:
+                group_config_path = os.path.join(theme_dir, "config.toml")
+                log_func.val(f"group_config_path={group_config_path}")
+                if not os.path.exists(group_config_path):
+                    log_func.error(f"配置文件不存在: {group_config_path}（theme_dir={theme_dir}）")
+                    return False
+
+                group_cfg = toml.load(group_config_path)
+
+                if "mouses" not in group_cfg or not isinstance(group_cfg["mouses"], dict):
+                    log_func.error(f"配置缺少 [mouses] 段或格式错误: {group_config_path}")
+                    return False
+
+                mouses_section = group_cfg["mouses"]
+
+                order = [
+                    "Arrow", "Help", "AppStarting", "Wait", "Crosshair",
+                    "IBeam", "Handwriting", "No", "SizeNS", "SizeWE",
+                    "SizeNWSE", "SizeNESW", "SizeAll", "Hand", "UpArrow"
+                ]
+
+                cursor_paths_list = []
+                for name in order:
+                    raw = mouses_section.get(name, "")
+                    rel = str(raw).strip().strip('"').strip("'") if raw is not None else ""
+                    rel = rel.replace("/", os.sep).replace("\\", os.sep)
+
+                    if not rel:
+                        cursor_paths_list.append("")
+                        continue
+
+                    cursor_paths_list.append(rel)
+
+                log_func.debug(f"生成的 cursor_paths 列表长度: {len(cursor_paths_list)}")
+
+                ok = 设置鼠标指针(cursor_paths_list)
+                if ok:
+                    log_func.info("鼠标指针主题设置成功（程序白名单）。")
+                    return True
+                else:
+                    log_func.error("设置鼠标指针主题失败。")
+                    return False
+
+            except Exception as e:
+                log_func.error(f"处理鼠标主题配置或设置指针失败: {e}")
+                return False
+        else:
+            log_func.debug(f"程序 {current_process_name} 不在白名单中，继续使用壁纸ID匹配")
+    else:
+        log_func.debug("无法获取当前焦点程序名，继续使用壁纸ID匹配")
+
     if target_wallpaper_id is None:
-        log_func.error("未提供 target_wallpaper_id，无法按“刷新事件”应用主题。")
-        return False
+        log_func.debug("未提供 target_wallpaper_id，尝试获取当前活跃壁纸ID")
+        try:
+            # 尝试获取当前活跃的壁纸ID
+            active_ids = get_active_ids()
+            if active_ids:
+                target_wallpaper_id = list(active_ids)[0]
+                log_func.info(f"获取到当前活跃壁纸ID: {target_wallpaper_id}")
+            else:
+                log_func.error("未获取到活跃壁纸ID，无法应用主题。")
+                return False
+        except Exception as e:
+            log_func.error(f"获取活跃壁纸ID失败: {e}")
+            return False
 
     target_id_str = str(target_wallpaper_id).strip()
     if not target_id_str:
@@ -388,6 +484,77 @@ def json监听():
         log_func.error(f"Json监听循环异常: {e}")
 
 
+def 焦点监听():
+    """
+    监听焦点窗口变化
+    使用状态锁避免不必要的刷新
+    """
+    global last_in_whitelist
+    log_func = TLog(获得函数名())
+    log_func.info("初始化焦点监听器")
+    
+    last_process_name = None
+    check_count = 0
+    
+    try:
+        while not stop_flag.is_set():
+            try:
+                current_process_name = get_process_name()
+                check_count += 1
+                
+                if check_count % 25 == 0:
+                    log_func.debug(f"焦点监听运行中，当前焦点: {current_process_name}")
+                
+                if current_process_name != last_process_name:
+                    if last_process_name is not None:
+                        log_func.info(f"焦点窗口变化: {last_process_name} -> {current_process_name}")
+                    else:
+                        log_func.info(f"初始焦点窗口: {current_process_name}")
+                    
+                    last_process_name = current_process_name
+                    
+                    # 检查当前和上一次进程是否在白名单中
+                    try:
+                        main_cfg = toml.load(CONFIG_FILE_PATH)
+                        program_whitelist = main_cfg.get("program_whitelist", {}) or {}
+                        
+                        current_in_whitelist = current_process_name in program_whitelist
+                        last_in_whitelist_value = last_in_whitelist
+                        
+                        if last_in_whitelist_value is None:
+                            # 首次运行触发刷新
+                            log_func.debug("首次运行，触发刷新")
+                            触发刷新(target_wallpaper_id=None, changed_monitor_index=None)
+                            last_in_whitelist = current_in_whitelist
+                        elif current_in_whitelist != last_in_whitelist_value:
+                            # 白名单状态发生变化
+                            log_func.debug(f"白名单状态变化: {last_in_whitelist_value} -> {current_in_whitelist}，触发刷新")
+                            触发刷新(target_wallpaper_id=None, changed_monitor_index=None)
+                            last_in_whitelist = current_in_whitelist
+                        elif current_in_whitelist and last_in_whitelist_value:
+                            # 都在白名单中
+                            log_func.debug(f"白名单内切换: {last_process_name} -> {current_process_name}，触发刷新")
+                            触发刷新(target_wallpaper_id=None, changed_monitor_index=None)
+                            last_in_whitelist = current_in_whitelist
+                        else:
+                            # 都不在白名单中
+                            log_func.debug(f"都不在白名单中，跳过刷新")
+                            last_in_whitelist = current_in_whitelist
+                    
+                    except Exception as e:
+                        log_func.error(f"检查白名单状态失败: {e}")
+                        # 容错
+                        触发刷新(target_wallpaper_id=None, changed_monitor_index=None)
+                
+            except Exception as e:
+                log_func.error(f"焦点监听异常: {e}")
+            
+            time.sleep(0.2)
+    
+    except Exception as e:
+        log_func.error(f"焦点监听循环异常: {e}")
+
+
 def ram监听():
     """
     基于进程句柄监听播放列表状态
@@ -481,17 +648,56 @@ def is_fullscreen_app_running():
         import win32api
         
         def callback(hwnd, extra):
-            if win32gui.IsWindowVisible(hwnd):
+            if win32gui.IsWindowVisible(hwnd) and win32gui.IsWindow(hwnd):
+                # 获取窗口矩形
                 rect = win32gui.GetWindowRect(hwnd)
-                if rect[2] - rect[0] == win32api.GetSystemMetrics(0) and rect[3] - rect[1] == win32api.GetSystemMetrics(1):
-                    extra.append(hwnd)
+                # 获取屏幕尺寸
+                screen_width = win32api.GetSystemMetrics(0)
+                screen_height = win32api.GetSystemMetrics(1)
+                # 检查窗口是否覆盖整个屏幕
+                window_width = rect[2] - rect[0]
+                window_height = rect[3] - rect[1]
+                # 检测全屏窗口
+                is_fullscreen = (window_width == screen_width and window_height == screen_height and 
+                               rect[0] == 0 and rect[1] == 0)
+                # 检测最大化窗口
+                is_maximized = (window_width >= screen_width - 20 and 
+                              window_height >= screen_height - 20 and
+                              rect[0] <= 10 and rect[1] <= 10)
+                
+                if is_fullscreen or is_maximized:
+                    # 排除桌面窗口、任务栏和其他系统窗口
+                    class_name = win32gui.GetClassName(hwnd)
+                    window_title = win32gui.GetWindowText(hwnd)
+                    
+                    # 排除系统窗口
+                    if class_name in ['Progman', 'WorkerW', 'Shell_TrayWnd', 'DwmWnd']:
+                        return
+                    
+                    # 排除没有标题的窗口
+                    if not window_title:
+                        return
+                    
+                    # 排除某些特定的窗口类
+                    if 'Windows.UI.Core' in class_name or 'ApplicationFrameWindow' in class_name:
+                        return
+                    
+                    # 记录窗口类型
+                    window_type = "全屏" if is_fullscreen else "最大化"
+                    extra.append((hwnd, class_name, window_title, window_type))
         
         fullscreen_windows = []
         win32gui.EnumWindows(callback, fullscreen_windows)
         
+        if fullscreen_windows:
+            window_info = []
+            for hwnd, class_name, window_title, window_type in fullscreen_windows:
+                window_info.append(f"{window_type} - {class_name} - {window_title}")
+            log.debug(f"检测到全屏/最大化窗口: {len(fullscreen_windows)}个 - {window_info}")
+        
         return len(fullscreen_windows) > 0
     except Exception as e:
-        log.error(f"检测全屏应用失败: {e}")
+        log.error(f"检测全屏/最大化应用失败: {e}")
         return False
 
 def 运行占用监控():
@@ -564,6 +770,7 @@ if __name__ == "__main__":
     if log.on_DEBUG == True:
         t2 = start_thread(运行占用监控, "ResourceMonitor")
     t3 = start_thread(ram监听, "RamListener")
+    t4 = start_thread(焦点监听, "FocusListener")
     
     log.info("所有后台线程已启动。")
 
