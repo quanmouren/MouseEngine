@@ -241,7 +241,15 @@ class MouseEngineEditor:
             g.get_win_theme_color_hex = get_win_theme_color_hex
             g.fps, g.total_frames = 60, 15 # 默认 1 秒动画
             
-            self.lua.execute(self.code_editor.get_code())
+            code = self.code_editor.get_code()
+            if not code or not code.strip():
+                raise Exception("Lua代码为空")
+            
+            self.lua.execute(code)
+            
+            if not g.on_render:
+                raise Exception("on_render函数未定义")
+            
             self.current_frame, self.error_msg = 1.0, None
             self.log_panel.log(f"🔧 Lua重载成功 (FPS:{g.fps} Total:{g.total_frames})", "success")
         except Exception as e:
@@ -255,14 +263,23 @@ class MouseEngineEditor:
         if delta > 0: self.realtime_fps = (self.realtime_fps * 0.9) + ((1.0 / delta) * 0.1)
 
         g = self.lua.globals() if self.lua else None
-        fps_limit = g.fps if g and g.fps else 30
-        total_f = g.total_frames if g and g.total_frames else 1
+        fps_limit = 30
+        total_f = 1
+        
+        if g:
+            try:
+                fps_limit = g.fps if g.fps else 30
+                total_f = g.total_frames if g.total_frames else 1
+            except:
+                pass
 
         if not self.engine.is_preview_mode:
             self.engine.clear_canvas()
-            if self.lua and not self.error_msg and g.on_render:
-                try: g.on_render(int(self.current_frame))
-                except Exception as e: self.error_msg = str(e)
+            if self.lua and not self.error_msg and g and g.on_render:
+                try: 
+                    g.on_render(int(self.current_frame))
+                except Exception as e: 
+                    self.error_msg = str(e)
 
         preview = self.engine.get_preview_image()
         if preview:
