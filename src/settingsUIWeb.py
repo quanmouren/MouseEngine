@@ -8,15 +8,25 @@ import tkinter as tk
 from tkinter import filedialog
 from path_utils import resolve_path, get_project_root
 try:
+    import psutil
+except ImportError:
+    psutil = None
+try:
     if platform.system() == "Windows":
         import winreg
         import win32com.client
+        import win32gui
+        import win32process
     else:
         winreg = None
         win32com = None
+        win32gui = None
+        win32process = None
 except ImportError:
     winreg = None
     win32com = None
+    win32gui = None
+    win32process = None
 
 log = TLog("SettingsUI")
 
@@ -374,6 +384,112 @@ class SettingsApi:
         except Exception as e:
             log.error(f"读取第三方许可证文件失败: {e}")
             return "读取第三方许可证文件失败"
+
+    def get_program_whitelist(self):
+        try:
+            config_path = resolve_path("config.toml")
+            if not os.path.exists(config_path):
+                return {}
+            
+            config_data = toml.load(config_path)
+            return config_data.get("program_whitelist", {})
+        except Exception as e:
+            log.error(f"获取程序白名单失败: {e}")
+            return {}
+
+    def add_program_whitelist(self, program, cursor_group):
+        try:
+            config_path = resolve_path("config.toml")
+            # 加载现有配置
+            if os.path.exists(config_path):
+                config_data = toml.load(config_path)
+            else:
+                config_data = {}
+            
+            # 确保 program_whitelist 部分存在
+            if "program_whitelist" not in config_data:
+                config_data["program_whitelist"] = {}
+            
+            # 添加或更新绑定
+            config_data["program_whitelist"][program] = cursor_group
+            
+            # 保存配置
+            with open(config_path, "w", encoding="utf-8") as f:
+                toml.dump(config_data, f)
+            
+            log.info(f"添加程序白名单: {program} -> {cursor_group}")
+            return True
+        except Exception as e:
+            log.error(f"添加程序白名单失败: {e}")
+            return False
+
+
+
+    def get_cursor_groups(self):
+        try:
+            from path_utils import resolve_path
+            import glob
+            import os
+            MOUSE_BASE_PATH = resolve_path("mouses")
+            groups = []
+            # 使用绝对路径搜索
+            search_pattern = os.path.join(MOUSE_BASE_PATH, '*', 'config.toml')
+            config_files = glob.glob(search_pattern)
+            for file_path in config_files:
+                group_name = os.path.basename(os.path.dirname(file_path))
+                groups.append(group_name)
+            return sorted(groups) if groups else ["默认"]
+        except Exception as e:
+            log.error(f"获取光标组失败: {e}")
+            return ["默认"]
+
+
+
+    def get_all_windows(self):
+        try:
+            if win32gui is None or win32process is None:
+                log.error("win32gui 或 win32process 模块不可用")
+                return []
+            if psutil is None:
+                log.error("psutil 模块不可用")
+                return []
+            
+            windows = []
+            
+            def enum_windows_callback(hwnd, windows):
+                # 只处理可见窗口
+                if win32gui.IsWindowVisible(hwnd):
+                    # 获取窗口标题
+                    title = win32gui.GetWindowText(hwnd)
+                    if title:
+                        try:
+                            # 获取进程ID
+                            _, pid = win32process.GetWindowThreadProcessId(hwnd)
+                            # 获取进程名
+                            proc = psutil.Process(pid)
+                            proc_name = proc.name()
+                            windows.append({
+                                "title": title,
+                                "process_name": proc_name
+                            })
+                        except Exception:
+                            pass
+            
+            # 枚举所有窗口
+            win32gui.EnumWindows(enum_windows_callback, windows)
+            
+            # 去重
+            seen_processes = set()
+            unique_windows = []
+            for window in windows:
+                if window["process_name"] not in seen_processes:
+                    seen_processes.add(window["process_name"])
+                    unique_windows.append(window)
+            
+            return unique_windows
+        except Exception as e:
+            log.error(f"获取所有窗口失败: {e}")
+            return []
 
 
 if __name__ == "__main__":

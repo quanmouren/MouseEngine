@@ -362,3 +362,99 @@
     margin: 10px 0;
     overflow-x: auto;
 }
+
+/* 白名单相关样式 */
+.whitelist-entries {
+    margin-top: 10px;
+}
+
+.whitelist-entry {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background: rgba(30, 41, 59, 0.5);
+    border-radius: 4px;
+    margin-bottom: 8px;
+    border: 1px solid rgba(51, 65, 85, 0.3);
+}
+
+.whitelist-program {
+    flex: 2;
+    font-size: 12px;
+    color: #ffffff;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.whitelist-cursor {
+    flex: 1;
+    font-size: 12px;
+    color: #94a3b8;
+    text-align: center;
+}
+
+.whitelist-actions {
+    flex: 1;
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.whitelist-empty {
+    text-align: center;
+    padding: 20px;
+    color: #64748b;
+    font-size: 12px;
+}
+
+.settings-btn-small {
+    padding: 6px 10px;
+    font-size: 11px;
+}
+
+.custom-input {
+    width: 200px;
+}
+
+.custom-input:disabled {
+    background: rgba(30, 41, 59, 0.5);
+    color: #64748b;
+    cursor: not-allowed;
+}
+
+/* 运行中窗口选择相关样式 */
+.running-windows-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.running-window-item {
+    padding: 10px;
+    background: rgba(30, 41, 59, 0.5);
+    border-radius: 4px;
+    border: 1px solid rgba(51, 65, 85, 0.3);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.running-window-item:hover {
+    background: rgba(45, 55, 72, 0.8);
+    border-color: #4299e1;
+}
+
+.running-window-title {
+    font-size: 12px;
+    color: #ffffff;
+    margin-bottom: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.running-window-process {
+    font-size: 11px;
+    color: #94a3b8;
+}

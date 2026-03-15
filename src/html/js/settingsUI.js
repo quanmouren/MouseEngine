@@ -93,6 +93,9 @@ function updateSettingsContent(menuText) {
         case '高级设置':
             renderAdvancedSettings(settingsSection);
             break;
+        case '程序白名单':
+            renderProgramWhitelistSettings(settingsSection);
+            break;
         case '关于':
             renderAboutSettings(settingsSection);
             break;
@@ -165,6 +168,209 @@ function renderAboutSettings(container) {
             <div class="settings-value settings-link" onclick="showModal('thirdparty')">查看</div>
         </div>
     `;
+}
+
+function renderProgramWhitelistSettings(container) {
+    container.innerHTML = `
+        <div class="settings-section-title">程序例外规则</div>
+        <div class="settings-item">
+            <div class="settings-label">应用程序</div>
+            <div class="settings-control">
+                <input type="text" class="custom-input" id="programInput" placeholder="选择应用程序" readonly>
+                <button class="settings-btn" onclick="selectFromRunning()">从运行中选择</button>
+            </div>
+        </div>
+        <div class="settings-item">
+            <div class="settings-label">光标组</div>
+            <div class="settings-control">
+                <select class="custom-input" id="cursorGroupSelect">
+                    <option value="">选择光标组</option>
+                </select>
+            </div>
+        </div>
+        <div class="settings-item">
+            <div class="settings-label">操作</div>
+            <div class="settings-control">
+                <button class="settings-btn" onclick="addWhitelistEntry()">添加绑定</button>
+            </div>
+        </div>
+        <div class="settings-divider"></div>
+        <div class="settings-section-title">当前绑定</div>
+        <div id="whitelistEntries" class="whitelist-entries">
+            <div class="whitelist-empty">暂无绑定</div>
+        </div>
+    `;
+    
+    // 加载白名单数据
+    loadWhitelistData();
+    // 加载光标组数据
+    loadCursorGroups();
+}
+
+async function loadWhitelistData() {
+    try {
+        if (typeof pywebview === 'undefined' || !pywebview.api) {
+            setTimeout(loadWhitelistData, 100);
+            return;
+        }
+        
+        const whitelist = await pywebview.api.get_program_whitelist();
+        const container = document.getElementById('whitelistEntries');
+        
+        if (whitelist && Object.keys(whitelist).length > 0) {
+            container.innerHTML = '';
+            Object.entries(whitelist).forEach(([program, cursorGroup]) => {
+                const entry = document.createElement('div');
+                entry.className = 'whitelist-entry';
+                entry.innerHTML = `
+                    <div class="whitelist-program">${program}</div>
+                    <div class="whitelist-cursor">${cursorGroup}</div>
+                    <div class="whitelist-actions">
+                        <button class="settings-btn settings-btn-small" onclick="editWhitelistEntry('${program}')">编辑</button>
+                    </div>
+                `;
+                container.appendChild(entry);
+            });
+        } else {
+            container.innerHTML = '<div class="whitelist-empty">暂无绑定</div>';
+        }
+    } catch (e) {
+        console.error("加载白名单数据失败:", e);
+    }
+}
+
+async function loadCursorGroups() {
+    try {
+        if (typeof pywebview === 'undefined' || !pywebview.api) {
+            setTimeout(loadCursorGroups, 100);
+            return;
+        }
+        
+        const cursorGroups = await pywebview.api.get_cursor_groups();
+        const select = document.getElementById('cursorGroupSelect');
+        
+        select.innerHTML = '<option value="">选择光标组</option>';
+        cursorGroups.forEach(group => {
+            const option = document.createElement('option');
+            option.value = group;
+            option.textContent = group;
+            select.appendChild(option);
+        });
+    } catch (e) {
+        console.error("加载光标组数据失败:", e);
+    }
+}
+
+
+
+async function addWhitelistEntry() {
+    const program = document.getElementById('programInput').value;
+    const cursorGroup = document.getElementById('cursorGroupSelect').value;
+    
+    if (!program || !cursorGroup) {
+        alert('请选择应用程序和光标组');
+        return;
+    }
+    
+    try {
+        if (typeof pywebview === 'undefined' || !pywebview.api) {
+            alert('请先启动应用程序');
+            return;
+        }
+        
+        await pywebview.api.add_program_whitelist(program, cursorGroup);
+        alert('绑定成功');
+        // 重新加载数据
+        loadWhitelistData();
+        // 清空选择
+        document.getElementById('programInput').value = '';
+        document.getElementById('cursorGroupSelect').value = '';
+    } catch (e) {
+        console.error("添加绑定失败:", e);
+        alert('添加绑定失败');
+    }
+}
+
+
+
+async function editWhitelistEntry(program) {
+    try {
+        if (typeof pywebview === 'undefined' || !pywebview.api) {
+            alert('请先启动应用程序');
+            return;
+        }
+        
+        const whitelist = await pywebview.api.get_program_whitelist();
+        const currentGroup = whitelist[program];
+        
+        if (currentGroup) {
+            document.getElementById('programInput').value = program;
+            document.getElementById('cursorGroupSelect').value = currentGroup;
+        }
+    } catch (e) {
+        console.error("编辑绑定失败:", e);
+    }
+}
+
+async function selectFromRunning() {
+    try {
+        if (typeof pywebview === 'undefined' || !pywebview.api) {
+            alert('请先启动应用程序');
+            return;
+        }
+        
+        const windows = await pywebview.api.get_all_windows();
+        if (!windows || windows.length === 0) {
+            alert('未找到运行中的窗口');
+            return;
+        }
+        
+        // 创建选择对话框
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        
+        const modalContent = document.createElement('div');
+        modalContent.className = 'modal-content';
+        modalContent.innerHTML = `
+            <div class="modal-header">
+                <h3>选择运行中的应用程序</h3>
+            </div>
+            <div class="modal-body scrollable">
+                <div class="running-windows-list">
+                    ${windows.map(window => `
+                        <div class="running-window-item" onclick="selectWindow('${window.process_name}')">
+                            <div class="running-window-title">${window.title}</div>
+                            <div class="running-window-process">${window.process_name}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+        
+        modal.appendChild(modalContent);
+        document.body.appendChild(modal);
+        
+        // 点击模态框外部关闭
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                document.body.removeChild(modal);
+            }
+        });
+    } catch (e) {
+        console.error("获取运行中窗口失败:", e);
+        alert('获取运行中窗口失败');
+    }
+}
+
+function selectWindow(processName) {
+    const input = document.getElementById('programInput');
+    input.value = processName;
+    
+    // 关闭模态框
+    const modal = document.querySelector('.modal-overlay');
+    if (modal) {
+        document.body.removeChild(modal);
+    }
 }
 
 // --- 交互逻辑 ---
