@@ -291,6 +291,42 @@ class SettingsApi:
         except Exception as e:
             log.error(f"获取全屏暂停状态失败: {e}")
             return False
+    def 严格窗口判定(self, status):
+        try:
+            config_path = resolve_path("config.toml")
+            # 尝试加载现有配置
+            if os.path.exists(config_path):
+                config_data = toml.load(config_path)
+            else:
+                config_data = {}
+            
+            # 确保config部分存在
+            if "config" not in config_data:
+                config_data["config"] = {}
+            
+            # 更新strict_window_judgment的值
+            config_data["config"]["strict_window_judgment"] = status
+            
+            # 保存配置
+            with open(config_path, "w", encoding="utf-8") as f:
+                toml.dump(config_data, f)
+            
+            return True
+        except Exception as e:
+            log.error(f"设置严格窗口判定状态失败: {e}")
+            return False
+    def 严格窗口判定状态(self):
+        # 获取状态
+        try:
+            config_path = resolve_path("config.toml")
+            if not os.path.exists(config_path):
+                return False
+            
+            config_data = toml.load(config_path)
+            return config_data.get("config", {}).get("strict_window_judgment", False)
+        except Exception as e:
+            log.error(f"获取严格窗口判定状态失败: {e}")
+            return False
     def 清理缓存(self):
         # 清理主目录下的cache文件夹和html\cache文件夹内的所有文件
         try:

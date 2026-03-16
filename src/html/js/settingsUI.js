@@ -61,6 +61,11 @@ async function startLoadingSequence() {
         const fullscreenPauseEl = document.getElementById('enableFullscreenPause');
         if (fullscreenPauseEl) fullscreenPauseEl.checked = fullscreenPauseStatus;
         
+        // 获取严格窗口判定状态
+        const strictWindowCheckStatus = await pywebview.api.严格窗口判定状态();
+        const strictWindowCheckEl = document.getElementById('strictWindowCheck');
+        if (strictWindowCheckEl) strictWindowCheckEl.checked = strictWindowCheckStatus;
+        
         console.log("所有配置项加载完成");
     } catch (e) {
         console.error("加载配置失败:", e);
@@ -92,6 +97,7 @@ function updateSettingsContent(menuText) {
             break;
         case '高级设置':
             renderAdvancedSettings(settingsSection);
+            startLoadingSequence(); // 重新填充数据
             break;
         case '程序白名单':
             renderProgramWhitelistSettings(settingsSection);
@@ -140,6 +146,13 @@ function renderAdvancedSettings(container) {
             <div class="settings-control">
                 <button class="settings-btn" onclick="handleClearCache(this)">清理</button>
             </div>
+        </div>
+        <div class="settings-item">
+            <div class="settings-label-container">
+                <div class="settings-label">严格的窗口判定 <span class="beta-badge">Bata</span></div>
+                <div class="settings-sub-label">用于程序白名单，进入或离开窗口时立即切换</div>
+            </div>
+            <div class="settings-control"><input type="checkbox" id="strictWindowCheck" onchange="handleStrictWindowCheckChange(this.checked)"></div>
         </div>
     `;
 }
@@ -440,6 +453,15 @@ async function handleFullscreenPauseChange(checked) {
         console.log("全屏暂停状态已更新为:", checked);
     } catch (e) {
         console.error("更新全屏暂停状态失败:", e);
+    }
+}
+
+async function handleStrictWindowCheckChange(checked) {
+    try {
+        await pywebview.api.严格窗口判定(checked);
+        console.log("严格窗口判定状态已更新为:", checked);
+    } catch (e) {
+        console.error("更新严格窗口判定状态失败:", e);
     }
 }
 
