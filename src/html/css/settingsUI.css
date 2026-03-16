@@ -101,10 +101,31 @@
     align-items: center;
     padding: 8px 0;
     border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+    position: relative;
 }
 
 .settings-item:last-child {
     border-bottom: none;
+}
+
+.settings-item-developing .developing-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(220, 38, 38, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.settings-item-developing .developing-overlay span {
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 500;
 }
 
 .settings-label {

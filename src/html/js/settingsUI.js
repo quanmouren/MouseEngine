@@ -147,9 +147,12 @@ function renderAdvancedSettings(container) {
                 <button class="settings-btn" onclick="handleClearCache(this)">清理</button>
             </div>
         </div>
-        <div class="settings-item">
+        <div class="settings-item settings-item-developing">
+            <div class="developing-overlay">
+                <span>此功能处于开发状态</span>
+            </div>
             <div class="settings-label-container">
-                <div class="settings-label">严格的窗口判定 <span class="beta-badge">Bata</span></div>
+                <div class="settings-label">严格的窗口判定 <span class="beta-badge">Beta</span></div>
                 <div class="settings-sub-label">用于程序白名单，进入或离开窗口时立即切换</div>
             </div>
             <div class="settings-control"><input type="checkbox" id="strictWindowCheck" onchange="handleStrictWindowCheckChange(this.checked)"></div>
@@ -162,7 +165,7 @@ function renderAboutSettings(container) {
         <div class="settings-section-title">关于 MouseEngine</div>
         <div class="settings-item">
             <div class="settings-label">版本</div>
-            <div class="settings-value">Beta1</div>
+            <div class="settings-value">Beta1.1</div>
         </div>
         <div class="settings-item">
             <div class="settings-label">开发者</div>
