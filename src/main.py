@@ -35,7 +35,8 @@ except ImportError:
 
 UI_IMPORT_SUCCESS = True
 
-PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+from path_utils import get_project_root
+PROJECT_ROOT = get_project_root()
 
 stop_flag = threading.Event()
 global_threads = []
@@ -43,8 +44,9 @@ TRAY_ICON = None
 initial_loading_done = False
 last_in_whitelist = None  # 跟踪上一次焦点窗口是否在白名单中
 
-CONFIG_FILE_PATH = "config.toml"
-MOUSE_THEMES_DIR = "mouses"
+from path_utils import resolve_path
+CONFIG_FILE_PATH = resolve_path("config.toml")
+MOUSE_THEMES_DIR = resolve_path("mouses")
 CURSOR_ORDER_MAPPING = [
     "Arrow", "Help", "AppStarting", "Wait", "Crosshair", "IBeam",
     "Handwriting", "No", "SizeNS", "SizeWE", "SizeNWSE", "SizeNESW",
@@ -236,7 +238,7 @@ def 触发刷新(target_wallpaper_id=None, changed_monitor_index=None):
             theme_dir = str(whitelist_theme).strip().strip('"').strip("'")
             theme_dir = theme_dir.replace("/", os.sep).replace("\\", os.sep)
             if (os.sep not in theme_dir) and (not theme_dir.lower().startswith("mouses")):
-                theme_dir = os.path.join("mouses", theme_dir)
+                theme_dir = os.path.join(MOUSE_THEMES_DIR, theme_dir)
             log_func.info(f"程序白名单匹配: {current_process_name} -> {theme_dir}")
             log_func.val(f"theme_dir={theme_dir}")
             
@@ -324,14 +326,14 @@ def 触发刷新(target_wallpaper_id=None, changed_monitor_index=None):
         if not enable_default:
             log_func.error("未启用默认图标组，跳过。")
             return False
-        theme_dir = os.path.join("mouses", "默认")
+        theme_dir = os.path.join(MOUSE_THEMES_DIR, "默认")
         log_func.val(f"theme_dir={theme_dir}")
         log_func.info(f"启用默认图标组，加载默认配置: {theme_dir}\\config.toml")
     else:
         theme_dir = str(theme_value).strip().strip('"').strip("'")
         theme_dir = theme_dir.replace("/", os.sep).replace("\\", os.sep)
         if (os.sep not in theme_dir) and (not theme_dir.lower().startswith("mouses")):
-            theme_dir = os.path.join("mouses", theme_dir)
+            theme_dir = os.path.join(MOUSE_THEMES_DIR, theme_dir)
         log_func.val(f"theme_dir={theme_dir}")
 
     try:

@@ -243,6 +243,7 @@ async function loadWhitelistData() {
                     <div class="whitelist-cursor">${cursorGroup}</div>
                     <div class="whitelist-actions">
                         <button class="settings-btn settings-btn-small" onclick="editWhitelistEntry('${program}')">编辑</button>
+                        <button class="settings-btn settings-btn-small" onclick="deleteWhitelistEntry('${program}')">删除</button>
                     </div>
                 `;
                 container.appendChild(entry);
@@ -284,18 +285,18 @@ async function addWhitelistEntry() {
     const cursorGroup = document.getElementById('cursorGroupSelect').value;
     
     if (!program || !cursorGroup) {
-        alert('请选择应用程序和光标组');
+        console.log('请选择应用程序和光标组');
         return;
     }
     
     try {
         if (typeof pywebview === 'undefined' || !pywebview.api) {
-            alert('请先启动应用程序');
+            console.log('请先启动应用程序');
             return;
         }
         
         await pywebview.api.add_program_whitelist(program, cursorGroup);
-        alert('绑定成功');
+        console.log('绑定成功');
         // 重新加载数据
         loadWhitelistData();
         // 清空选择
@@ -303,7 +304,6 @@ async function addWhitelistEntry() {
         document.getElementById('cursorGroupSelect').value = '';
     } catch (e) {
         console.error("添加绑定失败:", e);
-        alert('添加绑定失败');
     }
 }
 
@@ -312,7 +312,7 @@ async function addWhitelistEntry() {
 async function editWhitelistEntry(program) {
     try {
         if (typeof pywebview === 'undefined' || !pywebview.api) {
-            alert('请先启动应用程序');
+            console.log('请先启动应用程序');
             return;
         }
         
@@ -328,16 +328,32 @@ async function editWhitelistEntry(program) {
     }
 }
 
+async function deleteWhitelistEntry(program) {
+    try {
+        if (typeof pywebview === 'undefined' || !pywebview.api) {
+            console.log('请先启动应用程序');
+            return;
+        }
+        
+        await pywebview.api.delete_program_whitelist(program);
+        console.log('删除绑定成功');
+        // 重新加载数据
+        loadWhitelistData();
+    } catch (e) {
+        console.error("删除绑定失败:", e);
+    }
+}
+
 async function selectFromRunning() {
     try {
         if (typeof pywebview === 'undefined' || !pywebview.api) {
-            alert('请先启动应用程序');
+            console.log('请先启动应用程序');
             return;
         }
         
         const windows = await pywebview.api.get_all_windows();
         if (!windows || windows.length === 0) {
-            alert('未找到运行中的窗口');
+            console.log('未找到运行中的窗口');
             return;
         }
         
@@ -374,7 +390,6 @@ async function selectFromRunning() {
         });
     } catch (e) {
         console.error("获取运行中窗口失败:", e);
-        alert('获取运行中窗口失败');
     }
 }
 

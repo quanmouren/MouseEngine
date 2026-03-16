@@ -459,6 +459,33 @@ class SettingsApi:
             log.error(f"添加程序白名单失败: {e}")
             return False
 
+    def delete_program_whitelist(self, program):
+        try:
+            config_path = resolve_path("config.toml")
+            # 加载现有配置
+            if os.path.exists(config_path):
+                config_data = toml.load(config_path)
+            else:
+                config_data = {}
+            
+            # 确保 program_whitelist 部分存在
+            if "program_whitelist" in config_data:
+                # 删除绑定
+                if program in config_data["program_whitelist"]:
+                    del config_data["program_whitelist"][program]
+                    
+                    # 保存配置
+                    with open(config_path, "w", encoding="utf-8") as f:
+                        toml.dump(config_data, f)
+                    
+                    log.info(f"删除程序白名单: {program}")
+                    return True
+            
+            return False
+        except Exception as e:
+            log.error(f"删除程序白名单失败: {e}")
+            return False
+
 
 
     def get_cursor_groups(self):
