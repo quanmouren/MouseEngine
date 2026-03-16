@@ -1,6 +1,10 @@
 # MouseEngine
 
-[**README_en.md**](./docs/README_en.md)
+<div align="center">
+
+[English](./docs/README_en.md) | [中文文档](./README.md)
+
+</div>
 
 MouseEngine 是一个 **基于 Wallpaper Engine 的 Windows 鼠标指针自动切换工具**。
 它能够根据当前显示器所使用的壁纸，**自动切换对应的鼠标指针主题**，默认回退、系统托盘常驻运行。
