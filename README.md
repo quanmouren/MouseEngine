@@ -99,7 +99,7 @@ MouseEngine 是一个 **基于 Wallpaper Engine 的 Windows 鼠标指针自动�
 ### 1) 克隆仓库
 
 ```bash
-git clone https://github.com/yourname/MouseEngine.git
+git clone https://github.com/quanmouren/MouseEngine.git
 cd MouseEngine
 ```
 
