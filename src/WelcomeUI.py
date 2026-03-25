@@ -130,9 +130,9 @@ class Api:
             log.error(f"验证路径失败: {e}")
             return {"success": False, "message": str(e)}
     
-    def confirm_path(self, path):
+    def confirm_path(self, path, use_default_cursor=True):
         try:
-            self.on_path_selected_callback(path)
+            self.on_path_selected_callback(path, use_default_cursor)
         except Exception as e:
             log.error(f"确认路径失败: {e}")
     
@@ -147,10 +147,11 @@ class Api:
 win = None
 
 def get_wallpaper_engine_path_ui():
-    result = [None]
+    result = [None, True]
     
-    def on_path_selected(path):
+    def on_path_selected(path, use_default_cursor=True):
         result[0] = path
+        result[1] = use_default_cursor
         if win:
             win.destroy()
     
@@ -163,19 +164,20 @@ def get_wallpaper_engine_path_ui():
         main_html_path,
         js_api=api,
         width=600,
-        height=350,
+        height=360,
         resizable=False,
         easy_drag=True
     )
     
     webview.start(debug=False, http_server=True)
-    return result[0]
+    return result[0], result[1]
 
 if __name__ == "__main__":
-    final_path = get_wallpaper_engine_path_ui()
+    final_path, use_default_cursor = get_wallpaper_engine_path_ui()
     
     if final_path:
-        print(final_path)
+        print(f"路径: {final_path}")
+        print(f"使用默认光标: {use_default_cursor}")
     else:
         pass
         # sys.exit()

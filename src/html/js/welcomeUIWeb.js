@@ -5,6 +5,7 @@ window.onload = function() {
     const continueBtn = document.getElementById('continueBtn');
     const pathInput = document.getElementById('pathInput');
     const folderInput = document.getElementById('folderInput');
+    const defaultCursorCheck = document.getElementById('defaultCursorCheck');
     
     // 检查 pywebview 是否可用
     function checkPyWebView() {
@@ -93,7 +94,8 @@ window.onload = function() {
         
         window.pywebview.api.validate_path(path).then(function(result) {
             if (result.success) {
-                window.pywebview.api.confirm_path(path);
+                const useDefaultCursor = defaultCursorCheck.checked;
+                window.pywebview.api.confirm_path(path, useDefaultCursor);
             }
         }).catch(function(error) {
         });

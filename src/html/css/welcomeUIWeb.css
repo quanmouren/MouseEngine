@@ -165,6 +165,52 @@
             transform: none;
         }
         
+        .checkbox-section {
+            margin-top: -10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .checkbox {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(51, 65, 85, 0.6);
+            border-radius: 4px;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+        
+        .checkbox:hover {
+            border-color: #4299e1;
+            background: rgba(45, 55, 72, 0.9);
+        }
+        
+        .checkbox:checked {
+            background: rgba(66, 153, 225, 0.3);
+            border-color: #4299e1;
+        }
+        
+        .checkbox:checked::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #3b82f6;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .checkbox-label {
+            font-size: 12px;
+            color: #ffffff;
+        }
+        
         /* 动画效果 */
         @keyframes pulse {
             0%, 100% {
