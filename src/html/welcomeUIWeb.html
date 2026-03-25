@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>欢迎！应用程序配置向导</title>
+    <link rel="stylesheet" href="css/welcomeUIWeb.css">
+</head>
+<body>
+    <div class="container">
+        <div class="welcome-card">
+            <div class="header">
+                <div class="title">✨ 欢迎使用 MouseEngine</div>
+                <div class="subtitle">程序首次运行，请指定 Wallpaper Engine 的安装位置。</div>
+            </div>
+            
+            <div class="content">
+                <div class="path-section">
+                    <label for="pathInput" class="path-label">Wallpaper Engine 根目录:</label>
+                    <input type="text" id="pathInput" class="path-input" placeholder="输入路径，或使用下方的查找按钮">
+                    <input type="file" id="folderInput" class="folder-input" webkitdirectory directory multiple style="display: none;">
+                </div>
+                
+                <div class="button-section">
+                    <button id="autoFindBtn" class="btn primary">⚙️ 自动查找 (Steam)</button>
+                    <button id="browseBtn" class="btn secondary">📂 浏览文件夹</button>
+                    <button id="continueBtn" class="btn success">✅ 确认并继续</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/welcomeUIWeb.js"></script>
+</body>
+</html>
