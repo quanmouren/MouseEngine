@@ -331,6 +331,76 @@ def 删除鼠标组(group_name, base_path=MOUSE_BASE_PATH):
         log.error(f"删除鼠标组失败: {e}")
         return False
 
+def 重命名鼠标组(old_group_name, new_group_name, base_path=MOUSE_BASE_PATH):
+    """重命名鼠标组文件夹，并更新配置文件中的路径"""
+    if old_group_name == "默认":
+        log.error("禁止重命名默认组")
+        return False
+    
+    if old_group_name == new_group_name:
+        log.info("组名未变更")
+        return True
+    
+    old_path = os.path.join(base_path, old_group_name)
+    new_path = os.path.join(base_path, new_group_name)
+    
+    if not os.path.exists(old_path):
+        log.error(f"组不存在: {old_group_name}")
+        return False
+    
+    if os.path.exists(new_path):
+        log.error(f"目标组已存在: {new_group_name}")
+        return False
+    
+    try:
+        # 重命名目录
+        os.rename(old_path, new_path)
+        
+        # 更新配置文件中的路径
+        config_path = os.path.join(new_path, "config.toml")
+        if os.path.exists(config_path):
+            with open(config_path, 'r', encoding='utf-8') as f:
+                config = toml.load(f)
+            
+            # 更新mouses部分中的路径
+            if "mouses" in config:
+                for key, value in config["mouses"].items():
+                    if value and isinstance(value, str):
+                        # 统一处理路径分隔符
+                        new_value = value.replace(f"mouses\\{old_group_name}", f"mouses\\{new_group_name}")
+                        new_value = new_value.replace(f"mouses/{old_group_name}", f"mouses/{new_group_name}")
+                        config["mouses"][key] = new_value
+            
+            # 写回配置文件
+            with open(config_path, 'w', encoding='utf-8') as f:
+                toml.dump(config, f)
+        
+        # 更新主配置文件中的壁纸绑定
+        main_config_path = resolve_path(CONFIG_PATH)
+        if os.path.exists(main_config_path):
+            with open(main_config_path, 'r', encoding='utf-8') as f:
+                main_config = toml.load(f)
+            
+            # 更新wallpaper部分中的组名
+            if "wallpaper" in main_config:
+                updated = False
+                for key, value in main_config["wallpaper"].items():
+                    if value == old_group_name:
+                        main_config["wallpaper"][key] = new_group_name
+                        updated = True
+                
+                # 如果有更新，写回文件
+                if updated:
+                    with open(main_config_path, 'w', encoding='utf-8') as f:
+                        toml.dump(main_config, f)
+                    log.info(f"已更新主配置文件中的壁纸绑定: {old_group_name} -> {new_group_name}")
+        
+        log.info(f"重命名鼠标组成功: {old_group_name} -> {new_group_name}")
+        return True
+    except Exception as e:
+        log.error(f"重命名鼠标组失败: {e}")
+        return False
+
 
 if __name__ == "__main__":
     add_wallpaper("表1", "testdfghj")

@@ -314,6 +314,39 @@ body {
     z-index: 1000;
 }
 
+/* 右键菜单样式 */
+.context-menu {
+    position: fixed;
+    background-color: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1001;
+    display: none;
+}
+
+.context-menu-item {
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #ffffff;
+    white-space: nowrap;
+}
+
+.context-menu-item:hover {
+    background-color: #3b82f6;
+    border-radius: 4px;
+}
+
+.context-menu-item.disabled {
+    color: #64748b;
+    cursor: not-allowed;
+}
+
+.context-menu-item.disabled:hover {
+    background-color: transparent;
+}
+
 .modal-content {
     background-color: #1e293b;
     border: 1px solid #334155;

@@ -188,6 +188,39 @@ class EditMouseApi:
         except Exception as e:
             log.error(f"保存组失败: {e}")
             return {"status": "error", "msg": str(e)}
+
+    def delete_group(self, group_name):
+        if group_name == "默认组":
+            return {"status": "error", "msg": "默认组无法删除"}
+
+        try:
+            from mouses import 删除鼠标组
+            success = 删除鼠标组(group_name)
+            if success:
+                return {"status": "success", "msg": f"组 [{group_name}] 已删除"}
+            else:
+                return {"status": "error", "msg": f"删除组 [{group_name}] 失败"}
+        except Exception as e:
+            log.error(f"删除组失败: {e}")
+            return {"status": "error", "msg": str(e)}
+
+    def rename_group(self, old_group_name, new_group_name):
+        if old_group_name == "默认组":
+            return {"status": "error", "msg": "默认组无法重命名"}
+
+        if old_group_name == new_group_name:
+            return {"status": "success", "msg": "组名未变更"}
+
+        try:
+            from mouses import 重命名鼠标组
+            success = 重命名鼠标组(old_group_name, new_group_name)
+            if success:
+                return {"status": "success", "msg": f"组 [{old_group_name}] 已重命名为 [{new_group_name}]"}
+            else:
+                return {"status": "error", "msg": f"重命名组 [{old_group_name}] 失败"}
+        except Exception as e:
+            log.error(f"重命名组失败: {e}")
+            return {"status": "error", "msg": str(e)}
     
     def 导入组(self):
         import threading

@@ -109,6 +109,12 @@ async function renderPreviewGrid() {
             await selectGroup(groupName);
         });
         
+        // 添加右键点击事件
+        groupCard.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            showContextMenu(e, groupName);
+        });
+        
         // 添加到列表
         grid.appendChild(groupCard);
         
@@ -501,6 +507,7 @@ async function importGroup() {
 
 // 初始化悬浮窗事件监听器
 function initModalListeners() {
+    // 组名输入弹窗
     const modal = document.getElementById('groupNameModal');
     const cancelBtn = document.getElementById('cancelBtn');
     const confirmBtn = document.getElementById('confirmBtn');
@@ -532,6 +539,39 @@ function initModalListeners() {
             hideGroupNameModal();
         }
     });
+
+    // 重命名弹窗
+    const renameModal = document.getElementById('renameModal');
+    const renameCancelBtn = document.getElementById('renameCancelBtn');
+    const renameConfirmBtn = document.getElementById('renameConfirmBtn');
+    const renameInput = document.getElementById('renameInput');
+
+    // 取消按钮点击事件
+    renameCancelBtn.addEventListener('click', hideRenameModal);
+
+    // 确认按钮点击事件
+    renameConfirmBtn.addEventListener('click', confirmRenameGroup);
+
+    // 点击弹窗外层取消
+    renameModal.addEventListener('click', (e) => {
+        if (e.target === renameModal) {
+            hideRenameModal();
+        }
+    });
+
+    // 按下 Enter 键确认
+    renameInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            confirmRenameGroup();
+        }
+    });
+
+    // 按下 Escape 键取消
+    renameInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            hideRenameModal();
+        }
+    });
 }
 
 // 显示下拉框
@@ -545,4 +585,243 @@ document.addEventListener('click', e => {
     if (!e.target.closest('.header-row')) {
         document.getElementById('groupDropdown').style.display = 'none';
     }
+    // 点击外部关闭右键菜单
+    if (!e.target.closest('.context-menu') && !e.target.closest('.grid-item')) {
+        hideContextMenu();
+    }
 });
+
+// 显示右键菜单
+function showContextMenu(e, groupName) {
+    const contextMenu = document.getElementById('contextMenu');
+    const deleteItem = document.getElementById('deleteGroupItem');
+    
+    // 计算菜单位置，考虑content-left区域的滚动偏移
+    const contentLeft = document.querySelector('.content-left');
+    const rect = e.currentTarget.getBoundingClientRect();
+    const scrollLeft = contentLeft ? contentLeft.scrollLeft : 0;
+    const scrollTop = contentLeft ? contentLeft.scrollTop : 0;
+    
+    // 获取content-left的位置
+    const contentLeftRect = contentLeft ? contentLeft.getBoundingClientRect() : { left: 0, top: 0 };
+    
+    let left = e.clientX;
+    let top = e.clientY;
+    
+    // 检查菜单是否会超出视口
+    const menuWidth = contextMenu.offsetWidth || 200;
+    const menuHeight = contextMenu.offsetHeight || 50;
+    
+    if (left + menuWidth > window.innerWidth) {
+        left = window.innerWidth - menuWidth;
+    }
+    
+    if (top + menuHeight > window.innerHeight) {
+        top = window.innerHeight - menuHeight;
+    }
+    
+    // 确保菜单在视口内
+    left = Math.max(0, left);
+    top = Math.max(0, top);
+    
+    // 设置菜单位置
+    contextMenu.style.left = left + 'px';
+    contextMenu.style.top = top + 'px';
+    contextMenu.style.position = 'fixed';
+    
+    const renameItem = document.getElementById('renameGroupItem');
+    
+    // 如果是默认组，禁用删除选项
+    if (groupName === '默认组') {
+        deleteItem.classList.add('disabled');
+        deleteItem.onclick = null;
+    } else {
+        deleteItem.classList.remove('disabled');
+        deleteItem.onclick = () => handleDeleteGroup(groupName);
+    }
+    
+    // 为所有组添加重命名选项
+    renameItem.classList.remove('disabled');
+    renameItem.onclick = () => handleRenameGroup(groupName);
+    
+    // 显示菜单
+    contextMenu.style.display = 'block';
+    
+    // 添加滚动事件监听器，滚动时关闭菜单
+    if (contentLeft) {
+        contentLeft.addEventListener('scroll', hideContextMenu);
+    }
+    
+    // 添加鼠标离开事件监听器，离开画面时关闭菜单
+    document.addEventListener('mouseleave', hideContextMenu);
+}
+
+// 更新右键菜单位置
+function updateContextMenuPosition() {
+    const contextMenu = document.getElementById('contextMenu');
+    if (contextMenu.style.display === 'block') {
+        // 保持菜单在视口中的相对位置
+        const rect = contextMenu.getBoundingClientRect();
+        let left = rect.left;
+        let top = rect.top;
+        
+        // 检查菜单是否会超出视口
+        const menuWidth = contextMenu.offsetWidth || 200;
+        const menuHeight = contextMenu.offsetHeight || 50;
+        
+        if (left + menuWidth > window.innerWidth) {
+            left = window.innerWidth - menuWidth;
+        }
+        
+        if (top + menuHeight > window.innerHeight) {
+            top = window.innerHeight - menuHeight;
+        }
+        
+        // 确保菜单在视口内
+        left = Math.max(0, left);
+        top = Math.max(0, top);
+        
+        contextMenu.style.left = left + 'px';
+        contextMenu.style.top = top + 'px';
+    }
+}
+
+// 隐藏右键菜单
+function hideContextMenu() {
+    const contextMenu = document.getElementById('contextMenu');
+    contextMenu.style.display = 'none';
+    
+    // 移除事件监听器
+    const contentLeft = document.querySelector('.content-left');
+    if (contentLeft) {
+        contentLeft.removeEventListener('scroll', hideContextMenu);
+    }
+    document.removeEventListener('mouseleave', hideContextMenu);
+}
+
+// 处理删除组操作
+async function handleDeleteGroup(groupName) {
+    if (!window.pywebview) {
+        alert('此功能仅在应用内可用');
+        hideContextMenu();
+        return;
+    }
+    
+    try {
+        // 调用Python API删除组
+        const result = await pywebview.api.delete_group(groupName);
+        if (result.status === 'success') {
+            // 刷新组列表和预览网格
+            await refreshGroups();
+            await renderPreviewGrid();
+            
+            // 如果当前选中的是被删除的组，切换到默认组
+            if (currentOriginalGroup === groupName) {
+                await selectGroup('默认组');
+            }
+            
+            showNotification('删除成功', 'success');
+        } else {
+            showNotification(result.msg, 'error');
+        }
+    } catch (e) {
+        console.error('删除组失败', e);
+        showNotification('删除失败，请重试', 'error');
+    } finally {
+        hideContextMenu();
+    }
+}
+
+// 处理重命名组操作
+function handleRenameGroup(groupName) {
+    if (!window.pywebview) {
+        alert('此功能仅在应用内可用');
+        hideContextMenu();
+        return;
+    }
+    
+    // 显示重命名弹窗
+    showRenameModal(groupName);
+    hideContextMenu();
+}
+
+// 显示重命名弹窗
+function showRenameModal(groupName) {
+    const modal = document.getElementById('renameModal');
+    const input = document.getElementById('renameInput');
+    
+    // 设置输入框默认值为当前组名
+    input.value = groupName;
+    
+    // 存储当前组名，用于后续操作
+    modal.dataset.groupName = groupName;
+    
+    // 显示弹窗
+    modal.style.display = 'flex';
+    
+    // 自动聚焦输入框
+    setTimeout(() => {
+        input.focus();
+        // 选中输入框内容，方便直接修改
+        input.select();
+    }, 100);
+}
+
+// 隐藏重命名弹窗
+function hideRenameModal() {
+    const modal = document.getElementById('renameModal');
+    modal.style.display = 'none';
+}
+
+// 确认重命名组
+async function confirmRenameGroup() {
+    const modal = document.getElementById('renameModal');
+    const input = document.getElementById('renameInput');
+    const newGroupName = input.value.trim();
+    const oldGroupName = modal.dataset.groupName;
+    
+    if (!newGroupName) {
+        alert('组名不能为空');
+        return;
+    }
+    
+    // 验证组名
+    if (!validateGroupName(newGroupName)) {
+        alert('组名不能包含特殊字符，且长度不能超过20个字符');
+        return;
+    }
+    
+    // 检查组名是否已存在
+    const existingGroups = await pywebview.api.get_existing_groups();
+    if (existingGroups.includes(newGroupName) && newGroupName !== oldGroupName) {
+        const confirmOverwrite = confirm('该组名已存在，是否覆盖？');
+        if (!confirmOverwrite) {
+            return;
+        }
+    }
+    
+    // 隐藏弹窗
+    hideRenameModal();
+    
+    try {
+        // 调用Python API重命名组
+        const result = await pywebview.api.rename_group(oldGroupName, newGroupName);
+        if (result.status === 'success') {
+            // 刷新组列表和预览网格
+            await refreshGroups();
+            await renderPreviewGrid();
+            
+            // 如果当前选中的是被重命名的组，切换到新组名
+            if (currentOriginalGroup === oldGroupName) {
+                await selectGroup(newGroupName);
+            }
+            
+            showNotification('重命名成功', 'success');
+        } else {
+            showNotification(result.msg, 'error');
+        }
+    } catch (e) {
+        console.error('重命名组失败', e);
+        showNotification('重命名失败，请重试', 'error');
+    }
+}

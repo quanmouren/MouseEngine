@@ -57,6 +57,24 @@
         </div>
     </div>
 
+    <!-- 右键菜单 -->
+    <div id="contextMenu" class="context-menu">
+        <div id="renameGroupItem" class="context-menu-item">重命名</div>
+        <div id="deleteGroupItem" class="context-menu-item">删除此组</div>
+    </div>
+
+    <!-- 重命名弹窗 -->
+    <div id="renameModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>重命名鼠标组</h3>
+            <input type="text" id="renameInput" placeholder="请输入新组名" class="modal-input">
+            <div class="modal-buttons">
+                <button id="renameCancelBtn" class="modal-button cancel">取消</button>
+                <button id="renameConfirmBtn" class="modal-button confirm">确认</button>
+            </div>
+        </div>
+    </div>
+
     <script src="js/mouseUI.js"></script>
 </body>
 </html>
