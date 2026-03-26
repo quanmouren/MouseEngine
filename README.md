@@ -245,11 +245,6 @@ pip install portalocker
 - 在 `config.toml` 的 `[wallpaper]` 中添加该壁纸 ID 的映射
 - 或开启 `[config] enable_default_icon_group = true` 作为回退
 
-### Q4：删除mouses文件夹时无权限(此功能不在当前已发布版本中)
-- 在初次运行时如果使用windows默认光标作为默认光标组,程序会将带有Microsoft数字签名的光标复制进 `mouses` 文件夹,可能导致无法删除该文件夹.
-- 使用CMD可正常删除该文件夹.
-- 此问题会在后续版本中优化,避免直接复制带有Microsoft数字签名的光标到 `mouses` 文件夹.
-
 ---
 
 ## 🚧 开发进度和问题

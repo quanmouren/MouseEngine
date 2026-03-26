@@ -71,28 +71,12 @@ def initialize_folders(use_default_cursor=True):
             # Windows 光标文件夹路径
             windows_cursors_path = os.path.join(os.environ.get("WINDIR", "C:\Windows"), "Cursors")
             
-            # 复制光标文件到默认文件夹
-            copied_files = []
-            for cursor_name, cursor_file in cursor_files.items():
-                source_path = os.path.join(windows_cursors_path, cursor_file)
-                dest_path = os.path.join(default_path, cursor_file)
-                if os.path.exists(source_path):
-                    try:
-                        import shutil
-                        import stat
-                        # 复制文件
-                        shutil.copy2(source_path, dest_path)
-                        # 移除系统文件属性
-                        os.chmod(dest_path, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IWGRP | stat.S_IROTH)
-                        copied_files.append(cursor_file)
-                    except Exception as e:
-                        log.error(f"复制光标文件 {cursor_file} 失败：{e}")
-            
-            # 创建配置文件内容
             config_content = "[mouses]\n"
             for cursor_name, cursor_file in cursor_files.items():
-                if cursor_file in copied_files:
-                    config_content += f'{cursor_name} = "mouses\\\\默认\\\\{cursor_file}"\n'
+                cursor_path = os.path.join(windows_cursors_path, cursor_file)
+                if os.path.exists(cursor_path):
+                    cursor_path = cursor_path.replace('\\', '\\\\')
+                    config_content += f'{cursor_name} = "{cursor_path}"\n'
                 else:
                     config_content += f'{cursor_name} = ""\n'
             
@@ -100,7 +84,7 @@ def initialize_folders(use_default_cursor=True):
                 with open(config_path, "w", encoding="utf-8") as f:
                     f.write(config_content)
                 print(f"已创建默认光标配置文件：{config_path}")
-                print(f"已复制 {len(copied_files)} 个光标文件到默认文件夹")
+                print(f"已配置 {len(cursor_files)} 个光标文件路径")
             except Exception as e:
                 log.error(f"创建默认光标配置文件失败：{e}")
     else:
