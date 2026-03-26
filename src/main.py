@@ -125,24 +125,10 @@ def run_ui_in_process(script_filename: str, title: str):
         log.info(f"启动 UI 进程: {title} (pid={p.pid})")
     except Exception as e:
         log.error(f"启动 UI 进程失败 {title}: {e}")
-def open_config_mouse_gui(icon=None, item=None):
-    """打开 '配置鼠标组' UI"""
-    run_ui_in_process("mouseUI.py", "配置鼠标组")
-
-
-def open_bind_mouse_gui(icon="icon300.ico", item=None):
-    """打开 '绑定鼠标组' UI"""
-    run_ui_in_process("playlistUI.py", "绑定鼠标组")
-
 
 def open_bind_mouse_gui_test(icon="icon300.ico", item=None):
     """打开 '绑定鼠标组' UI"""
     run_ui_in_process("mainUIWeb.py", "绑定鼠标组")
-
-
-def open_settings_ui(icon=None, item=None):
-    """打开 '设置' UI"""
-    run_ui_in_process("settingsUIWeb.py", "设置")
 
 def start_thread(target_func, name):
     t = threading.Thread(target=target_func, name=name)
@@ -183,6 +169,20 @@ def on_exit_request(icon, item):
             active_ui_processes.pop(title, None)
 
 
+def open_config_mouse_gui(icon=None, item=None):
+    """打开 '配置鼠标组' UI"""
+    run_ui_in_process("mouseUI.py", "配置鼠标组")
+
+
+def open_bind_mouse_gui(icon="icon300.ico", item=None):
+    """打开 '绑定鼠标组' UI"""
+    run_ui_in_process("mainUIWeb.py", "绑定鼠标组")
+
+
+def open_settings_ui(icon=None, item=None):
+    """打开 '设置' UI"""
+    run_ui_in_process("settingsUIWeb.py", "设置")
+
 def setup_pystray_icon():
     """设置 pystray 系统托盘图标和菜单"""
     global TRAY_ICON
@@ -204,10 +204,10 @@ def setup_pystray_icon():
             image.thumbnail((64, 64), Image.ANTIALIAS)
 
     menu = Menu(
-        #MenuItem("配置鼠标组", open_config_mouse_gui, enabled=UI_IMPORT_SUCCESS),
-        #MenuItem("绑定鼠标组", open_bind_mouse_gui_test, enabled=UI_IMPORT_SUCCESS),
-        #MenuItem("设置", open_settings_ui, enabled=UI_IMPORT_SUCCESS),
-        #Menu.SEPARATOR,
+        MenuItem("配置鼠标组", open_config_mouse_gui, enabled=UI_IMPORT_SUCCESS),
+        MenuItem("绑定鼠标组", open_bind_mouse_gui, enabled=UI_IMPORT_SUCCESS),
+        MenuItem("设置", open_settings_ui, enabled=UI_IMPORT_SUCCESS),
+        Menu.SEPARATOR,
         MenuItem("退出", on_exit_request),
     )
 

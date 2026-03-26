@@ -20,7 +20,6 @@ from path_utils import resolve_path, get_project_root
 PROJECT_ROOT = get_project_root()
 log.info(f"项目根目录: {PROJECT_ROOT}")
 
-log.on_DEBUG = True
 
 MOUSE_BASE_PATH = resolve_path("mouses")
 CONFIG_PATH = resolve_path("config.toml")
