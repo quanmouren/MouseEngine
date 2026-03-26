@@ -27,7 +27,7 @@ except ImportError:
     win32com = None
     win32gui = None
     win32process = None
-
+import shutil
 log = TLog("SettingsUI")
 
 def find_steam_install_path():
@@ -507,7 +507,6 @@ class SettingsApi:
             return ["默认"]
 
 
-
     def get_all_windows(self):
         try:
             if win32gui is None or win32process is None:
@@ -553,6 +552,57 @@ class SettingsApi:
         except Exception as e:
             log.error(f"获取所有窗口失败: {e}")
             return []
+    
+    def 设置默认组为Windows默认光标(self):
+        try:
+            MOUSE_BASE_PATH = resolve_path("mouses")
+            default_path = os.path.join(MOUSE_BASE_PATH, "默认")
+            
+            if os.path.exists(default_path):
+                shutil.rmtree(default_path)
+                log.info(f"已删除原默认光标组: {default_path}")
+            
+            os.makedirs(default_path, exist_ok=True)
+            
+            cursor_files = {
+                "Arrow": "aero_arrow.cur",
+                "Help": "aero_helpsel.cur",
+                "AppStarting": "aero_working.ani",
+                "Wait": "aero_busy.ani",
+                "Crosshair": "cross_i.cur",
+                "IBeam": "beam_i.cur",
+                "Handwriting": "aero_pen.cur",
+                "No": "aero_unavail.cur",
+                "SizeNS": "aero_ns.cur",
+                "SizeWE": "aero_ew.cur",
+                "SizeNWSE": "aero_nwse.cur",
+                "SizeNESW": "aero_nesw.cur",
+                "SizeAll": "aero_move.cur",
+                "Hand": "aero_link.cur",
+                "UpArrow": "aero_up.cur"
+            }
+            
+            windows_cursors_path = os.path.join(os.environ.get("WINDIR", "C:\Windows"), "Cursors")
+            
+            config_path = os.path.join(default_path, "config.toml")
+            config_content = "[mouses]\n"
+            for cursor_name, cursor_file in cursor_files.items():
+                cursor_path = os.path.join(windows_cursors_path, cursor_file)
+                if os.path.exists(cursor_path):
+                    cursor_path = cursor_path.replace('\\', '\\\\')
+                    config_content += f'{cursor_name} = "{cursor_path}"\n'
+                else:
+                    config_content += f'{cursor_name} = ""\n'
+            
+            with open(config_path, "w", encoding="utf-8") as f:
+                f.write(config_content)
+            log.info(f"已创建默认光标配置文件：{config_path}")
+            
+            log.info(f"已成功将默认组设置为Windows默认光标：{config_path}")
+            return True
+        except Exception as e:
+            log.error(f"设置默认组为Windows默认光标失败: {e}")
+            return False
 
 
 if __name__ == "__main__":

@@ -157,6 +157,14 @@ function renderAdvancedSettings(container) {
             </div>
             <div class="settings-control"><input type="checkbox" id="strictWindowCheck" onchange="handleStrictWindowCheckChange(this.checked)"></div>
         </div>
+        <div class="settings-item">
+            <div class="settings-label-container">
+                <div class="settings-label">将默认组设置为Windows默认光标</div>
+            </div>
+            <div class="settings-control">
+                <button class="settings-btn" onclick="handleRestoreDefaultCursor()">设置默认</button>
+            </div>
+        </div>
     `;
 }
 
@@ -518,6 +526,48 @@ async function handleClearCache(button) {
     } catch (e) {
         console.error("清理缓存失败:", e);
         button.textContent = "清理失败";
+    } finally {
+        // 3秒后恢复按钮状态
+        setTimeout(() => {
+            button.textContent = originalText;
+            button.disabled = false;
+        }, 3000);
+    }
+}
+
+async function handleRestoreDefaultCursor() {
+    // 获取按钮元素
+    const button = event.target;
+    // 保存原始文本
+    const originalText = button.textContent;
+    // 替换为正在设置
+    button.textContent = "正在设置...";
+    // 禁用按钮
+    button.disabled = true;
+    
+    try {
+        if (typeof pywebview === 'undefined' || !pywebview.api) {
+            console.log('请先启动应用程序');
+            button.textContent = "未启动应用";
+            // 3秒后恢复按钮状态
+            setTimeout(() => {
+                button.textContent = originalText;
+                button.disabled = false;
+            }, 3000);
+            return;
+        }
+        
+        const success = await pywebview.api.设置默认组为Windows默认光标();
+        if (success) {
+            console.log('已将默认组设置为Windows默认光标');
+            button.textContent = "设置成功";
+        } else {
+            console.log('设置默认组失败');
+            button.textContent = "设置失败";
+        }
+    } catch (e) {
+        console.error('设置默认组失败:', e);
+        button.textContent = "设置失败";
     } finally {
         // 3秒后恢复按钮状态
         setTimeout(() => {
