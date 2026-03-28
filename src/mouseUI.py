@@ -273,7 +273,10 @@ if __name__ == "__main__":
         html_file,
         js_api=api,
         width=900,
-        height=765
+        height=765,
+        easy_drag=True,
+        resizable=True,
+        text_select=False
     )
     api.set_window(window)
     

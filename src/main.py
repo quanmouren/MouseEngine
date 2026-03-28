@@ -108,27 +108,57 @@ def run_ui_in_process(script_filename: str, title: str):
     if old and old.poll() is None:
         log.warning(f"UI '{title}' 已经在运行中，请勿重复点击。")
         return
-
-    script_path = _script_abs_path(script_filename)
-    if not os.path.exists(script_path):
-        log.error(f"UI 脚本不存在：{script_path}")
-        return
-
-    try:
-        p = subprocess.Popen(
-            [sys.executable, script_path],
-            cwd=PROJECT_ROOT,
-            stdout=None,  
-            stderr=None,
-        )
-        active_ui_processes[title] = p
-        log.info(f"启动 UI 进程: {title} (pid={p.pid})")
-    except Exception as e:
-        log.error(f"启动 UI 进程失败 {title}: {e}")
+    
+    # 先检查项目根目录下的exe
+    exe_path = os.path.join(PROJECT_ROOT, script_filename)
+    if os.path.exists(exe_path):
+        try:
+            p = subprocess.Popen(
+                [exe_path],
+                cwd=PROJECT_ROOT,
+                stdout=None,  
+                stderr=None,
+            )
+            active_ui_processes[title] = p
+            log.info(f"启动 UI 进程: {title} (pid={p.pid})")
+        except Exception as e:
+            log.error(f"启动 UI 进程失败 {title}: {e}")
+    else:
+        # 检查dist目录下的exe
+        dist_exe_path = os.path.join(PROJECT_ROOT, "dist", script_filename)
+        if os.path.exists(dist_exe_path):
+            try:
+                p = subprocess.Popen(
+                    [dist_exe_path],
+                    cwd=PROJECT_ROOT,
+                    stdout=None,  
+                    stderr=None,
+                )
+                active_ui_processes[title] = p
+                log.info(f"启动 UI 进程: {title} (pid={p.pid})")
+            except Exception as e:
+                log.error(f"启动 UI 进程失败 {title}: {e}")
+        else:
+            # exe不存在，使用Python脚本
+            script_path = _script_abs_path(script_filename)
+            if not os.path.exists(script_path):
+                log.error(f"UI 脚本不存在：{script_path}")
+                return
+            try:
+                p = subprocess.Popen(
+                    [sys.executable, script_path],
+                    cwd=PROJECT_ROOT,
+                    stdout=None,  
+                    stderr=None,
+                )
+                active_ui_processes[title] = p
+                log.info(f"启动 UI 进程: {title} (pid={p.pid})")
+            except Exception as e:
+                log.error(f"启动 UI 进程失败 {title}: {e}")
 
 def open_bind_mouse_gui_test(icon="icon300.ico", item=None):
     """打开 '绑定鼠标组' UI"""
-    run_ui_in_process("mainUIWeb.py", "绑定鼠标组")
+    run_ui_in_process("WallpaperListSettings.exe", "绑定鼠标组")
 
 def start_thread(target_func, name):
     t = threading.Thread(target=target_func, name=name)
@@ -171,17 +201,16 @@ def on_exit_request(icon, item):
 
 def open_config_mouse_gui(icon=None, item=None):
     """打开 '配置鼠标组' UI"""
-    run_ui_in_process("mouseUI.py", "配置鼠标组")
-
+    run_ui_in_process("MouseGroupSettings.exe", "配置鼠标组")
 
 def open_bind_mouse_gui(icon="icon300.ico", item=None):
     """打开 '绑定鼠标组' UI"""
-    run_ui_in_process("mainUIWeb.py", "绑定鼠标组")
+    run_ui_in_process("WallpaperListSettings.exe", "绑定鼠标组")
 
 
 def open_settings_ui(icon=None, item=None):
     """打开 '设置' UI"""
-    run_ui_in_process("settingsUIWeb.py", "设置")
+    run_ui_in_process("Settings.exe", "设置")
 
 def setup_pystray_icon():
     """设置 pystray 系统托盘图标和菜单"""
