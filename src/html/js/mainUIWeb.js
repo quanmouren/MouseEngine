@@ -9,6 +9,15 @@
     // 当前选中的壁纸 ID
     let currentWallpaperId = null;
     
+    // 当前播放列表的壁纸ID集合
+    let playlistWallpaperIds = new Set();
+    
+    // 是否仅显示当前播放列表
+    let showPlaylistOnly = false;
+    
+    // 所有壁纸数据缓存
+    let allWallpapersData = [];
+    
     // 鼠标组图标缓存
     const mouseGroupIconsCache = {};
 
@@ -43,12 +52,19 @@
                 wallpapers = TEST_WALLPAPERS;
             }
             
+            // 缓存所有壁纸数据
+            allWallpapersData = wallpapers;
+            
             renderWallpapers(wallpapers);
         } catch (error) {
             // 捕获所有异常
             console.error("初始化失败，切换到测试数据：", error);
+            allWallpapersData = TEST_WALLPAPERS;
             renderWallpapers(TEST_WALLPAPERS);
         }
+        
+        // 初始化复选框事件监听
+        initCheckboxListener();
     }
 
     // 初始化预览面板为默认状态
@@ -475,6 +491,18 @@
         const count = items.length;
         playlistTitle.textContent = `当前播放列表: ${name || '未命名'} (共 ${count} 项)`;
         
+        // 更新播放列表壁纸ID集合
+        playlistWallpaperIds.clear();
+        items.forEach(item => {
+            const [id, imagePath] = item;
+            playlistWallpaperIds.add(id);
+        });
+        
+        // 如果复选框已选中，重新过滤壁纸
+        if (showPlaylistOnly) {
+            filterWallpapersByPlaylist();
+        }
+        
         // 渲染播放列表项
         items.forEach((item, index) => {
             const [id, imagePath] = item;
@@ -494,11 +522,15 @@
             // 如果有预览图，添加到播放列表项
             if (imagePath) {
                 const img = document.createElement('img');
+                img.loading = 'lazy'; // 启用懒加载
                 img.src = imagePath.replace(/\\/g, '/');
                 img.alt = `壁纸 ${id}`;
                 img.style.width = '100%';
                 img.style.height = '100%';
                 img.style.objectFit = 'cover';
+                img.style.willChange = 'transform'; // 启用GPU加速
+                img.style.backfaceVisibility = 'hidden'; // 优化渲染性能
+                img.style.webkitBackfaceVisibility = 'hidden';
                 img.onerror = function() {
                     // 图片加载失败时显示默认内容
                     this.parentElement.innerHTML = '<div class="playlist-item-no-image">无预览图</div>';
@@ -521,50 +553,46 @@
     
     // 添加鼠标滚轮左右滚动功能
     function addMouseWheelScroll(element) {
-        let isScrolling = false;
-        let currentPosition = 0;
-        let targetPosition = 0;
-        let startTime = 0;
+        let lastScrollTime = 0;
+        let accumulatedDelta = 0;
+        const throttleDelay = 8; // 更短的节流间隔，提高响应性
+        const maxAccumulatedDelta = 100; // 最大累积滚动距离
         
         element.addEventListener('wheel', (event) => {
+            const currentTime = performance.now();
+            
+            // 累积滚动距离
+            accumulatedDelta += event.deltaY;
+            
+            // 限制最大累积距离，防止滚动过快
+            if (Math.abs(accumulatedDelta) > maxAccumulatedDelta) {
+                accumulatedDelta = Math.sign(accumulatedDelta) * maxAccumulatedDelta;
+            }
+            
+            // 节流控制，限制事件触发频率
+            if (currentTime - lastScrollTime < throttleDelay) {
+                return;
+            }
+            lastScrollTime = currentTime;
+            
             event.preventDefault();
             
-            // 计算目标滚动位置
-            targetPosition = element.scrollLeft + event.deltaY * 2; // 调整滚动速度
+            // 使用累积的滚动距离
+            const scrollAmount = accumulatedDelta * 2.5; // 增加滚动速度倍数
+            const newPosition = element.scrollLeft + scrollAmount;
             
             // 限制滚动范围
-            targetPosition = Math.max(0, Math.min(targetPosition, element.scrollWidth - element.clientWidth));
+            const maxScroll = element.scrollWidth - element.clientWidth;
+            const boundedPosition = Math.max(0, Math.min(newPosition, maxScroll));
             
-            if (!isScrolling) {
-                currentPosition = element.scrollLeft;
-                startTime = performance.now();
-                isScrolling = true;
-                smoothScroll();
-            }
-        });
-        
-        // 平滑滚动函数
-        function smoothScroll(currentTime = performance.now()) {
-            const elapsed = currentTime - startTime;
-            const duration = 200; // 滚动动画持续时间（毫秒）
+            // 重置累积距离
+            accumulatedDelta = 0;
             
-            // 使用缓动函数
-            const progress = Math.min(elapsed / duration, 1);
-            const easeProgress = 1 - Math.pow(1 - progress, 3); // 缓出效果
-            
-            // 计算当前滚动位置
-            const newPosition = currentPosition + (targetPosition - currentPosition) * easeProgress;
-            element.scrollLeft = newPosition;
-            
-            // 检查是否需要继续滚动
-            if (progress < 1 && Math.abs(newPosition - targetPosition) > 1) {
-                requestAnimationFrame(smoothScroll);
-            } else {
-                // 确保滚动到精确位置
-                element.scrollLeft = targetPosition;
-                isScrolling = false;
-            }
-        }
+            // 使用requestAnimationFrame确保在下一帧执行
+            requestAnimationFrame(() => {
+                element.scrollLeft = boundedPosition;
+            });
+        }, { passive: false });
     }
 
     // 页面加载后自动执行
@@ -578,3 +606,38 @@
             loadPlaylist();
         }, 1000); // 加载播放列表
     });
+    
+    // 初始化复选框事件监听
+    function initCheckboxListener() {
+        const checkbox = document.getElementById('showPlaylistOnly');
+        if (checkbox) {
+            checkbox.addEventListener('change', handleCheckboxChange);
+        }
+    }
+    
+    // 处理复选框状态变更
+    function handleCheckboxChange(event) {
+        showPlaylistOnly = event.target.checked;
+        console.log('复选框状态变更:', showPlaylistOnly);
+        
+        if (showPlaylistOnly) {
+            filterWallpapersByPlaylist();
+        } else {
+            renderWallpapers(allWallpapersData);
+        }
+    }
+    
+    // 根据播放列表过滤壁纸
+    function filterWallpapersByPlaylist() {
+        if (!showPlaylistOnly) {
+            return;
+        }
+        
+        const filteredWallpapers = allWallpapersData.filter(wallpaper => {
+            const [id, imagePath, name, type] = wallpaper;
+            return playlistWallpaperIds.has(id);
+        });
+        
+        console.log('过滤后的壁纸数量:', filteredWallpapers.length);
+        renderWallpapers(filteredWallpapers);
+    }
