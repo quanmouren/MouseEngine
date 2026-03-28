@@ -551,7 +551,7 @@ def 焦点监听():
             except Exception as e:
                 log_func.error(f"焦点监听异常: {e}")
             
-            time.sleep(0.2)
+            time.sleep(0.5)
     
     except Exception as e:
         log_func.error(f"焦点监听循环异常: {e}")

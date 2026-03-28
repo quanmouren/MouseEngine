@@ -283,41 +283,83 @@ class Api:
             wallpaper_list = 获取当前壁纸列表(we_config_path, user)
             
             if not wallpaper_list:
-                return {"items": [], "name": ""}
+                return {"items": [], "name": "", "monitors": []}
             
-            monitor1_data = wallpaper_list[0]
-            items_list = monitor1_data[2]
-            playlist_name = monitor1_data[3]
+            monitor_count = len(wallpaper_list)
             
-            processed_items = []
-            for item_path in items_list:
-                if not item_path: continue
-                dir_path = os.path.dirname(item_path)
-                wallpaper_id = os.path.basename(dir_path)
+            if monitor_count == 1:
+                monitor1_data = wallpaper_list[0]
+                items_list = monitor1_data[2]
+                playlist_name = monitor1_data[3]
                 
-                preview_path = ""
-                for ext in ['jpg', 'png', 'gif']:
-                    candidate = os.path.join(dir_path, f"preview.{ext}")
-                    if os.path.exists(candidate):
-                        preview_path = candidate
-                        break
+                processed_items = []
+                for item_path in items_list:
+                    if not item_path: continue
+                    dir_path = os.path.dirname(item_path)
+                    wallpaper_id = os.path.basename(dir_path)
+                    
+                    preview_path = ""
+                    for ext in ['jpg', 'png', 'gif']:
+                        candidate = os.path.join(dir_path, f"preview.{ext}")
+                        if os.path.exists(candidate):
+                            preview_path = candidate
+                            break
+                    
+                    if preview_path:
+                        try:
+                            os.makedirs(CACHE_BASE_DIR, exist_ok=True)
+                            file_ext = os.path.splitext(preview_path)[1]
+                            cache_filename = f"{wallpaper_id}{file_ext}"
+                            cache_full_path = os.path.join(CACHE_BASE_DIR, cache_filename)
+                            if not os.path.exists(cache_full_path):
+                                shutil.copy2(preview_path, cache_full_path)
+                            preview_path = f"cache/{cache_filename}"
+                        except Exception: pass
+                    
+                    processed_items.append([wallpaper_id, preview_path])
+                return {"items": processed_items, "name": playlist_name, "monitors": [{"name": playlist_name}]}
+            else:
+                monitors_info = []
+                all_items_set = set()
+                all_items_list = []
                 
-                if preview_path:
-                    try:
-                        os.makedirs(CACHE_BASE_DIR, exist_ok=True)
-                        file_ext = os.path.splitext(preview_path)[1]
-                        cache_filename = f"{wallpaper_id}{file_ext}"
-                        cache_full_path = os.path.join(CACHE_BASE_DIR, cache_filename)
-                        if not os.path.exists(cache_full_path):
-                            shutil.copy2(preview_path, cache_full_path)
-                        preview_path = f"cache/{cache_filename}"
-                    except Exception: pass
+                for monitor_data in wallpaper_list:
+                    playlist_name = monitor_data[3]
+                    monitors_info.append({"name": playlist_name})
+                    
+                    items_list = monitor_data[2]
+                    for item_path in items_list:
+                        if not item_path: continue
+                        dir_path = os.path.dirname(item_path)
+                        wallpaper_id = os.path.basename(dir_path)
+                        
+                        if wallpaper_id not in all_items_set:
+                            all_items_set.add(wallpaper_id)
+                            
+                            preview_path = ""
+                            for ext in ['jpg', 'png', 'gif']:
+                                candidate = os.path.join(dir_path, f"preview.{ext}")
+                                if os.path.exists(candidate):
+                                    preview_path = candidate
+                                    break
+                            
+                            if preview_path:
+                                try:
+                                    os.makedirs(CACHE_BASE_DIR, exist_ok=True)
+                                    file_ext = os.path.splitext(preview_path)[1]
+                                    cache_filename = f"{wallpaper_id}{file_ext}"
+                                    cache_full_path = os.path.join(CACHE_BASE_DIR, cache_filename)
+                                    if not os.path.exists(cache_full_path):
+                                        shutil.copy2(preview_path, cache_full_path)
+                                    preview_path = f"cache/{cache_filename}"
+                                except Exception: pass
+                            
+                            all_items_list.append([wallpaper_id, preview_path])
                 
-                processed_items.append([wallpaper_id, preview_path])
-            return {"items": processed_items, "name": playlist_name}
+                return {"items": all_items_list, "name": "", "monitors": monitors_info}
         except Exception as e:
             log.error(f"获取播放列表失败：{e}")
-            return {"items": [], "name": ""}
+            return {"items": [], "name": "", "monitors": []}
 
     def exit_app(self):
         safe_exit()

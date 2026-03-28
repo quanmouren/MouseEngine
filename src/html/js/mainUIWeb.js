@@ -451,7 +451,7 @@
             console.log('获取到播放列表数据:', playlistData);
             
             // 渲染播放列表
-            renderPlaylist(playlistData.items, playlistData.name);
+            renderPlaylist(playlistData.items, playlistData.name, playlistData.monitors);
         } catch (error) {
             console.error('加载播放列表失败:', error);
             console.error('错误堆栈:', error.stack);
@@ -476,7 +476,7 @@
     window.testPlaylist = testPlaylist;
     
     // 渲染播放列表
-    function renderPlaylist(items, name) {
+    function renderPlaylist(items, name, monitors) {
         const playlistContent = document.querySelector('.playlist-content');
         const playlistTitle = document.querySelector('.playlist-title');
         
@@ -489,7 +489,13 @@
         
         // 更新播放列表标题和数量
         const count = items.length;
-        playlistTitle.textContent = `当前播放列表: ${name || '未命名'} (共 ${count} 项)`;
+        
+        if (monitors && monitors.length > 1) {
+            const monitorNames = monitors.map(m => m.name).join('，');
+            playlistTitle.textContent = `多个播放列表（${monitorNames}）(共 ${count} 项)`;
+        } else {
+            playlistTitle.textContent = `当前播放列表: ${name || '未命名'} (共 ${count} 项)`;
+        }
         
         // 更新播放列表壁纸ID集合
         playlistWallpaperIds.clear();
