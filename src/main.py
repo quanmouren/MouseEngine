@@ -42,7 +42,8 @@ stop_flag = threading.Event()
 global_threads = []
 TRAY_ICON = None
 initial_loading_done = False
-last_in_whitelist = None  # 跟踪上一次焦点窗口是否在白名单中
+last_in_whitelist = None
+pause_flag = threading.Event()  # 跟踪上一次焦点窗口是否在白名单中
 
 from path_utils import resolve_path
 CONFIG_FILE_PATH = resolve_path("config.toml")
@@ -212,6 +213,27 @@ def open_settings_ui(icon=None, item=None):
     """打开 '设置' UI"""
     run_ui_in_process("Settings.exe", "设置")
 
+def toggle_pause(icon=None, item=None):
+    """切换暂停/恢复状态"""
+    global TRAY_ICON
+    if pause_flag.is_set():
+        pause_flag.clear()
+        log.info("已解除暂停，程序继续运行")
+        if TRAY_ICON:
+            TRAY_ICON.title = "光标引擎"
+    else:
+        pause_flag.set()
+        log.info("已暂停，监听器停止工作")
+        if TRAY_ICON:
+            TRAY_ICON.title = "光标引擎 (已暂停)"
+    
+    if TRAY_ICON:
+        TRAY_ICON.update_menu()
+
+def get_pause_menu_text(icon=None, item=None):
+    """获取暂停菜单项的显示文本"""
+    return "解除暂停" if pause_flag.is_set() else "暂停"
+
 def setup_pystray_icon():
     """设置 pystray 系统托盘图标和菜单"""
     global TRAY_ICON
@@ -236,6 +258,8 @@ def setup_pystray_icon():
         MenuItem("配置鼠标组", open_config_mouse_gui, enabled=UI_IMPORT_SUCCESS),
         MenuItem("绑定鼠标组", open_bind_mouse_gui, enabled=UI_IMPORT_SUCCESS),
         MenuItem("设置", open_settings_ui, enabled=UI_IMPORT_SUCCESS),
+        Menu.SEPARATOR,
+        MenuItem(get_pause_menu_text, toggle_pause),
         Menu.SEPARATOR,
         MenuItem("退出", on_exit_request),
     )
@@ -493,6 +517,10 @@ def json监听():
     # 循环监听
     try:
         while not stop_flag.is_set():#TODO 暂未对json做全屏暂停
+            if pause_flag.is_set():
+                time.sleep(1)
+                continue
+            
             latest_wallpaperConfig = 获取当前壁纸列表(config_path, winUserName)
 
             for index, project in enumerate(latest_wallpaperConfig):
@@ -529,6 +557,10 @@ def 焦点监听():
     
     try:
         while not stop_flag.is_set():
+            if pause_flag.is_set():
+                time.sleep(1)
+                continue
+            
             try:
                 current_process_name = get_process_name()
                 check_count += 1
@@ -629,6 +661,10 @@ def ram监听():
     # 循环监听
     try:
         while not stop_flag.is_set():
+            if pause_flag.is_set():
+                time.sleep(1)
+                continue
+            
             # 检查是否启用全屏暂停
             try:
                 main_cfg = toml.load(CONFIG_FILE_PATH)
