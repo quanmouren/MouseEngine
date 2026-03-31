@@ -152,16 +152,6 @@ function renderAdvancedSettings(container) {
                 <button class="settings-btn" onclick="handleClearCache(this)">清理</button>
             </div>
         </div>
-        <div class="settings-item settings-item-developing">
-            <div class="developing-overlay">
-                <span>此功能处于开发状态</span>
-            </div>
-            <div class="settings-label-container">
-                <div class="settings-label">严格的窗口判定 <span class="beta-badge">Beta</span></div>
-                <div class="settings-sub-label">用于程序白名单，进入或离开窗口时立即切换</div>
-            </div>
-            <div class="settings-control"><input type="checkbox" id="strictWindowCheck" onchange="handleStrictWindowCheckChange(this.checked)"></div>
-        </div>
         <div class="settings-item">
             <div class="settings-label-container">
                 <div class="settings-label">将默认组设置为Windows默认光标</div>
