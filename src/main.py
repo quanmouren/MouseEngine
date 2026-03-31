@@ -44,6 +44,36 @@ TRAY_ICON = None
 initial_loading_done = False
 last_in_whitelist = None
 pause_flag = threading.Event()  # 跟踪上一次焦点窗口是否在白名单中
+last_config_mtime = 0  # 用于跟踪配置文件修改时间
+
+
+def update_tray_menu():
+    """更新系统托盘菜单"""
+    if TRAY_ICON:
+        TRAY_ICON.menu = create_menu()
+        TRAY_ICON.update_menu()
+        log.info("系统托盘菜单已更新。")
+
+def settings_watcher():
+    """监控配置文件变化并更新菜单"""
+    global last_config_mtime
+
+    # 初始化 last_config_mtime
+    try:
+        last_config_mtime = os.path.getmtime(CONFIG_FILE_PATH)
+    except OSError:
+        last_config_mtime = 0
+
+    while not stop_flag.is_set():
+        try:
+            mtime = os.path.getmtime(CONFIG_FILE_PATH)
+            if mtime > last_config_mtime:
+                log.DEBUG("检测到配置文件变化，准备更新菜单...")
+                last_config_mtime = mtime
+                update_tray_menu()
+        except OSError:
+            pass
+        time.sleep(2)  # 每2秒检查一次
 
 from path_utils import resolve_path
 CONFIG_FILE_PATH = resolve_path("config.toml")
@@ -101,7 +131,7 @@ def _kill_process(p: subprocess.Popen, timeout_sec: float = 2.0):
         pass
 
 
-def run_ui_in_process(script_filename: str, title: str):
+def run_ui_in_process(filenames: list, title: str):
     if not UI_IMPORT_SUCCESS:
         log.error("UI 启动失败: 模块导入不成功，请检查文件路径和依赖。")
         return
@@ -110,8 +140,11 @@ def run_ui_in_process(script_filename: str, title: str):
         log.warning(f"UI '{title}' 已经在运行中，请勿重复点击。")
         return
     
+    exe_filename = filenames[0]
+    py_filename = filenames[1]
+    
     # 先检查项目根目录下的exe
-    exe_path = os.path.join(PROJECT_ROOT, script_filename)
+    exe_path = os.path.join(PROJECT_ROOT, exe_filename)
     if os.path.exists(exe_path):
         try:
             p = subprocess.Popen(
@@ -126,7 +159,7 @@ def run_ui_in_process(script_filename: str, title: str):
             log.error(f"启动 UI 进程失败 {title}: {e}")
     else:
         # 检查dist目录下的exe
-        dist_exe_path = os.path.join(PROJECT_ROOT, "dist", script_filename)
+        dist_exe_path = os.path.join(PROJECT_ROOT, "dist", exe_filename)
         if os.path.exists(dist_exe_path):
             try:
                 p = subprocess.Popen(
@@ -141,7 +174,7 @@ def run_ui_in_process(script_filename: str, title: str):
                 log.error(f"启动 UI 进程失败 {title}: {e}")
         else:
             # exe不存在，使用Python脚本
-            script_path = _script_abs_path(script_filename)
+            script_path = _script_abs_path(py_filename)
             if not os.path.exists(script_path):
                 log.error(f"UI 脚本不存在：{script_path}")
                 return
@@ -159,7 +192,7 @@ def run_ui_in_process(script_filename: str, title: str):
 
 def open_bind_mouse_gui_test(icon="icon300.ico", item=None):
     """打开 '绑定鼠标组' UI"""
-    run_ui_in_process("WallpaperListSettings.exe", "绑定鼠标组")
+    run_ui_in_process(["WallpaperListSettings.exe", "mainUIWeb.py"], "绑定鼠标组")
 
 def start_thread(target_func, name):
     t = threading.Thread(target=target_func, name=name)
@@ -202,16 +235,16 @@ def on_exit_request(icon, item):
 
 def open_config_mouse_gui(icon=None, item=None):
     """打开 '配置鼠标组' UI"""
-    run_ui_in_process("MouseGroupSettings.exe", "配置鼠标组")
+    run_ui_in_process(["MouseGroupSettings.exe", "mouseUI.py"], "配置鼠标组")
 
 def open_bind_mouse_gui(icon="icon300.ico", item=None):
     """打开 '绑定鼠标组' UI"""
-    run_ui_in_process("WallpaperListSettings.exe", "绑定鼠标组")
+    run_ui_in_process(["WallpaperListSettings.exe", "mainUIWeb.py"], "绑定鼠标组")
 
 
 def open_settings_ui(icon=None, item=None):
     """打开 '设置' UI"""
-    run_ui_in_process("Settings.exe", "设置")
+    run_ui_in_process(["Settings.exe", "settingsUIWeb.py"], "设置")
 
 def toggle_pause(icon=None, item=None):
     """切换暂停/恢复状态"""
@@ -234,6 +267,39 @@ def get_pause_menu_text(icon=None, item=None):
     """获取暂停菜单项的显示文本"""
     return "解除暂停" if pause_flag.is_set() else "暂停"
 
+def create_menu():
+    # 读取 show_more_menu 设置
+    show_more_menu = False
+    try:
+        config_data = toml.load(CONFIG_FILE_PATH)
+        show_more_menu = config_data.get("config", {}).get("show_more_menu", False)
+    except Exception as e:
+        log.error(f"读取配置失败: {e}")
+
+    # 构建菜单
+    menu_items = []
+    
+    # 更多菜单内容
+    if show_more_menu:
+        menu_items.extend([
+            MenuItem("测试1", lambda: print("测试1")),
+            MenuItem("测试2", lambda: print("测试2")),
+            Menu.SEPARATOR,
+        ])
+    
+    # 基本菜单内容
+    menu_items.extend([
+        MenuItem("配置鼠标组", open_config_mouse_gui, enabled=UI_IMPORT_SUCCESS),
+        MenuItem("绑定鼠标组", open_bind_mouse_gui, enabled=UI_IMPORT_SUCCESS),
+        MenuItem("设置", open_settings_ui, enabled=UI_IMPORT_SUCCESS),
+        Menu.SEPARATOR,
+        MenuItem(get_pause_menu_text, toggle_pause),
+        Menu.SEPARATOR,
+        MenuItem("退出", on_exit_request),
+    ])
+
+    return Menu(*menu_items)
+
 def setup_pystray_icon():
     """设置 pystray 系统托盘图标和菜单"""
     global TRAY_ICON
@@ -254,15 +320,7 @@ def setup_pystray_icon():
         except AttributeError:
             image.thumbnail((64, 64), Image.ANTIALIAS)
 
-    menu = Menu(
-        MenuItem("配置鼠标组", open_config_mouse_gui, enabled=UI_IMPORT_SUCCESS),
-        MenuItem("绑定鼠标组", open_bind_mouse_gui, enabled=UI_IMPORT_SUCCESS),
-        MenuItem("设置", open_settings_ui, enabled=UI_IMPORT_SUCCESS),
-        Menu.SEPARATOR,
-        MenuItem(get_pause_menu_text, toggle_pause),
-        Menu.SEPARATOR,
-        MenuItem("退出", on_exit_request),
-    )
+    menu = create_menu()
 
     TRAY_ICON = Icon("MouseEngine", image, "光标引擎", menu)
     return TRAY_ICON
@@ -838,6 +896,7 @@ if __name__ == "__main__":
         t2 = start_thread(运行占用监控, "ResourceMonitor")
     t3 = start_thread(ram监听, "RamListener")
     t4 = start_thread(焦点监听, "FocusListener")
+    t5 = start_thread(settings_watcher, "SettingsWatcher")
     
     log.info("所有后台线程已启动。")
 

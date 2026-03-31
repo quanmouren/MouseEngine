@@ -66,6 +66,11 @@ async function startLoadingSequence() {
         const strictWindowCheckEl = document.getElementById('strictWindowCheck');
         if (strictWindowCheckEl) strictWindowCheckEl.checked = strictWindowCheckStatus;
         
+        // 获取显示更多菜单内容状态
+        const showMoreMenuStatus = await pywebview.api.get_show_more_menu();
+        const showMoreMenuEl = document.getElementById('showMoreMenu');
+        if (showMoreMenuEl) showMoreMenuEl.checked = showMoreMenuStatus;
+        
         console.log("所有配置项加载完成");
     } catch (e) {
         console.error("加载配置失败:", e);
@@ -164,6 +169,12 @@ function renderAdvancedSettings(container) {
             <div class="settings-control">
                 <button class="settings-btn" onclick="handleRestoreDefaultCursor()">设置默认</button>
             </div>
+        </div>
+        <div class="settings-item">
+            <div class="settings-label-container">
+                <div class="settings-label">显示更多菜单内容 <span class="beta-badge">Beta</span></div>
+            </div>
+            <div class="settings-control"><input type="checkbox" id="showMoreMenu" onchange="handleShowMoreMenuChange(this.checked)"></div>
         </div>
     `;
 }
@@ -574,6 +585,15 @@ async function handleRestoreDefaultCursor() {
             button.textContent = originalText;
             button.disabled = false;
         }, 3000);
+    }
+}
+
+async function handleShowMoreMenuChange(checked) {
+    try {
+        await pywebview.api.set_show_more_menu(checked);
+        console.log("显示更多菜单内容状态已更新为:", checked);
+    } catch (e) {
+        console.error("更新显示更多菜单内容状态失败:", e);
     }
 }
 

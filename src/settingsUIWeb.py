@@ -327,6 +327,44 @@ class SettingsApi:
         except Exception as e:
             log.error(f"获取严格窗口判定状态失败: {e}")
             return False
+    
+    def get_show_more_menu(self):
+        # 获取显示更多菜单内容状态
+        try:
+            config_path = resolve_path("config.toml")
+            if not os.path.exists(config_path):
+                return False
+            
+            config_data = toml.load(config_path)
+            return config_data.get("config", {}).get("show_more_menu", False)
+        except Exception as e:
+            log.error(f"获取显示更多菜单内容状态失败: {e}")
+            return False
+    
+    def set_show_more_menu(self, status):
+        try:
+            config_path = resolve_path("config.toml")
+            # 无论文件是否存在，都先尝试加载现有配置
+            if os.path.exists(config_path):
+                config_data = toml.load(config_path)
+            else:
+                config_data = {}
+            
+            # 确保 config 部分存在
+            if "config" not in config_data:
+                config_data["config"] = {}
+            
+            # 更新 show_more_menu 的值
+            config_data["config"]["show_more_menu"] = status
+            
+            # 保存配置
+            with open(config_path, "w", encoding="utf-8") as f:
+                toml.dump(config_data, f)
+            
+            return True
+        except Exception as e:
+            log.error(f"设置显示更多菜单内容状态失败: {e}")
+            return False
     def 清理缓存(self):
         # 清理主目录下的cache文件夹和html\cache文件夹内的所有文件
         try:

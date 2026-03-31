@@ -152,11 +152,11 @@ function renderRows() {
     if (!container) return;
     
     container.innerHTML = CURSOR_KEYS.map(k => `
-        <div class="position-row">
+        <div class="position-row" oncontextmenu="showInputContextMenu(event, '${k}')">
             <div class="thumb-preview" id="prev-${k}">
                 <img src="${DEFAULT_IMAGES[k]}" alt="${k}">
             </div>
-            <input id="input-${k}" class="position-input" readonly placeholder="${k}" value="">
+            <input id="input-${k}" class="position-input" placeholder="${k}" value="">
             <button class="browse-button" onclick="handleBrowse('${k}')">浏览</button>
         </div>
     `).join('');
@@ -237,9 +237,10 @@ async function selectGroup(name) {
         titleElement.textContent = name ? `编辑鼠标组：${name}` : '编辑鼠标组：新建组';
     }
 
-    // 重置所有输入框和预览
     for (const k of CURSOR_KEYS) {
-        document.getElementById(`input-${k}`).value = '';
+        const input = document.getElementById(`input-${k}`);
+        input.value = '';
+
         const rightPreview = document.getElementById(`prev-${k}`);
         if (rightPreview) {
             rightPreview.innerHTML = `<img src="${DEFAULT_IMAGES[k]}" alt="${k}">`;
@@ -253,8 +254,9 @@ async function selectGroup(name) {
     // 加载组数据
     const data = await pywebview.api.load_group_config(name);
     for (const k of CURSOR_KEYS) {
+        const input = document.getElementById(`input-${k}`);
         if (data[k] && data[k].trim() !== '') {
-            document.getElementById(`input-${k}`).value = data[k];
+            input.value = data[k];
             await setPreviewImage(k, data[k]);
         }
     }
@@ -391,7 +393,8 @@ async function handleBrowse(key) {
     try {
         const path = await pywebview.api.open_file_dialog();
         if (path) {
-            document.getElementById(`input-${key}`).value = path;
+            const input = document.getElementById(`input-${key}`);
+            input.value = path;
             await setPreviewImage(key, path);
         }
     } catch (e) {
@@ -589,6 +592,9 @@ document.addEventListener('click', e => {
     if (!e.target.closest('.context-menu') && !e.target.closest('.grid-item')) {
         hideContextMenu();
     }
+    if (!e.target.closest('#inputContextMenu')) {
+        hideInputContextMenu();
+    }
 });
 
 // 显示右键菜单
@@ -697,6 +703,36 @@ function hideContextMenu() {
         contentLeft.removeEventListener('scroll', hideContextMenu);
     }
     document.removeEventListener('mouseleave', hideContextMenu);
+}
+
+// 显示输入框右键菜单
+function showInputContextMenu(e, key) {
+    e.preventDefault();
+    const contextMenu = document.getElementById('inputContextMenu');
+    contextMenu.style.left = `${e.clientX}px`;
+    contextMenu.style.top = `${e.clientY}px`;
+    contextMenu.style.display = 'block';
+
+    const clearItem = document.getElementById('clearInputItem');
+    clearItem.onclick = () => clearInput(key);
+}
+
+// 隐藏输入框右键菜单
+function hideInputContextMenu() {
+    const contextMenu = document.getElementById('inputContextMenu');
+    if (contextMenu) {
+        contextMenu.style.display = 'none';
+    }
+}
+
+// 清空输入框内容
+async function clearInput(key) {
+    const input = document.getElementById(`input-${key}`);
+    if (input) {
+        input.value = '';
+    }
+    await setPreviewImage(key, '');
+    hideInputContextMenu();
 }
 
 // 处理删除组操作
