@@ -267,6 +267,56 @@ def get_pause_menu_text(icon=None, item=None):
     """获取暂停菜单项的显示文本"""
     return "解除暂停" if pause_flag.is_set() else "暂停"
 
+def set_last_app_as_default():
+    """
+    将上一个焦点窗口的应用设置为使用“默认”鼠标组。
+    """
+    log_func = TLog("set_last_app_as_default")
+    try:
+        temp_storage_path = resolve_path('temp_storage.toml')
+        if not os.path.exists(temp_storage_path):
+            log_func.error("temp_storage.toml 不存在，无法获取上一个焦点应用。")
+            if TRAY_ICON:
+                TRAY_ICON.notify("未能获取上一焦点窗口", "操作失败")
+            return
+
+        with open(temp_storage_path, 'r', encoding='utf-8') as f:
+            data = toml.load(f)
+
+        focus_info = data.get('FocusInfo', {})
+        last_app = focus_info.get('last_app')
+
+        if not last_app:
+            log_func.warning("temp_storage.toml 中没有找到 last_app。")
+            if TRAY_ICON:
+                TRAY_ICON.notify("未能获取上一焦点窗口", "操作失败")
+            return
+            
+        log_func.info(f"准备将 '{last_app}' 设置为默认鼠标组。")
+        
+        if os.path.exists(CONFIG_FILE_PATH):
+            with open(CONFIG_FILE_PATH, 'r', encoding='utf-8') as f:
+                config_data = toml.load(f)
+        else:
+            config_data = {}
+
+        if "program_whitelist" not in config_data:
+            config_data["program_whitelist"] = {}
+        
+        config_data["program_whitelist"][last_app] = "默认"
+
+        with open(CONFIG_FILE_PATH, 'w', encoding='utf-8') as f:
+            toml.dump(config_data, f)
+        
+        log_func.info(f"已成功将 '{last_app}' 添加到白名单，使用'默认'组。")
+        if TRAY_ICON:
+            TRAY_ICON.notify(f"已将 {last_app} 设为默认", "操作成功")
+
+    except Exception as e:
+        log_func.error(f"操作失败: {e}")
+        if TRAY_ICON:
+            TRAY_ICON.notify(f"操作失败: {e}", "错误")
+
 def create_menu():
     # 读取 show_more_menu 设置
     show_more_menu = False
@@ -282,8 +332,7 @@ def create_menu():
     # 更多菜单内容
     if show_more_menu:
         menu_items.extend([
-            MenuItem("测试1", lambda: print("测试1")),
-            MenuItem("测试2", lambda: print("测试2")),
+            MenuItem("将上一焦点窗口设为默认", set_last_app_as_default),
             Menu.SEPARATOR,
         ])
     
@@ -529,6 +578,31 @@ def save_active_wallpaper_id(wallpaper_id, log_func):
     except Exception as e:
         log_func.error(f"保存文件失败: {e}")
 
+def save_focus_info(current_app, last_app, log_func):
+    """
+    保存当前和上一个焦点应用到 temp_storage.toml 文件
+    """
+    from path_utils import resolve_path
+    temp_storage_path = resolve_path('temp_storage.toml')
+    
+    try:
+        if os.path.exists(temp_storage_path):
+            with open(temp_storage_path, 'r', encoding='utf-8') as f:
+                data = toml.load(f)
+        else:
+            data = {}
+        
+        if 'FocusInfo' not in data:
+            data['FocusInfo'] = {}
+            
+        data['FocusInfo']['current_app'] = current_app if current_app else ""
+        data['FocusInfo']['last_app'] = last_app if last_app else ""
+        
+        with open(temp_storage_path, 'w', encoding='utf-8') as f:
+            toml.dump(data, f)
+    except Exception as e:
+        log_func.error(f"保存焦点信息失败: {e}")
+
 def json监听():
     global LAST_JSON_TRIGGER_TIME
     global initial_loading_done
@@ -632,6 +706,9 @@ def 焦点监听():
                     else:
                         log_func.info(f"初始焦点窗口: {current_process_name}")
                     
+                    # 保存焦点信息
+                    save_focus_info(current_process_name, last_process_name, log_func)
+
                     last_process_name = current_process_name
                     
                     # 检查当前和上一次进程是否在白名单中

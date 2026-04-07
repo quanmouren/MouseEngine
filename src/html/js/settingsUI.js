@@ -174,7 +174,7 @@ function renderAboutSettings(container) {
         <div class="settings-section-title">关于 MouseEngine</div>
         <div class="settings-item">
             <div class="settings-label">版本</div>
-            <div class="settings-value">Beta1.1</div>
+            <div class="settings-value">Beta1.2</div>
         </div>
         <div class="settings-item">
             <div class="settings-label">开发者</div>

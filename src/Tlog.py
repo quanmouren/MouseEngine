@@ -83,7 +83,8 @@ class TLog:
             
             code_lines = inspect.getframeinfo(frame).code_context
             code_line = code_lines[0].strip() if code_lines else "unknown"
-            var_name = re.search(r"val\((.*)\)", code_line).group(1) if "(" in code_line else "unknown"
+            match = re.search(r"val\((.*)\)", code_line)
+            var_name = match.group(1) if match else "unknown"
             
             is_global = var_name in frame.f_globals and frame.f_globals[var_name] is var
             scope = "\033[0;33m[Global]\033[0m" if is_global else "\033[0;36m[Local]\033[0m"
