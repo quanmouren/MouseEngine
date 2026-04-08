@@ -525,6 +525,17 @@ class SettingsApi:
             return False
 
 
+    def get_version(self):
+        try:
+            version_path = resolve_path("version.toml")
+            if os.path.exists(version_path):
+                version_data = toml.load(version_path)
+                return version_data.get("__version__", "Beta1.3")
+            return "Beta1.3"
+        except Exception as e:
+            log.error(f"获取版本失败: {e}")
+            return "Beta1.3"
+
 
     def get_cursor_groups(self):
         try:

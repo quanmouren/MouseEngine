@@ -19,6 +19,28 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+// 加载版本信息
+async function loadVersionInfo() {
+    if (typeof pywebview === 'undefined' || !pywebview.api) {
+        setTimeout(loadVersionInfo, 100);
+        return;
+    }
+    
+    try {
+        const version = await pywebview.api.get_version();
+        const versionEl = document.getElementById('aboutVersion');
+        if (versionEl) {
+            versionEl.textContent = version;
+        }
+    } catch (e) {
+        console.error("获取版本失败:", e);
+        const versionEl = document.getElementById('aboutVersion');
+        if (versionEl) {
+            versionEl.textContent = "获取失败";
+        }
+    }
+}
+
 // 异步加载序列：逐个触发 Python 函数并等待返回
 async function startLoadingSequence() {
     if (typeof pywebview === 'undefined' || !pywebview.api) {
@@ -174,7 +196,7 @@ function renderAboutSettings(container) {
         <div class="settings-section-title">关于 MouseEngine</div>
         <div class="settings-item">
             <div class="settings-label">版本</div>
-            <div class="settings-value">Beta1.2</div>
+            <div class="settings-value" id="aboutVersion">加载中...</div>
         </div>
         <div class="settings-item">
             <div class="settings-label">开发者</div>
@@ -193,6 +215,8 @@ function renderAboutSettings(container) {
             <div class="settings-value settings-link" onclick="showModal('thirdparty')">查看</div>
         </div>
     `;
+    
+    loadVersionInfo();
 }
 
 function renderProgramWhitelistSettings(container) {
