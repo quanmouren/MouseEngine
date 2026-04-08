@@ -160,7 +160,10 @@ def 保存组配置(name, folder_path, file_list):
                 continue
 
             file_name = os.path.basename(source_path)
-            target_path = os.path.join(target_folder, file_name)
+            # 删除文件名中的空格
+            new_file_name = file_name.replace(' ', '')
+            
+            target_path = os.path.join(target_folder, new_file_name)
             target_path_abs = os.path.abspath(target_path)
 
             is_same_file = False
@@ -173,9 +176,9 @@ def 保存组配置(name, folder_path, file_list):
 
             if not is_same_file:
                 shutil.copy2(source_path, target_path)
-                log.debug(f"已复制文件: {file_name}")
+                log.debug(f"已复制文件: {file_name} -> {new_file_name}")
             else:
-                log.debug(f"文件已存在且相同，跳过复制: {file_name}")
+                log.debug(f"文件已存在且相同，跳过复制: {new_file_name}")
             
             # 保存相对路径，相对于项目根目录
             from path_utils import get_project_root
