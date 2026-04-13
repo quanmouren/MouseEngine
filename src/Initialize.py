@@ -4,8 +4,9 @@ import os
 import sys
 from Tlog import TLog
 log = TLog("初始化")
-from WelcomeUI import get_wallpaper_engine_path_ui
+from WelcomeUI import get_wallpaper_engine_path_ui, check_other_versions_in_startup
 from path_utils import resolve_path
+
 def initialize_config():
     config_path = resolve_path("config.toml")
     if os.path.exists(config_path):
@@ -43,12 +44,11 @@ def initialize_folders(use_default_cursor=True):
     default_path = os.path.join(mouses_path, "默认")
     os.makedirs(default_path, exist_ok=True)
     print(f"已创建默认文件夹：{default_path}")
-    
+
 
     if use_default_cursor:
         config_path = os.path.join(default_path, "config.toml")
         if not os.path.exists(config_path):
-            # 定义光标文件映射
             cursor_files = {
                 "Arrow": "aero_arrow.cur",
                 "Help": "aero_helpsel.cur",
@@ -67,7 +67,6 @@ def initialize_folders(use_default_cursor=True):
                 "UpArrow": "aero_up.cur"
             }
             
-            # Windows 光标文件夹路径
             windows_cursors_path = os.path.join(os.environ.get("WINDIR", "C:\Windows"), "Cursors")
             
             config_content = "[mouses]\n"
@@ -115,4 +114,5 @@ UpArrow = ""
 
 
 if __name__ == "__main__":
+    log.val(check_other_versions_in_startup())
     initialize_config()

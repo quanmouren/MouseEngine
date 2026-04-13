@@ -7,6 +7,7 @@ log = TLog("MouseEngineWelcomeUI")
 import os
 import platform
 import re
+import sys
 from path_utils import resolve_path
 
 try:
@@ -18,6 +19,60 @@ except ImportError:
     winreg = None
 
 log.on_DEBUG = True
+
+
+def get_version_from_path(exe_path):
+    version_file = os.path.join(os.path.dirname(exe_path), "version.toml")
+    if os.path.exists(version_file):
+        try:
+            import toml
+            version_data = toml.load(version_file)
+            return version_data.get("__version__", None)
+        except Exception:
+            pass
+    return None
+
+def check_other_versions_in_startup():
+    startup_folder = os.path.join(os.environ['APPDATA'], 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup')
+    
+    if not os.path.exists(startup_folder):
+        return []
+    
+    current_exe_path = sys.executable
+    current_exe_name = os.path.basename(current_exe_path).lower()
+    
+    other_versions = []
+    
+    try:
+        for filename in os.listdir(startup_folder):
+            if filename.lower().startswith('mouseengine') and filename.endswith('.lnk'):
+                shortcut_path = os.path.join(startup_folder, filename)
+                
+                try:
+                    import win32com.client
+                    shell = win32com.client.Dispatch('WScript.Shell')
+                    shortcut = shell.CreateShortcut(shortcut_path)
+                    target_path = shortcut.TargetPath
+                    
+                    target_name = os.path.basename(target_path).lower()
+                    
+                    if target_name != current_exe_name and target_name.endswith('.exe'):
+                        version = get_version_from_path(target_path)
+                        
+                        other_versions.append({
+                            'shortcut_name': filename,
+                            'shortcut_path': shortcut_path,
+                            'target_path': target_path,
+                            'target_name': target_name,
+                            'version': version if version else "过时的版本"
+                        })
+                except Exception as e:
+                    log.warning(f"读取快捷方式 {filename} 失败: {e}")
+    except Exception as e:
+        log.error(f"检查启动文件夹失败: {e}")
+    
+    return other_versions
+
 
 def find_steam_install_path():
     if platform.system() != "Windows" or winreg is None:
@@ -144,9 +199,102 @@ class Api:
         except Exception as e:
             log.error(f"退出欢迎界面时出错: {e}")
 
+
+class UpgradeApi:
+    def __init__(self, on_upgrade_callback, on_skip_callback, window_ref):
+        self.on_upgrade_callback = on_upgrade_callback
+        self.on_skip_callback = on_skip_callback
+        self._window = window_ref
+
+    def get_old_versions(self):
+        return check_other_versions_in_startup()
+
+    def get_current_version(self):
+        try:
+            version_path = resolve_path("version.toml")
+            if os.path.exists(version_path):
+                import toml
+                version_data = toml.load(version_path)
+                return version_data.get("__version__", "Beta1.3")
+            return "Beta1.3"
+        except Exception as e:
+            log.error(f"获取版本失败: {e}")
+            return "Beta1.3"
+
+    def cleanup_old_versions(self):
+        try:
+            versions = check_other_versions_in_startup()
+            
+            if not versions:
+                return {"success": True, "message": "没有旧版本需要清理", "count": 0}
+            
+            deleted_count = 0
+            for version in versions:
+                shortcut_path = version.get('shortcut_path')
+                if shortcut_path and os.path.exists(shortcut_path):
+                    os.remove(shortcut_path)
+                    deleted_count += 1
+                    log.info(f"已删除旧版本快捷方式: {shortcut_path}")
+            
+            print(f"[模拟升级] 已清理 {deleted_count} 个旧版本")
+            return {"success": True, "message": f"已清理 {deleted_count} 个旧版本", "count": deleted_count}
+        except Exception as e:
+            log.error(f"清理旧版本失败: {e}")
+            return {"success": False, "message": str(e), "count": 0}
+
+    def close_window(self):
+        try:
+            if self._window:
+                self._window.destroy()
+        except Exception as e:
+            log.error(f"关闭窗口失败: {e}")
+
+    def on_upgrade_clicked(self):
+        self.on_upgrade_callback()
+        self.close_window()
+
+    def on_skip_clicked(self):
+        self.on_skip_callback()
+        self.close_window()
+
+
 win = None
+upgrade_win = None
+
+def run_upgrade_check():
+    old_versions = check_other_versions_in_startup()
+    
+    if not old_versions:
+        log.info("没有发现旧版本，跳过升级检查")
+        return False
+    
+    log.info(f"发现 {len(old_versions)} 个旧版本，显示升级确认界面")
+    
+    result = [False]
+    
+    def on_upgrade():
+        print("[升级流程] 用户点击了一键升级")
+        result[0] = True
+    
+    def on_skip():
+        print("[升级流程] 用户点击了跳过")
+        result[0] = False
+    
+    global upgrade_win
+    upgrade_api = UpgradeApi(on_upgrade, on_skip, None)
+    html_file = resolve_path("html/upgradeConfirm.html")
+    upgrade_win = webview.create_window("版本升级", html_file, js_api=upgrade_api, width=600, height=360, resizable=False)
+    upgrade_api._window = upgrade_win
+    webview.start(http_server=True)
+    
+    return result[0]
+
 
 def get_wallpaper_engine_path_ui():
+    # 检查是否有旧版本需要升级
+    #run_upgrade_check()
+    
+    # 继续显示欢迎界面
     result = [None, True]
     
     def on_path_selected(path, use_default_cursor=True):

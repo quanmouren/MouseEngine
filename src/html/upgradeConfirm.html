@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MouseEngine - 版本升级</title>
+    <link rel="stylesheet" href="css/welcomeUIWeb.css">
+    <style>
+        .upgrade-card {
+            background: transparent;
+            border: none;
+            border-radius: 10px;
+            padding: 30px;
+            width: 550px;
+            box-shadow: none;
+        }
+
+        .upgrade-header {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .upgrade-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #f59e0b;
+            margin-bottom: 10px;
+        }
+
+        .upgrade-subtitle {
+            font-size: 14px;
+            color: #94a3b8;
+            line-height: 1.4;
+        }
+
+        .version-info {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .warning-section {
+            margin-top: 10px;
+            padding: 15px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 8px;
+        }
+
+        .warning-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #10b981;
+            margin-bottom: 8px;
+        }
+
+        .warning-text {
+            font-size: 12px;
+            color: #6ee7b7;
+            line-height: 1.5;
+        }
+
+        .action-section {
+            display: flex;
+            gap: 10px;
+            margin-top: 25px;
+        }
+
+        .btn-upgrade {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-upgrade:hover {
+            background: #059669;
+            transform: translateY(-1px);
+        }
+
+        .btn-skip {
+            background: rgba(45, 55, 72, 0.7);
+            color: #94a3b8;
+            border: 1px solid #334155;
+        }
+
+        .btn-skip:hover {
+            background: rgba(55, 65, 81, 0.7);
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="welcome-card upgrade-card">
+            <div class="upgrade-header">
+                <div class="upgrade-title">🔄 一键更新 <span id="oldVersionTitle"></span></div>
+                <div class="upgrade-subtitle">程序找到了之前安装过的旧版本，是否一键更新？</div>
+            </div>
+
+            <div class="version-info" id="versionList">
+                <!-- 动态加载版本信息 -->
+            </div>
+
+            <div class="warning-section">
+                <div class="warning-title">ℹ️ 温馨提示</div>
+                <div class="warning-text">
+                    点击"一键升级"将自动删除旧版本<span id="oldVersionText"></span>，但保留原先的配置文件。
+                </div>
+            </div>
+
+            <div class="action-section">
+                <button id="upgradeBtn" class="btn btn-upgrade">🚀 一键升级</button>
+                <button id="skipBtn" class="btn btn-skip">跳过</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/upgradeConfirm.js"></script>
+</body>
+</html>
