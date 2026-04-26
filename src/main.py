@@ -285,6 +285,8 @@ def set_last_app_as_default():
 
         focus_info = data.get('FocusInfo', {})
         last_app = focus_info.get('last_app')
+        if last_app == "explorer.exe":
+            last_app = focus_info.get('last_app_1')
 
         if not last_app:
             log_func.warning("temp_storage.toml 中没有找到 last_app。")
@@ -578,7 +580,7 @@ def save_active_wallpaper_id(wallpaper_id, log_func):
     except Exception as e:
         log_func.error(f"保存文件失败: {e}")
 
-def save_focus_info(current_app, last_app, log_func):
+def save_focus_info(current_app, last_app, log_func, last_app_1):
     """
     保存当前和上一个焦点应用到 temp_storage.toml 文件
     """
@@ -597,6 +599,7 @@ def save_focus_info(current_app, last_app, log_func):
             
         data['FocusInfo']['current_app'] = current_app if current_app else ""
         data['FocusInfo']['last_app'] = last_app if last_app else ""
+        data['FocusInfo']['last_app_1'] = last_app_1 if last_app_1 else ""
         
         with open(temp_storage_path, 'w', encoding='utf-8') as f:
             toml.dump(data, f)
@@ -685,6 +688,7 @@ def 焦点监听():
     log_func.info("初始化焦点监听器")
     
     last_process_name = None
+    last_process_name_1 = None
     check_count = 0
     
     try:
@@ -707,9 +711,10 @@ def 焦点监听():
                         log_func.info(f"初始焦点窗口: {current_process_name}")
                     
                     # 保存焦点信息
-                    save_focus_info(current_process_name, last_process_name, log_func)
-
-                    last_process_name = current_process_name
+                    save_focus_info(current_process_name, last_process_name, log_func, last_process_name_1)
+                    
+                    last_process_name_1 = last_process_name
+                    last_process_name = current_process_name  
                     
                     # 检查当前和上一次进程是否在白名单中
                     try:
