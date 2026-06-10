@@ -13,6 +13,7 @@ from lib.INFParser import INFParser
 from mouses import 保存组配置, CURSOR_ORDER_MAPPING
 from Tlog import TLog
 from path_utils import resolve_path
+from i18n_utils import get_language
 
 try:
     from ani_to_gif import get_ani_frames
@@ -37,6 +38,9 @@ class EditMouseApi:
 
     def set_window(self, window):
         self._window = window
+
+    def get_language(self):
+        return get_language()
 
     def get_existing_groups(self):
         os.makedirs(MOUSE_BASE_PATH, exist_ok=True)
@@ -269,7 +273,7 @@ if __name__ == "__main__":
     import os
     html_file = resolve_path("html/mouseUI.html")
     window = webview.create_window(
-        "鼠标组编辑器",
+        "MouseEngine-鼠标组编辑器",
         html_file,
         js_api=api,
         width=900,

@@ -3,7 +3,7 @@
 window.addEventListener('DOMContentLoaded', () => {
     initNavigation();
     // 初始加载第一页的数据
-    startLoadingSequence();
+    updateSettingsContent('basic');
     
     // 添加输入框事件监听
     const pathInput = document.querySelector('.custom-input-stretch');
@@ -18,6 +18,27 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+function syncLanguageSelect() {
+    const languageSelect = document.getElementById('languageSelect');
+    if (!languageSelect || !window.MouseEngineI18n) return;
+    languageSelect.value = MouseEngineI18n.getLanguage();
+}
+
+async function handleLanguageChange(language) {
+    if (window.MouseEngineI18n) {
+        await MouseEngineI18n.setLanguage(language);
+    } else if (typeof pywebview !== 'undefined' && pywebview.api && pywebview.api.set_language) {
+        await pywebview.api.set_language(language);
+    }
+    syncLanguageSelect();
+}
+
+window.addEventListener('mouseengine-language-applied', syncLanguageSelect);
+
+function tr(key, params) {
+    return window.MouseEngineI18n ? MouseEngineI18n.t(key, params) : key;
+}
 
 // 加载版本信息
 async function loadVersionInfo() {
@@ -105,33 +126,46 @@ function initNavigation() {
         item.addEventListener('click', function() {
             menuItems.forEach(i => i.classList.remove('active'));
             this.classList.add('active');
-            updateSettingsContent(this.textContent.trim());
+            updateSettingsContent(this.dataset.page || 'basic');
         });
     });
 }
 
-function updateSettingsContent(menuText) {
+function updateSettingsContent(page) {
     const settingsTitle = document.querySelector('.settings-title');
     const settingsSection = document.querySelector('.settings-section');
+    const titleKeyMap = {
+        basic: 'basicSettings',
+        advanced: 'advancedSettings',
+        whitelist: 'programWhitelist',
+        about: 'about'
+    };
     
-    if (settingsTitle) settingsTitle.textContent = menuText;
+    if (settingsTitle) {
+        settingsTitle.dataset.i18n = titleKeyMap[page] || 'basicSettings';
+        settingsTitle.textContent = window.MouseEngineI18n ? MouseEngineI18n.t(settingsTitle.dataset.i18n) : settingsTitle.textContent;
+    }
     
     // 清空当前内容并根据菜单名重新渲染
-    switch (menuText) {
-        case '基本设置':
+    switch (page) {
+        case 'basic':
             renderBasicSettings(settingsSection);
             startLoadingSequence(); // 重新填充数据
             break;
-        case '高级设置':
+        case 'advanced':
             renderAdvancedSettings(settingsSection);
             startLoadingSequence(); // 重新填充数据
             break;
-        case '程序白名单':
+        case 'whitelist':
             renderProgramWhitelistSettings(settingsSection);
             break;
-        case '关于':
+        case 'about':
             renderAboutSettings(settingsSection);
             break;
+    }
+
+    if (window.MouseEngineI18n) {
+        MouseEngineI18n.apply(settingsSection);
     }
 }
 
@@ -139,52 +173,63 @@ function updateSettingsContent(menuText) {
 
 function renderBasicSettings(container) {
     container.innerHTML = `
-        <div class="settings-section-title">应用设置</div>
+        <div class="settings-section-title" data-i18n="appSettings">应用设置</div>
         <div class="settings-item">
-            <div class="settings-label">启动时自动运行</div>
+            <div class="settings-label" data-i18n="language">语言</div>
+            <div class="settings-control">
+                <select class="custom-input" id="languageSelect" onchange="handleLanguageChange(this.value)">
+                    <option value="zh-CN">简体中文</option>
+                    <option value="en">English</option>
+                    <option value="ja">日本語</option>
+                </select>
+            </div>
+        </div>
+        <div class="settings-item">
+            <div class="settings-label" data-i18n="runAtStartup">启动时自动运行</div>
             <div class="settings-control"><input type="checkbox" id="autoStart" onchange="handleAutoStartChange(this.checked)"></div>
         </div>
         <div class="settings-item settings-item-double-row">
-            <div class="settings-label-row"><div class="settings-label">Wallpaper Engine路径</div></div>
+            <div class="settings-label-row"><div class="settings-label" data-i18n="wallpaperEnginePath">Wallpaper Engine路径</div></div>
             <div class="settings-control-row">
-                <input type="text" class="custom-input custom-input-stretch" placeholder="请输入路径">
+                <input type="text" class="custom-input custom-input-stretch" placeholder="请输入路径" data-i18n-placeholder="enterPath">
                 <div class="settings-buttons">
-                    <button class="settings-btn" onclick="handleAutoGet()">自动获取</button>
-                    <button class="settings-btn" onclick="handlePreview()">预览</button>
+                    <button class="settings-btn" onclick="handleAutoGet()" data-i18n="autoGet">自动获取</button>
+                    <button class="settings-btn" onclick="handlePreview()" data-i18n="preview">预览</button>
                 </div>
             </div>
         </div>
         <div class="settings-item">
-            <div class="settings-label">启用默认光标</div>
+            <div class="settings-label" data-i18n="enableDefaultCursor">启用默认光标</div>
             <div class="settings-control"><input type="checkbox" id="enableDefaultCursor" onchange="handleEnableDefaultCursorChange(this.checked)"></div>
         </div>
         <div class="settings-item">
-            <div class="settings-label">启动全屏暂停</div>
+            <div class="settings-label" data-i18n="pauseOnFullscreen">启动全屏暂停</div>
             <div class="settings-control"><input type="checkbox" id="enableFullscreenPause" onchange="handleFullscreenPauseChange(this.checked)"></div>
         </div>
     `;
+    syncLanguageSelect();
 }
 
 function renderAdvancedSettings(container) {
     container.innerHTML = `
-        <div class="settings-section-title">高级选项</div>
+        <div class="settings-section-title" data-i18n="advancedOptions">高级选项</div>
         <div class="settings-item">
-            <div class="settings-label">缓存清理</div>
+            <div class="settings-label" data-i18n="cacheCleanup">缓存清理</div>
             <div class="settings-control">
-                <button class="settings-btn" onclick="handleClearCache(this)">清理</button>
+                <button class="settings-btn" onclick="handleClearCache(this)" data-i18n="clear">清理</button>
             </div>
         </div>
         <div class="settings-item">
             <div class="settings-label-container">
-                <div class="settings-label">将默认组设置为Windows默认光标</div>
+                <div class="settings-label" data-i18n="setDefaultWindowsCursor">将默认组设置为Windows默认光标</div>
             </div>
             <div class="settings-control">
-                <button class="settings-btn" onclick="handleRestoreDefaultCursor()">设置默认</button>
+                <button class="settings-btn" onclick="handleRestoreDefaultCursor()" data-i18n="setDefault">设置默认</button>
             </div>
         </div>
         <div class="settings-item">
             <div class="settings-label-container">
-                <div class="settings-label">显示更多菜单内容 <span class="beta-badge">Beta</span></div>
+                <div class="settings-label"><span data-i18n="showMoreMenu">显示更多菜单内容</span> <span class="beta-badge">Beta</span></div>
             </div>
             <div class="settings-control"><input type="checkbox" id="showMoreMenu" onchange="handleShowMoreMenuChange(this.checked)"></div>
         </div>
@@ -193,26 +238,26 @@ function renderAdvancedSettings(container) {
 
 function renderAboutSettings(container) {
     container.innerHTML = `
-        <div class="settings-section-title">关于 MouseEngine</div>
+        <div class="settings-section-title" data-i18n="aboutMouseEngine">关于 MouseEngine</div>
         <div class="settings-item">
-            <div class="settings-label">版本</div>
-            <div class="settings-value" id="aboutVersion">加载中...</div>
+            <div class="settings-label" data-i18n="version">版本</div>
+            <div class="settings-value" id="aboutVersion" data-i18n="loading">加载中...</div>
         </div>
         <div class="settings-item">
-            <div class="settings-label">开发者</div>
+            <div class="settings-label" data-i18n="developer">开发者</div>
             <div class="settings-value">CIF3</div>
         </div>
         <div class="settings-item">
-            <div class="settings-label">版权</div>
+            <div class="settings-label" data-i18n="copyright">版权</div>
             <div class="settings-value">© 2025-${new Date().getFullYear()} CIF3</div>
         </div>
         <div class="settings-item">
-            <div class="settings-label">许可证</div>
-            <div class="settings-value settings-link" onclick="showModal('license')">查看</div>
+            <div class="settings-label" data-i18n="license">许可证</div>
+            <div class="settings-value settings-link" onclick="showModal('license')" data-i18n="view">查看</div>
         </div>
         <div class="settings-item">
-            <div class="settings-label">第三方库</div>
-            <div class="settings-value settings-link" onclick="showModal('thirdparty')">查看</div>
+            <div class="settings-label" data-i18n="thirdPartyLibraries">第三方库</div>
+            <div class="settings-value settings-link" onclick="showModal('thirdparty')" data-i18n="view">查看</div>
         </div>
     `;
     
@@ -221,32 +266,32 @@ function renderAboutSettings(container) {
 
 function renderProgramWhitelistSettings(container) {
     container.innerHTML = `
-        <div class="settings-section-title">程序例外规则</div>
+        <div class="settings-section-title" data-i18n="programExceptionRules">程序例外规则</div>
         <div class="settings-item">
-            <div class="settings-label">应用程序</div>
+            <div class="settings-label" data-i18n="application">应用程序</div>
             <div class="settings-control">
-                <input type="text" class="custom-input" id="programInput" placeholder="选择应用程序" readonly>
-                <button class="settings-btn" onclick="selectFromRunning()">从运行中选择</button>
+                <input type="text" class="custom-input" id="programInput" placeholder="选择应用程序" data-i18n-placeholder="selectApplication" readonly>
+                <button class="settings-btn" onclick="selectFromRunning()" data-i18n="selectFromRunning">从运行中选择</button>
             </div>
         </div>
         <div class="settings-item">
-            <div class="settings-label">光标组</div>
+            <div class="settings-label" data-i18n="cursorGroup">光标组</div>
             <div class="settings-control">
                 <select class="custom-input" id="cursorGroupSelect">
-                    <option value="">选择光标组</option>
+                    <option value="" data-i18n="selectCursorGroup">选择光标组</option>
                 </select>
             </div>
         </div>
         <div class="settings-item">
-            <div class="settings-label">操作</div>
+            <div class="settings-label" data-i18n="operation">操作</div>
             <div class="settings-control">
-                <button class="settings-btn" onclick="addWhitelistEntry()">添加绑定</button>
+                <button class="settings-btn" onclick="addWhitelistEntry()" data-i18n="addBinding">添加绑定</button>
             </div>
         </div>
         <div class="settings-divider"></div>
-        <div class="settings-section-title">当前绑定</div>
+        <div class="settings-section-title" data-i18n="currentBindings">当前绑定</div>
         <div id="whitelistEntries" class="whitelist-entries">
-            <div class="whitelist-empty">暂无绑定</div>
+            <div class="whitelist-empty" data-i18n="noBindings">暂无绑定</div>
         </div>
     `;
     
@@ -282,7 +327,7 @@ async function loadWhitelistData() {
                 container.appendChild(entry);
             });
         } else {
-            container.innerHTML = '<div class="whitelist-empty">暂无绑定</div>';
+            container.innerHTML = `<div class="whitelist-empty" data-i18n="noBindings">${window.MouseEngineI18n ? MouseEngineI18n.t('noBindings') : '暂无绑定'}</div>`;
         }
     } catch (e) {
         console.error("加载白名单数据失败:", e);
@@ -299,7 +344,7 @@ async function loadCursorGroups() {
         const cursorGroups = await pywebview.api.get_cursor_groups();
         const select = document.getElementById('cursorGroupSelect');
         
-        select.innerHTML = '<option value="">选择光标组</option>';
+        select.innerHTML = `<option value="" data-i18n="selectCursorGroup">${window.MouseEngineI18n ? MouseEngineI18n.t('selectCursorGroup') : '选择光标组'}</option>`;
         cursorGroups.forEach(group => {
             const option = document.createElement('option');
             option.value = group;
@@ -538,7 +583,7 @@ async function handleClearCache(button) {
     // 保存原始文本
     const originalText = button.textContent;
     // 替换为正在清理
-    button.textContent = "正在清理...";
+    button.textContent = tr("clearing");
     // 禁用按钮
     button.disabled = true;
     
@@ -546,11 +591,11 @@ async function handleClearCache(button) {
         // 调用清理缓存方法
         const success = await pywebview.api.清理缓存();
         // 替换为清理完成
-        button.textContent = "清理完成";
+        button.textContent = tr("clearDone");
         console.log("缓存清理完成");
     } catch (e) {
         console.error("清理缓存失败:", e);
-        button.textContent = "清理失败";
+        button.textContent = tr("clearFailed");
     } finally {
         // 3秒后恢复按钮状态
         setTimeout(() => {
@@ -566,14 +611,14 @@ async function handleRestoreDefaultCursor() {
     // 保存原始文本
     const originalText = button.textContent;
     // 替换为正在设置
-    button.textContent = "正在设置...";
+    button.textContent = tr("setting");
     // 禁用按钮
     button.disabled = true;
     
     try {
         if (typeof pywebview === 'undefined' || !pywebview.api) {
             console.log('请先启动应用程序');
-            button.textContent = "未启动应用";
+            button.textContent = tr("appNotStarted");
             // 3秒后恢复按钮状态
             setTimeout(() => {
                 button.textContent = originalText;
@@ -585,14 +630,14 @@ async function handleRestoreDefaultCursor() {
         const success = await pywebview.api.设置默认组为Windows默认光标();
         if (success) {
             console.log('已将默认组设置为Windows默认光标');
-            button.textContent = "设置成功";
+            button.textContent = tr("setSuccess");
         } else {
             console.log('设置默认组失败');
-            button.textContent = "设置失败";
+            button.textContent = tr("setFailed");
         }
     } catch (e) {
         console.error('设置默认组失败:', e);
-        button.textContent = "设置失败";
+        button.textContent = tr("setFailed");
     } finally {
         // 3秒后恢复按钮状态
         setTimeout(() => {
@@ -675,10 +720,10 @@ function showModal(type) {
     } else if (type === 'thirdparty') {
         modalContent.innerHTML = `
             <div class="modal-header">
-                <h3>第三方库</h3>
+                <h3 data-i18n="thirdPartyLibraries">${tr('thirdPartyLibraries')}</h3>
             </div>
             <div class="modal-body scrollable" id="thirdPartyContent">
-                <p>加载中...</p>
+                <p data-i18n="loading">${tr('loading')}</p>
             </div>
         `;
         
@@ -695,7 +740,7 @@ function showModal(type) {
                 console.error('获取第三方库信息失败:', error);
                 const contentDiv = document.getElementById('thirdPartyContent');
                 if (contentDiv) {
-                    contentDiv.innerHTML = '<p>获取第三方库信息失败</p>';
+                    contentDiv.innerHTML = `<p>${tr('loadFailed')}</p>`;
                 }
             });
         }

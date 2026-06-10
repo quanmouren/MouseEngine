@@ -10,18 +10,18 @@
 <body>
     <div class="container">
         <div class="header">
-            <div class="header-left"><div class="header-title">设置</div></div>
+            <div class="header-left"><div class="header-title" data-i18n="settings">设置</div></div>
         </div>
         <div class="main-content">
             <div class="settings-navbar">
-                <div class="settings-nav-item active">基本设置</div>
-                <div class="settings-nav-item">高级设置</div>
-                <div class="settings-nav-item">程序白名单</div>
-                <div class="settings-nav-item">关于</div>
+                <div class="settings-nav-item active" data-page="basic" data-i18n="basicSettings">基本设置</div>
+                <div class="settings-nav-item" data-page="advanced" data-i18n="advancedSettings">高级设置</div>
+                <div class="settings-nav-item" data-page="whitelist" data-i18n="programWhitelist">程序白名单</div>
+                <div class="settings-nav-item" data-page="about" data-i18n="about">关于</div>
             </div>
             <div class="settings-container">
                 <div class="settings-content">
-                    <div class="settings-title">基本设置</div>
+                    <div class="settings-title" data-i18n="basicSettings">基本设置</div>
                     <div class="settings-section">
                         <div class="settings-section-title">应用设置</div>
                         <div class="settings-item">
@@ -51,6 +51,7 @@
             </div>
         </div>
     </div>
+    <script src="js/i18n.js"></script>
     <script src="js/settingsUI.js"></script>
 </body>
 </html>

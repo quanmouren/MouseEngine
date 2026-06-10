@@ -93,8 +93,8 @@
     <div class="container">
         <div class="welcome-card upgrade-card">
             <div class="upgrade-header">
-                <div class="upgrade-title">🔄 一键更新 <span id="oldVersionTitle"></span></div>
-                <div class="upgrade-subtitle">程序找到了之前安装过的旧版本，是否一键更新？</div>
+                <div class="upgrade-title">🔄 <span data-i18n="oneClickUpdate">一键更新</span> <span id="oldVersionTitle"></span></div>
+                <div class="upgrade-subtitle" data-i18n="oldVersionFound">程序找到了之前安装过的旧版本，是否一键更新？</div>
             </div>
 
             <div class="version-info" id="versionList">
@@ -102,19 +102,20 @@
             </div>
 
             <div class="warning-section">
-                <div class="warning-title">ℹ️ 温馨提示</div>
+                <div class="warning-title">ℹ️ <span data-i18n="tip">温馨提示</span></div>
                 <div class="warning-text">
-                    点击"一键升级"将自动删除旧版本<span id="oldVersionText"></span>，但保留原先的配置文件。
+                    <span data-i18n="clickOneClickUpgradePrefix">点击"一键升级"将自动删除旧版本</span><span id="oldVersionText"></span><span data-i18n="keepConfig">，但保留原先的配置文件。</span>
                 </div>
             </div>
 
             <div class="action-section">
-                <button id="upgradeBtn" class="btn btn-upgrade">🚀 一键升级</button>
-                <button id="skipBtn" class="btn btn-skip">跳过</button>
+                <button id="upgradeBtn" class="btn btn-upgrade">🚀 <span data-i18n="oneClickUpgrade">一键升级</span></button>
+                <button id="skipBtn" class="btn btn-skip" data-i18n="skip">跳过</button>
             </div>
         </div>
     </div>
 
+    <script src="js/i18n.js"></script>
     <script src="js/upgradeConfirm.js"></script>
 </body>
 </html>

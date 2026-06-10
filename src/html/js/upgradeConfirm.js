@@ -7,6 +7,10 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('skipBtn').addEventListener('click', handleSkip);
 });
 
+function tr(key, params) {
+    return window.MouseEngineI18n ? MouseEngineI18n.t(key, params) : key;
+}
+
 async function loadOldVersions() {
     if (typeof pywebview === 'undefined' || !pywebview.api) {
         setTimeout(loadOldVersions, 100);
@@ -29,7 +33,7 @@ async function loadOldVersions() {
         renderVersionList(versions);
     } catch (e) {
         console.error('获取旧版本失败:', e);
-        document.getElementById('versionList').innerHTML = '<p style="color: #ef4444;">加载失败</p>';
+        document.getElementById('versionList').innerHTML = `<p style="color: #ef4444;">${tr('loadFailed')}</p>`;
     }
 }
 
@@ -37,8 +41,8 @@ function renderVersionList(versions) {
     const container = document.getElementById('versionList');
     
     if (!versions || versions.length === 0) {
-        container.innerHTML = '<p style="color: #10b981; text-align: center;">没有发现旧版本</p>';
-        document.getElementById('upgradeBtn').textContent = '确认';
+        container.innerHTML = `<p style="color: #10b981; text-align: center;">${tr('noOldVersions')}</p>`;
+        document.getElementById('upgradeBtn').textContent = tr('confirm');
         return;
     }
 
@@ -55,14 +59,14 @@ function renderVersionList(versions) {
 async function handleUpgrade() {
     const btn = document.getElementById('upgradeBtn');
     const originalText = btn.textContent;
-    btn.textContent = '正在清理...';
+    btn.textContent = tr('clearing');
     btn.disabled = true;
 
     try {
         const result = await pywebview.api.cleanup_old_versions();
         
         if (result.success) {
-            btn.textContent = '清理完成!';
+            btn.textContent = tr('clearDone');
             setTimeout(() => {
                 if (pywebview.api.on_upgrade_clicked) {
                     pywebview.api.on_upgrade_clicked();
@@ -71,13 +75,13 @@ async function handleUpgrade() {
                 }
             }, 1000);
         } else {
-            btn.textContent = '清理失败';
+            btn.textContent = tr('clearFailed');
             btn.disabled = false;
             console.error('清理失败:', result.message);
         }
     } catch (e) {
         console.error('清理旧版本失败:', e);
-        btn.textContent = '清理失败';
+        btn.textContent = tr('clearFailed');
         btn.disabled = false;
     }
 }

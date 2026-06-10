@@ -36,6 +36,7 @@ except ImportError:
 UI_IMPORT_SUCCESS = True
 
 from path_utils import get_project_root
+from i18n_utils import tr
 PROJECT_ROOT = get_project_root()
 
 stop_flag = threading.Event()
@@ -50,6 +51,7 @@ last_config_mtime = 0  # 用于跟踪配置文件修改时间
 def update_tray_menu():
     """更新系统托盘菜单"""
     if TRAY_ICON:
+        TRAY_ICON.title = tr("tray_title_paused") if pause_flag.is_set() else tr("tray_title")
         TRAY_ICON.menu = create_menu()
         TRAY_ICON.update_menu()
         log.info("系统托盘菜单已更新。")
@@ -253,19 +255,19 @@ def toggle_pause(icon=None, item=None):
         pause_flag.clear()
         log.info("已解除暂停，程序继续运行")
         if TRAY_ICON:
-            TRAY_ICON.title = "光标引擎"
+            TRAY_ICON.title = tr("tray_title")
     else:
         pause_flag.set()
         log.info("已暂停，监听器停止工作")
         if TRAY_ICON:
-            TRAY_ICON.title = "光标引擎 (已暂停)"
+            TRAY_ICON.title = tr("tray_title_paused")
     
     if TRAY_ICON:
         TRAY_ICON.update_menu()
 
 def get_pause_menu_text(icon=None, item=None):
     """获取暂停菜单项的显示文本"""
-    return "解除暂停" if pause_flag.is_set() else "暂停"
+    return tr("resume") if pause_flag.is_set() else tr("pause")
 
 def set_last_app_as_default():
     """
@@ -334,19 +336,19 @@ def create_menu():
     # 更多菜单内容
     if show_more_menu:
         menu_items.extend([
-            MenuItem("将上一焦点窗口设为默认", set_last_app_as_default),
+            MenuItem(tr("set_last_focus_default"), set_last_app_as_default),
             Menu.SEPARATOR,
         ])
     
     # 基本菜单内容
     menu_items.extend([
-        MenuItem("配置鼠标组", open_config_mouse_gui, enabled=UI_IMPORT_SUCCESS),
-        MenuItem("绑定鼠标组", open_bind_mouse_gui, enabled=UI_IMPORT_SUCCESS),
-        MenuItem("设置", open_settings_ui, enabled=UI_IMPORT_SUCCESS),
+        MenuItem(tr("configure_mouse_groups"), open_config_mouse_gui, enabled=UI_IMPORT_SUCCESS),
+        MenuItem(tr("bind_mouse_groups"), open_bind_mouse_gui, enabled=UI_IMPORT_SUCCESS),
+        MenuItem(tr("settings"), open_settings_ui, enabled=UI_IMPORT_SUCCESS),
         Menu.SEPARATOR,
         MenuItem(get_pause_menu_text, toggle_pause),
         Menu.SEPARATOR,
-        MenuItem("退出", on_exit_request),
+        MenuItem(tr("exit"), on_exit_request),
     ])
 
     return Menu(*menu_items)
@@ -373,7 +375,7 @@ def setup_pystray_icon():
 
     menu = create_menu()
 
-    TRAY_ICON = Icon("MouseEngine", image, "光标引擎", menu)
+    TRAY_ICON = Icon("MouseEngine", image, tr("tray_title"), menu)
     return TRAY_ICON
 
 def 触发刷新(target_wallpaper_id=None, changed_monitor_index=None):

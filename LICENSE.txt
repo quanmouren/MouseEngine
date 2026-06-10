@@ -2,42 +2,66 @@
 
 Copyright (c) 2025, CIF3. All rights reserved.
 
-This project is distributed under a combined licensing model:
+This project is distributed under a combined licensing model. Different files and modules may use different licenses. The license of each file is identified by its `SPDX-License-Identifier` header when present.
+
+If a file does not clearly state another license, it is licensed under the MouseEngine Non-Commercial License described below.
 
 ## 1. Core Logic & Original Features
-The core functionality, original algorithms, and unique features of this software are licensed under:
-Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)
-https://creativecommons.org/licenses/by-nc-sa/4.0/
+
+The core functionality, original algorithms, original workflows, project-specific features, and other files without a separate MIT, BSD 3-Clause, or third-party license notice are licensed under:
+
+MouseEngine Non-Commercial License
+
+Free projects, personal projects, learning, research, and open-source non-commercial projects may use, copy, study, modify, and share these parts freely.
+
+Commercial use requires prior permission from the author.
+
+Commercial use includes, but is not limited to:
+- Selling this software or a modified version of it.
+- Including this software in paid software, paid services, or commercial products.
+- Using this software or its modified versions to provide paid services.
+- Using this software in commercial platforms, commercial projects, or profit-making activities.
+- Removing author information and redistributing this software for commercial gain.
+
+Modified versions must retain the copyright notice and this license notice, and must clearly state that changes were made.
+
+This software is provided "as is", without warranty of any kind.
 
 ## 2. Wallpaper Engine Integration & API Modules
-The modules specifically designed for interacting with Wallpaper Engine, process monitoring (psutil-based logic), and system handle operations are licensed under:
+
+Some modules specifically designed for interacting with Wallpaper Engine, process monitoring, system handle operations, or other integration features may be licensed under:
+
 The BSD 3-Clause License
 https://opensource.org/licenses/BSD-3-Clause
 
-## 3. Third-Party Support or Miscellaneous Modules
-Certain files in this project are licensed under:
+These files may be used according to their own file-level license notices.
+
+## 3. Independent Utility Modules
+
+Certain independent utility files may be licensed under:
+
 The MIT License (MIT)
 https://opensource.org/licenses/MIT
 
-(See individual file headers for the specific license governing each file.)
+These files may be used according to their own file-level license notices.
 
----
+## 4. Third-Party Libraries and Assets
 
-## BSD 3-Clause License Text (for Integration Modules)
-Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
-1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
-2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
-3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+Third-party libraries, dependencies, and assets are not covered by the MouseEngine Non-Commercial License. They remain governed by their own licenses.
 
----
+See `FINAL_THIRD_PARTY_NOTICES.txt` for third-party license notices.
 
-## Important Exceptions & Disclaimers
+## 5. Important Exceptions & Disclaimers
+
 - WALLPAPER CONTENT: This project identifies and retrieves metadata of wallpapers. All wallpaper assets, IDs, and media remain the property of their respective copyright holders on Steam Workshop.
-- THIRD-PARTY LIBRARIES: Libraries such as 'psutil' are subject to their own respective licenses.
-- NO ENDORSEMENT: This project is not affiliated with or endorsed by Wallpaper Engine or Steam.
+- THIRD-PARTY LIBRARIES: Third-party libraries remain subject to their own respective licenses.
+- NO ENDORSEMENT: This project is not affiliated with or endorsed by Wallpaper Engine, Steam, or Valve.
+- NO WARRANTY: This software is provided "as is", without warranty of any kind. The author is not liable for damages or issues caused by use of this software.
 
----
+## 6. Version and License Change Notice
 
-Note: This project changed its license starting from Alpha2.0.
-Alpha2.0 and later: Licensed under CC BY-NC-SA 4.0 (Core) & BSD 3-Clause (Integration). Commercial use without authorization is prohibited.
-Alpha1.2 and earlier: Remains under BSD 3-Clause. Permissions granted under the previous license for older versions are still valid.
+This project changed its license starting from Alpha 2.0, and deprecated CC BY-NC-SA 4.0 for core logic starting from V1.0.
+
+- V1.0 and later: Core logic and original features are licensed under the MouseEngine Non-Commercial License unless a file states another license.
+- Alpha 2.0 through versions before V1.0: Some core logic and original features were licensed under Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0). Already published CC-licensed code remains licensed under that license; those granted rights are not withdrawn.
+- Alpha 1.2 and earlier: Remain under the BSD 3-Clause License. Permissions granted under the previous license for older versions remain valid and are not withdrawn.

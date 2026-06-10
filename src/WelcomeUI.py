@@ -9,6 +9,7 @@ import platform
 import re
 import sys
 from path_utils import resolve_path
+from i18n_utils import get_language, set_language
 
 try:
     if platform.system() == "Windows":
@@ -138,6 +139,12 @@ def find_wallpaper_engine_path_advanced():
 class Api:
     def __init__(self, on_path_selected_callback):
         self.on_path_selected_callback = on_path_selected_callback
+
+    def get_language(self):
+        return get_language()
+
+    def set_language(self, language):
+        return set_language(language)
     
     def auto_find_wallpaper_engine(self):
         try:
@@ -206,6 +213,9 @@ class UpgradeApi:
         self.on_skip_callback = on_skip_callback
         self._window = window_ref
 
+    def get_language(self):
+        return get_language()
+
     def get_old_versions(self):
         return check_other_versions_in_startup()
 
@@ -215,11 +225,11 @@ class UpgradeApi:
             if os.path.exists(version_path):
                 import toml
                 version_data = toml.load(version_path)
-                return version_data.get("__version__", "Beta1.3")
-            return "Beta1.3"
+                return version_data.get("__version__", "V1.0")
+            return "V1.0"
         except Exception as e:
             log.error(f"获取版本失败: {e}")
-            return "Beta1.3"
+            return "V1.0"
 
     def cleanup_old_versions(self):
         try:

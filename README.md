@@ -1,120 +1,111 @@
 # MouseEngine
 
-<div align="center">
+**语言 / Language**: 简体中文 | [English](./docs/README_EN.md) | [日本語](./docs/README_JA.md)
 
-[中文文档](./README.md)
+MouseEngine 是一个 **基于 Wallpaper Engine 的 Windows 鼠标指针自动切换工具**。  
+它会根据当前显示器正在使用的 Wallpaper Engine 壁纸，自动切换到对应的鼠标指针主题。
 
-</div>
-
-MouseEngine 是一个 **基于 Wallpaper Engine 的 Windows 鼠标指针自动切换工具**。
-它能够根据当前显示器所使用的壁纸，**自动切换对应的鼠标指针主题**
-
-![Logo](./docs/images/1.jpg "MouseEngine Logo")
+![Logo](./docs/images/logo.jpg "MouseEngine Logo")
 
 ---
 
 ## ✨ 功能特性
 
-- 🎨 **壁纸驱动鼠标指针切换**
-  - 读取 Wallpaper Engine 当前壁纸项目 ID
-  - 根据配置和播放列表自动切换鼠标指针主题
-
-- ♻ **默认回退机制**
-  - 未配置映射时，可自动使用默认鼠标指针组
-
-- ⚙ **可视化设置界面**
-  - Wallpaper Engine 路径配置
-  - 默认鼠标指针开关
-  - 播放列表快速配置与设置
-
-- 📌 **系统托盘常驻**
-  - 后台监听壁纸变化
-  - 托盘菜单快速打开配置 / 设置
-  - 安全退出
-
-- 🎯 **应用白名单**
-  - 根据设定的白名单内容指定程序使用的鼠标指针主题
-  - 白名单程序直接使用指定主题，跳过壁纸ID匹配
-
+- **壁纸驱动光标切换**：读取 Wallpaper Engine 当前壁纸 ID，并自动应用绑定的鼠标组。
+- **鼠标组管理**：可创建、导入、编辑鼠标指针主题，支持 `.cur` / `.ani` 光标文件。
+- **壁纸绑定界面**：以可视化方式为 Wallpaper Engine 壁纸绑定鼠标组。
+- **程序白名单**：为指定应用单独绑定鼠标组，白名单优先于壁纸规则。
+- **默认回退机制**：壁纸未绑定或主题异常时，可回退到默认鼠标组。
+- **系统托盘常驻**：托盘菜单支持打开配置界面、暂停/恢复、设置和安全退出。
+- **多语言界面**：现支持简体中文、英语、日语。
 
 ---
 
-## 🧩 工作原理简述
+## 🧩 工作原理
 
-1. 读取 Wallpaper Engine 的 `config.json`
-2. 获取当前显示器正在使用的壁纸项目 ID
-3. 启动线程监控获取活跃壁纸
-4. 在 `config.toml` 中查找对应的鼠标主题
-5. 调用 Windows API 应用鼠标指针
-6. 若无匹配项，根据设置决定是否使用默认主题
+1. 读取 Wallpaper Engine 的 `config.json`。
+2. 获取当前显示器正在使用的壁纸项目 ID。
+3. 在 `config.toml` 中查找壁纸 ID 对应的鼠标组。
+4. 如当前前台程序命中白名单，则优先使用白名单绑定的鼠标组。
+5. 调用 Windows API 应用鼠标指针。
+6. 若无匹配项，则根据设置决定是否使用默认鼠标组。
 
 ---
 
-# 🚀 快速使用
-## 一、下载与解压
-首先获取软件安装包：点击链接 [MouseEngine-Beta1.3](https://github.com/quanmouren/MouseEngine/releases/download/Beta1.3/MouseEngine-Beta1.3-windows-x64.zip) 下载软件压缩包。下载完成后，将压缩包解压到你希望存放的位置。
+## 🚀 快速使用
 
-## 二、首次启动核心程序
-找到解压目录中的 `MouseEngine.exe` 并双击启动。
+### 1. 下载与解压
+
+从 GitHub Releases 下载正式版压缩包：
+
+[MouseEngine-V1.0](https://github.com/quanmouren/MouseEngine/releases/download/V1.0/MouseEngine-V1.0-windows-x64.zip)
+
+下载完成后，将压缩包解压到你希望存放 MouseEngine 的目录。推荐放在普通用户目录或独立工具目录，避免放到需要管理员权限写入的系统目录。
+
+### 2. 首次启动
+
+双击解压目录中的 `MouseEngine.exe`。
 
 ![欢迎向导UI](./docs/images/UI1.png)
 
-程序启动后会自动检测并获取电脑中 Wallpaper Engine 的安装路径，且自动填入对应输入框；确认路径无误后，点击“确认并继续”按钮，程序将进入静默运行状态（后台运行，无显性窗口，可在任务管理器中查看进程状态）。
-接下来的操作将会在系统托盘中启动，右键 `MouseEngine` 程序图标即可看见以下菜单。
+首次启动时，程序会尝试自动查找 Wallpaper Engine 的安装路径。确认路径无误后，点击“确认并继续”。之后程序会进入后台运行状态，并在系统托盘中常驻。
+
+右键托盘中的 `MouseEngine` 图标，可以打开主要功能菜单。
 
 ![menu](./docs/images/menu.png)
 
-## 三、配置光标组
-点击菜单 `配置鼠标组` 选项打开此界面
+### 3. 配置鼠标组
+
+点击托盘菜单中的 `配置鼠标组`。
 
 ![UI](./docs/images/UI2.png)
 
-该工具用于快速配置光标组：
-- 支持通过“导入组”选项，选择已有的光标组配置文件，快速添加光标组；
-- 也可手动新建光标组，按需自定义光标样式、触发逻辑等参数。
+在这里可以创建、导入、编辑鼠标组。每个鼠标组对应一套 Windows 鼠标指针配置。
 
-## 四、绑定壁纸与光标组
-点击菜单 `绑定鼠标组` 选项打开此界面
+### 4. 绑定壁纸与鼠标组
+
+点击托盘菜单中的 `绑定鼠标组`。
 
 ![UI](./docs/images/UI3.png)
 
-为壁纸绑定指定光标组：
-1. 程序启动后，左侧列表会展示 Wallpaper Engine 中已安装的所有壁纸；
-2. 选中目标壁纸，右侧会显示已创建的光标组复选框；
-3. 勾选需要绑定的光标组，即可完成壁纸与光标组的关联设置（保存后，启动该壁纸时会自动加载对应光标组）。
+左侧会显示 Wallpaper Engine 中已安装的壁纸。选择壁纸后，在右侧为其绑定需要使用的鼠标组即可。
 
-## 五、程序基础设置
-点击菜单 `设置` 选项打开此界面
+### 5. 程序设置
+
+点击托盘菜单中的 `设置`。
 
 ![UI](./docs/images/UI4.png)
 
-可进行程序运行相关配置，在这里可以为程序设置自启动，勾选对应选项后，程序将随系统开机自动运行。
-可以在程序白名单中为指定程序绑定特定光标组。
-
-## 💡 附言
-本程序默认开启“默认光标设置”功能：当壁纸未绑定任何光标组，或绑定的光标组因文件损坏、路径错误等原因无法加载时，程序会自动启用默认光标配置，作为备选方案，确保光标正常显示，避免出现光标丢失、样式异常的问题，建议配置默认光标组。
+设置页可配置 Wallpaper Engine 路径、开机自启、默认光标组、全屏暂停、语言和程序白名单。
 
 ---
 
-## 🚀 快速部署
+## 💡 使用建议
 
-> 适合第一次使用 / 只想快速跑起来
+- 建议保留默认鼠标组。壁纸未绑定鼠标组或主题文件异常时，默认鼠标组可以作为回退方案。
+- 程序需要在 Windows 桌面会话中运行，系统托盘和光标切换依赖 Windows 桌面环境。
+- 当前版本不提供自动联网更新。更新时请前往 GitHub Releases 手动下载新版。
 
-### 1) 克隆仓库
+---
+
+## 🛠 从源码运行
+
+> 面向开发者或希望直接从源码运行的用户。
+
+### 1. 克隆仓库
 
 ```bash
 git clone https://github.com/quanmouren/MouseEngine.git
 cd MouseEngine
 ```
 
-### 2) 安装依赖
+### 2. 安装依赖
 
 ```bash
 pip install -r requirements.txt
 ```
 
-
-### 3) 启动程序
+### 3. 启动程序
 
 ```bash
 cd src
@@ -123,56 +114,66 @@ python main.py
 
 ---
 
-## 🔧 详细部署说明（进阶）
+## 🔧 详细说明
 
 ### 📁 项目目录结构（参考）
 
 ```text
 MouseEngine/
 │
-├─ LICENSE
-├─ README.md
-├─ requirements.txt
-├─ THIRD_PARTY_NOTICES.txt
-│
+├─ README.md                         # 项目说明与使用文档
+├─ LICENSE.txt                       # 开源许可证
+├─ FINAL_THIRD_PARTY_NOTICES.txt     # 第三方依赖许可证汇总
+├─ requirements.txt                  # Python 依赖列表
 ├─ docs/
-│  └─ licenses/              # 第三方依赖许可证原文
+│  ├─ README_EN.md                   # English documentation
+│  ├─ README_JA.md                   # 日本語ドキュメント
+│  └─ images/                        # 文档图片
 │
-└─ src/                      # ⭐ 唯一运行目录
-   ├─ main.py                # 主入口（监听 / 托盘）
-   ├─ config.toml            # 主配置文件
-   ├─ Initialize.py          # 初始化与配置修复
-   ├─ Tlog.py                # 日志模块
-   ├─ ani_to_gif.py          # 处理ani格式转换
-   ├─ cur_to_png.py          # 处理cur格式转换
-   ├─ getActiveWallpaper.py  # 获取活跃壁纸
-   ├─ getWallpaperConfig.py  # 壁纸配置解析
-   ├─ setMouse.py            # 鼠标指针切换逻辑
-   ├─ mouses.py              # 显示器与主题解析
-   ├─ mainUIWeb.py           # 主界面
-   ├─ settingsUIWeb.py       # 设置界面
-   ├─ WelcomeUI.py           # 欢迎界面
-   ├─ mouseUI.py             # 鼠标主题界面
-   ├─ path_utils.py          # 统一路径管理
+└─ src/                              # ⭐ 程序运行目录，命令行启动请先进入此目录
+   ├─ main.py                        # 主入口：壁纸监听、托盘菜单、暂停/退出
+   ├─ Initialize.py                  # 首次启动初始化与配置修复
+   ├─ WelcomeUI.py                   # 首次启动向导与旧版本清理确认
+   ├─ mainUIWeb.py                   # 壁纸与鼠标组绑定界面 API
+   ├─ mouseUI.py                     # 鼠标组编辑器 API
+   ├─ settingsUIWeb.py               # 设置界面 API
+   ├─ getActiveWallpaper.py          # 获取当前活跃壁纸
+   ├─ getWallpaperConfig.py          # 解析 Wallpaper Engine 配置
+   ├─ setMouse.py                    # Windows 鼠标指针应用逻辑
+   ├─ mouses.py                      # 鼠标组保存、读取与显示器映射
+   ├─ i18n_utils.py                  # Python 侧语言读取、写入与托盘翻译
+   ├─ path_utils.py                  # 统一路径解析，兼容源码与打包环境
+   ├─ Tlog.py                        # 日志模块
+   ├─ ani_to_gif.py                  # ani 光标预览转换
+   ├─ cur_to_png.py                  # cur 光标预览转换
+   ├─ config.toml                    # 主配置文件
+   ├─ temp_storage.toml              # 运行时临时状态
+   ├─ version.toml                   # 程序版本信息
    │
-   ├─ mouses/                # 鼠标组文件夹
+   ├─ mouses/                        # 鼠标组目录，每个子目录是一套光标主题
    │
-   ├─ html/                  # Web界面资源
+   ├─ html/
+   │  ├─ js/                         # 页面脚本与前端 i18n
+   │  ├─ components/                 # 复用组件
+   │  ├─ image/                      # 前端图片资源
+   │  └─ cache/                      # 预览图缓存
    │
-   ├─ lib/                   # 库文件
-   │  ├─ INFParser.py        # 解析inf文件快速添加组
-   │  └─ imgObj_to_cur.py    # 2D编辑器
+   ├─ lib/                           # 辅助库
+   │  ├─ INFParser.py                # 解析 .inf 光标主题文件
+   │  ├─ imgObj_to_cur.py            # 2D 编辑器导出 cur
+   │  └─ get_monitor_by_cursor.py    # 根据光标位置识别显示器
    │
-   ├─ projects/              # 编辑器项目目录
-   │  └─ test_mouse/         # 示例项目
+   ├─ projects/                      # 2D 编辑器项目目录
+   │  └─ test_mouse/                 # 示例项目
    │     ├─ image/
    │     ├─ main.lua
    │     └─ project.toml
-   └─ ui/                    # UI相关文件
-      ├─ widgets/            # 自定义控件
-      │  ├─ file_manager.py
-      │  └─ lua_editor.py
-      └─ Cur2D_Editor.py     #2D编辑器
+   │
+   └─ ui/                            # 2D 编辑器 UI
+      ├─ Cur2D_Editor.py             # 2D 编辑器主界面
+      └─ widgets/                    # 自定义控件
+         ├─ file_manager.py
+         └─ lua_editor.py
 
 ```
 
@@ -182,14 +183,14 @@ MouseEngine/
 
 ### 1) Wallpaper Engine 配置文件路径
 
-在 `config.toml` 中设置 Wallpaper Engine 的 `config.json` 路径：
+`config.toml` 中的 `[path]` 用于记录 Wallpaper Engine 的 `config.json` 路径：
 
 ```toml
 [path]
 wallpaper_engine_config = "D:/Steam/steamapps/common/wallpaper_engine/config.json"
 ```
 
-你也可以通过「设置」界面的“自动查找 / 浏览文件夹”按钮填写并写入。
+首次启动向导或「设置」页面中的“自动查找 / 浏览文件夹”会自动写入该路径。
 
 ---
 
@@ -204,6 +205,39 @@ wallpaper_engine_config = "D:/Steam/steamapps/common/wallpaper_engine/config.jso
 说明：
 - 左边是 Wallpaper Engine 的项目 ID
 - 右边是 `mouses/<主题名>/` 的文件夹名
+
+---
+
+### 3) 基础设置
+
+```toml
+[config]
+enable_default_icon_group = true
+pause_on_fullscreen = false
+show_more_menu = false
+language = "zh-CN"
+```
+
+说明：
+- `enable_default_icon_group`：未匹配到鼠标组时是否启用默认鼠标组。
+- `pause_on_fullscreen`：检测到全屏程序时是否暂停切换。
+- `show_more_menu`：是否显示更多托盘菜单项。
+- `language`：界面语言，目前支持 `zh-CN`、`en` 与 `ja`。
+
+---
+
+### 4) 程序白名单
+
+```toml
+[program_whitelist]
+"Code.exe" = "默认"
+"Photoshop.exe" = "设计用光标"
+```
+
+说明：
+- 左边是进程名。
+- 右边是鼠标组名称。
+- 当前前台程序命中白名单时，将优先使用白名单绑定的鼠标组。
 
 ---
 
@@ -232,12 +266,14 @@ Wait = "wait.ani"
 ## 🧪 常见问题（FAQ）
 
 ### Q1：系统托盘没有显示？
-- 确认已安装 `pystray` 和 `Pillow`
-- 确认在“有桌面会话”的环境运行
-- 使用同一个 Python/venv 运行 `main.py`
-- 检查是否缺失ico文件
+
+- 确认程序运行在 Windows 桌面会话中。
+- 从源码运行时，确认已安装 `pystray` 和 `Pillow`。
+- 检查是否有安全软件拦截托盘程序。
+- 如果是打包版，确认解压目录中文件完整，没有只单独复制 `MouseEngine.exe`。
 
 ### Q2：提示 `portalocker not installed`？
+
 - 这是可选警告：表示未安装文件锁库
 - 单实例使用通常可以忽略
 - 安装即可消除：
@@ -246,45 +282,44 @@ Wait = "wait.ani"
 pip install portalocker
 ```
 
----
+### Q3：为什么壁纸切换后光标没有变化？
 
-## 🚧 开发进度和问题
-### 🔄 开发中功能
-- 适配 Web 类型壁纸（当前开发中，暂未支持）
-- 计时器，进一步降低占用
-- 多显示器适配
-- 使用Rust重构有关句柄的内容，进一步降低占用
-- 配置导出导入同步
+- 确认 Wallpaper Engine 路径正确。
+- 确认目标壁纸已经绑定鼠标组。
+- 确认鼠标组中的 `.cur` / `.ani` 文件路径有效。
+- 如果当前前台程序命中白名单，白名单规则会优先于壁纸规则。
 
-### ❌ 不支持/无计划功能
-- EXE 类型壁纸（暂无支持计划）
+### Q4：如何切换界面语言？
 
-### 🛠 核心开发任务
-- 核心功能模块（对的，还没写）
-- 2D渲染器
+打开「设置」页面，在“语言”选项中选择 `简体中文`、`English` 或 `日本語`。
+
+### Q5：更新版本时会自动下载安装吗？
+
+当前版本不提供自动联网更新。请从 GitHub Releases 下载新版压缩包后手动替换。
 
 ---
 
 ## 📜 许可证与第三方声明
 
-本项目采用**组合授权模型 (Combined Licensing Model)**，不同功能模块遵循不同的开源协议。
+本项目采用**组合授权模型 (Combined Licensing Model)**，不同功能模块遵循不同的授权协议。
 
 ### 1. 授权划分
 为了平衡原创保护与社区集成，本项目代码划分为以下部分：
 
 | 模块类型 | 涵盖内容 | 采用协议 | 限制说明 |
 | :--- | :--- | :--- | :--- |
-| **核心逻辑** | 独创算法、核心业务流、项目特有功能 | **[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh)** | 署名、**禁止商用**、相同方式共享 |
+| **核心逻辑** | 独创算法、核心业务流、项目特有功能 | **MouseEngine Non-Commercial License** | 免费项目、个人项目、学习研究、开源非商业项目可自由使用；商业使用需获得作者许可 |
 | **联动接口** | 与 Wallpaper Engine 交互、Wallpaper Engine 相关UI、进程监控、系统句柄操作 | **[BSD 3-Clause](https://opensource.org/licenses/BSD-3-Clause)** | 宽松授权 |
 | **通用工具** | 独立的小型辅助工具函数 | **[MIT](https://opensource.org/licenses/MIT)** | 极度宽松 |
 
-> **注**：具体每个文件的授权情况，请参阅各文件头部的 `SPDX-License-Identifier` 标注。
+> **注**：具体每个文件的授权情况，请参阅各文件头部的 `SPDX-License-Identifier` 标注。若某个文件没有单独标注 MIT、BSD 3-Clause 或其他许可证，则默认适用 MouseEngine Non-Commercial License。
 
 ---
 
 ### 2. 版本变更说明
-本项目自 **Alpha 2.0** 版本起进行了协议调整：
-* **Alpha 2.0 及后续版本**：采用上述组合授权模型。
+本项目自 **Alpha 2.0** 版本起进行了协议调整，并自 **V1.0** 版本起弃用 CC BY-NC-SA 4.0：
+* **V1.0 及后续版本**：采用上述组合授权模型，其中核心逻辑使用 MouseEngine Non-Commercial License。
+* **Alpha 2.0 至 V1.0 之前的版本**：核心逻辑曾采用 **[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh)**。已发布版本的 CC 授权不会撤回，原有权利继续有效。
 * **Alpha 1.2 及更早版本**：仍遵循原有的 **[BSD 3-Clause](https://opensource.org/licenses/BSD-3-Clause)** 协议。如果您使用的是旧版本代码，原有权利继续有效且不可撤销。
 
 ---
@@ -294,29 +329,22 @@ pip install portalocker
 * **官方关联**：本项目为个人开发，与 Wallpaper Engine 或 Steam 官方无任何隶属或背书关系。
 * **软件使用**：本软件按“原样”提供，不附带任何形式的保证。作者不对因使用本软件导致的任何系统损害或法律纠纷负责。
 
-更多详情，请阅读完整的 **[LICENSE](./LICENSE)** 文件。
+更多详情，请阅读完整的 **[LICENSE.txt](./LICENSE.txt)** 文件。
 
-- 本项目许可证：`LICENSE`
-- 第三方依赖清单：`THIRD_PARTY_NOTICES.txt`
-- 第三方许可证原文：`docs/licenses/`
-
----
-
-### 4. 本项目中“不受 CC BY-NC-SA 4.0 限制”的内容
-
-以下内容并非本人原创，其使用遵循各自独立的许可协议，不受本项目 CC BY-NC-SA 4.0 协议限制：
-
+- 本项目许可证：`LICENSE.txt`
+- 第三方依赖声明：`FINAL_THIRD_PARTY_NOTICES.txt`
 
 ---
 
 ### 5. 对本许可证的解释与开发者权益说明
 #### 许可协议的不可撤销性说明：
-本项目部分内容采用的 CC BY-NC-SA 4.0 协议为不可撤销的公共许可：
-- 公众获得的“非商业使用、修改、分享”权利永久有效，本人不会收回已发布版本的授权；
-- 本人可停止更新项目，但已发布的版本仍受协议约束。
+本项目已经发布过的版本，其当时适用的授权不会被撤回：
+- 已按 CC BY-NC-SA 4.0 发布的代码，公众已经获得的“非商业使用、修改、分享”权利继续有效；
+- 已按 BSD 3-Clause 或 MIT 发布的文件，仍遵循其对应许可证；
+- 本人可在后续版本调整授权方式，但不会撤回已发布版本中已经授予的权利。
 
 #### 对开发者：
-* **自由开发**：使用 CC BY-NC-SA 4.0 协议的内容只要不用于商用、盈利，您可以随意 fork、魔改、集成或分发本项目的衍生版本，无需额外征得本人许可。
+* **自由开发**：免费项目、个人项目、学习研究、开源非商业项目均可自由使用核心逻辑；商业使用需获得作者许可。
 
 * **功能保障**：关于与 Wallpaper Engine 联动相关内容均使用 BSD 3-Clause 许可证，包括主main、UI、及所需的必要组件，对于此内容您可以随意更改。
 
@@ -336,4 +364,3 @@ pip install portalocker
 <div align="center">
   <img src="https://api.star-history.com/svg?repos=quanmouren/MouseEngine&type=Date" width="100%">
 </div>
-

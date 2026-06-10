@@ -15,6 +15,7 @@ import shutil
 import glob
 from PIL import Image
 from path_utils import resolve_path, get_project_root
+from i18n_utils import get_language
 
 # 引入项目根目录
 PROJECT_ROOT = get_project_root()
@@ -235,6 +236,9 @@ def load_wallpaper_bindings(path=CONFIG_PATH) -> dict:
         return {}
 
 class Api:
+    def get_language(self):
+        return get_language()
+
     def init(self):
         wallpapers = all_wallpapers()
         wallpapers = 图片加缓存(wallpapers)

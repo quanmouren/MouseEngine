@@ -1,3 +1,5 @@
+# Copyright (c) 2025, CIF3
+# SPDX-License-Identifier: BSD-3-Clause
 import webview
 import os
 import toml
@@ -7,6 +9,7 @@ import re
 import tkinter as tk
 from tkinter import filedialog
 from path_utils import resolve_path, get_project_root
+from i18n_utils import get_language, set_language
 try:
     import psutil
 except ImportError:
@@ -100,6 +103,12 @@ class SettingsApi:
 
     def set_window(self, window):
         self._window = window
+
+    def get_language(self):
+        return get_language()
+
+    def set_language(self, language):
+        return set_language(language)
 
     def get_auto_start(self):
         log.info("获取自启动状态")
@@ -530,11 +539,11 @@ class SettingsApi:
             version_path = resolve_path("version.toml")
             if os.path.exists(version_path):
                 version_data = toml.load(version_path)
-                return version_data.get("__version__", "Beta1.3")
-            return "Beta1.3"
+                return version_data.get("__version__", "V1.0")
+            return "V1.0"
         except Exception as e:
             log.error(f"获取版本失败: {e}")
-            return "Beta1.3"
+            return "V1.0"
 
 
     def get_cursor_groups(self):
