@@ -8,7 +8,7 @@ MouseEngine は **Wallpaper Engine と連動して Windows のマウスカーソ
 
 現在のディスプレイで使用されている Wallpaper Engine の壁紙を読み取り、その壁紙に対応するカーソルテーマへ自動で切り替えます。
 
-![Logo](./images/1.jpg "MouseEngine Logo")
+![Logo](./images/logo.jpg "MouseEngine Logo")
 
 ---
 
@@ -49,19 +49,19 @@ GitHub Releases からリリース版の zip をダウンロードします。
 
 展開したフォルダ内の `MouseEngine.exe` をダブルクリックします。
 
-![Welcome UI](./images/UI1.png)
+![Welcome UI](./images/UI1_ja.png)
 
 初回起動時、MouseEngine は Wallpaper Engine のインストールパスを自動で探します。パスを確認したら、「確認して続行」をクリックしてください。その後、アプリはバックグラウンドで動作し、システムトレイに常駐します。
 
 トレイ内の `MouseEngine` アイコンを右クリックすると、メインメニューを開けます。
 
-![Menu](./images/menu.png)
+![Menu](./images/menu_ja.png)
 
 ### 3. カーソルグループの設定
 
 トレイメニューから `カーソルグループを設定` を開きます。
 
-![Cursor Group UI](./images/UI2.png)
+![Cursor Group UI](./images/UI2_ja.png)
 
 ここではカーソルグループの作成、インポート、編集ができます。各カーソルグループは Windows のカーソルテーマに対応します。
 
@@ -69,7 +69,7 @@ GitHub Releases からリリース版の zip をダウンロードします。
 
 トレイメニューから `カーソルグループを紐づけ` を開きます。
 
-![Binding UI](./images/UI3.png)
+![Binding UI](./images/UI3_ja.png)
 
 左側に Wallpaper Engine にインストール済みの壁紙が表示されます。壁紙を選択し、右側で使用したいカーソルグループを紐づけます。
 
@@ -77,7 +77,7 @@ GitHub Releases からリリース版の zip をダウンロードします。
 
 トレイメニューから `設定` を開きます。
 
-![Settings UI](./images/UI4.png)
+![Settings UI](./images/UI4_ja.png)
 
 設定画面では Wallpaper Engine のパス、スタートアップ、デフォルトカーソルグループ、フルスクリーン時の一時停止、言語、プログラム別ホワイトリストを設定できます。
 

@@ -6,7 +6,7 @@ MouseEngine is a **Windows cursor auto-switching tool for Wallpaper Engine**.
 
 It reads the Wallpaper Engine wallpaper currently active on your display and automatically switches to the matching cursor theme.
 
-![Logo](./images/1.jpg "MouseEngine Logo")
+![Logo](./images/logo.jpg "MouseEngine Logo")
 
 ---
 
@@ -47,19 +47,19 @@ After downloading, extract the package to the directory where you want to keep M
 
 Double-click `MouseEngine.exe` in the extracted directory.
 
-![Welcome UI](./images/UI1.png)
+![Welcome UI](./images/UI1_en.png)
 
 On first launch, MouseEngine will try to locate your Wallpaper Engine installation path automatically. After confirming the path, click "Confirm and continue". The app will then run in the background and stay in the system tray.
 
 Right-click the `MouseEngine` tray icon to open the main menu.
 
-![Menu](./images/menu.png)
+![Menu](./images/menu_en.png)
 
 ### 3. Configure Cursor Groups
 
 Click `Configure cursor groups` in the tray menu.
 
-![Cursor Group UI](./images/UI2.png)
+![Cursor Group UI](./images/UI2_en.png)
 
 Here you can create, import, and edit cursor groups. Each cursor group represents a Windows cursor theme.
 
@@ -67,7 +67,7 @@ Here you can create, import, and edit cursor groups. Each cursor group represent
 
 Click `Bind cursor groups` in the tray menu.
 
-![Binding UI](./images/UI3.png)
+![Binding UI](./images/UI3_en.png)
 
 Installed Wallpaper Engine wallpapers are shown on the left. Select a wallpaper, then bind the cursor group you want to use on the right.
 
@@ -75,7 +75,7 @@ Installed Wallpaper Engine wallpapers are shown on the left. Select a wallpaper,
 
 Click `Settings` in the tray menu.
 
-![Settings UI](./images/UI4.png)
+![Settings UI](./images/UI4_en.png)
 
 The settings page lets you configure the Wallpaper Engine path, startup behavior, default cursor group, fullscreen pause, language, and program whitelist.
 

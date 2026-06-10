@@ -13,7 +13,7 @@ class TLog:
         self.TF = True
         self.on_def = True
         self._time = True
-        self.on_DEBUG = True
+        self.on_DEBUG = False
         self.level = 3
 
     def __color_text(self, text, is_error=False):
