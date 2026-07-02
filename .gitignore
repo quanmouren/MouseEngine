@@ -2,7 +2,7 @@
 __pycache__/
 mouses/
 config.toml
-.vscode/settings.json
+.vscode/
 venv/
 docs/licenses/一键整理许可证.ps1
 todo
@@ -19,3 +19,6 @@ src/temp_storage.toml
 src/*.spec
 src/build
 打包版本/
+promo-video/
+*/test/
+src/.vscode/
