@@ -11,6 +11,7 @@ import threading
 from PIL import Image
 from lib.INFParser import INFParser
 from mouses import 保存组配置, CURSOR_ORDER_MAPPING
+from setMouse import 设置鼠标指针
 from Tlog import TLog
 from path_utils import resolve_path
 from i18n_utils import get_language
@@ -30,6 +31,7 @@ log = TLog("EditMouse")
 
 MOUSE_BASE_PATH = resolve_path("mouses")
 CURSOR_KEYS = CURSOR_ORDER_MAPPING[:]
+CONFIG_PATH = resolve_path("config.toml")
 
 
 class EditMouseApi:
@@ -224,6 +226,38 @@ class EditMouseApi:
                 return {"status": "error", "msg": f"重命名组 [{old_group_name}] 失败"}
         except Exception as e:
             log.error(f"重命名组失败: {e}")
+            return {"status": "error", "msg": str(e)}
+
+    def apply_group(self, group_name):
+        if not group_name:
+            return {"status": "error", "msg": "组名不能为空"}
+
+        group_config_path = os.path.join(MOUSE_BASE_PATH, group_name, "config.toml")
+        if not os.path.exists(group_config_path):
+            return {"status": "error", "msg": f"组 [{group_name}] 配置不存在"}
+
+        try:
+            group_config = toml.load(group_config_path)
+            mouses_section = group_config.get("mouses", {})
+            if not isinstance(mouses_section, dict):
+                return {"status": "error", "msg": "鼠标组配置格式无效"}
+
+            cursor_paths = [mouses_section.get(key, "") for key in CURSOR_KEYS]
+            if not 设置鼠标指针(cursor_paths):
+                return {"status": "error", "msg": "应用鼠标组失败"}
+
+            if os.path.exists(CONFIG_PATH):
+                config_data = toml.load(CONFIG_PATH)
+            else:
+                config_data = {}
+            config_data.setdefault("config", {})
+            config_data["config"]["specified_mouse_group"] = group_name
+            with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+                toml.dump(config_data, f)
+
+            return {"status": "success", "msg": f"已应用组 [{group_name}]"}
+        except Exception as e:
+            log.error(f"应用组失败: {e}")
             return {"status": "error", "msg": str(e)}
     
     def 导入组(self):

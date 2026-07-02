@@ -374,6 +374,40 @@ class SettingsApi:
         except Exception as e:
             log.error(f"设置显示更多菜单内容状态失败: {e}")
             return False
+
+    def get_use_new_menu(self):
+        try:
+            config_path = resolve_path("config.toml")
+            if not os.path.exists(config_path):
+                return True
+
+            config_data = toml.load(config_path)
+            return config_data.get("config", {}).get("use_new_menu", True)
+        except Exception as e:
+            log.error(f"获取新版菜单状态失败: {e}")
+            return True
+
+    def set_use_new_menu(self, status):
+        try:
+            config_path = resolve_path("config.toml")
+            if os.path.exists(config_path):
+                config_data = toml.load(config_path)
+            else:
+                config_data = {}
+
+            if "config" not in config_data:
+                config_data["config"] = {}
+
+            config_data["config"]["use_new_menu"] = status
+
+            with open(config_path, "w", encoding="utf-8") as f:
+                toml.dump(config_data, f)
+
+            return True
+        except Exception as e:
+            log.error(f"设置新版菜单状态失败: {e}")
+            return False
+
     def 清理缓存(self):
         # 清理主目录下的cache文件夹和html\cache文件夹内的所有文件
         try:

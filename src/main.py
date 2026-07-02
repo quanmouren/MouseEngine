@@ -51,7 +51,7 @@ last_config_mtime = 0  # 用于跟踪配置文件修改时间
 def update_tray_menu():
     """更新系统托盘菜单"""
     if TRAY_ICON:
-        TRAY_ICON.title = tr("tray_title_paused") if pause_flag.is_set() else tr("tray_title")
+        TRAY_ICON.title = get_tray_title()
         TRAY_ICON.menu = create_menu()
         TRAY_ICON.update_menu()
         log.info("系统托盘菜单已更新。")
@@ -88,6 +88,77 @@ CURSOR_ORDER_MAPPING = [
 
 log = TLog("main")
 active_ui_processes = {}  
+
+
+def load_main_config():
+    try:
+        if os.path.exists(CONFIG_FILE_PATH):
+            return toml.load(CONFIG_FILE_PATH)
+    except Exception as e:
+        log.error(f"读取主配置失败: {e}")
+    return {}
+
+
+def save_main_config(config_data):
+    with open(CONFIG_FILE_PATH, "w", encoding="utf-8") as f:
+        toml.dump(config_data, f)
+
+
+def get_specified_mouse_group():
+    config_data = load_main_config()
+    return str(config_data.get("config", {}).get("specified_mouse_group", "") or "").strip()
+
+
+def set_specified_mouse_group(group_name):
+    config_data = load_main_config()
+    config_data.setdefault("config", {})
+    config_data["config"]["specified_mouse_group"] = str(group_name or "")
+    save_main_config(config_data)
+
+
+def clear_specified_mouse_group():
+    set_specified_mouse_group("")
+
+
+def apply_mouse_group_by_name(group_name, log_func=None):
+    logger = log_func or log
+    theme_dir = str(group_name or "").strip().strip('"').strip("'")
+    if not theme_dir:
+        return False
+
+    theme_dir = theme_dir.replace("/", os.sep).replace("\\", os.sep)
+    if os.path.isabs(theme_dir):
+        theme_dir = os.path.abspath(theme_dir)
+    elif theme_dir.lower().startswith("mouses" + os.sep):
+        theme_dir = resolve_path(theme_dir)
+    elif (os.sep not in theme_dir) and (not theme_dir.lower().startswith("mouses")):
+        theme_dir = os.path.join(MOUSE_THEMES_DIR, theme_dir)
+
+    group_config_path = os.path.join(theme_dir, "config.toml")
+    logger.val(f"group_config_path={group_config_path}")
+    if not os.path.exists(group_config_path):
+        logger.error(f"指定光标组配置不存在: {group_config_path}")
+        return False
+
+    try:
+        group_cfg = toml.load(group_config_path)
+        mouses_section = group_cfg.get("mouses", {})
+        if not isinstance(mouses_section, dict):
+            logger.error(f"指定光标组配置格式无效: {group_config_path}")
+            return False
+
+        cursor_paths_list = [mouses_section.get(name, "") for name in CURSOR_ORDER_MAPPING]
+        ok = 设置鼠标指针(cursor_paths_list)
+        if ok:
+            logger.info(f"已应用指定光标组: {group_name}")
+        else:
+            logger.error(f"应用指定光标组失败: {group_name}")
+        return ok
+    except Exception as e:
+        logger.error(f"处理指定光标组失败: {e}")
+        return False
+
+
 def get_process_name():
     """获取当前焦点窗口的进程名"""
     try:
@@ -248,25 +319,41 @@ def open_settings_ui(icon=None, item=None):
     """打开 '设置' UI"""
     run_ui_in_process(["Settings.exe", "settingsUIWeb.py"], "设置")
 
+def open_mouseengine_ui(icon=None, item=None):
+    """打开新版统一 UI"""
+    run_ui_in_process(["MouseEngineUI.exe", "NewUI.py"], "MouseEngine")
+
+def get_tray_title():
+    if get_specified_mouse_group():
+        return tr("tray_title_specified_mouse_group_paused")
+    return tr("tray_title_paused") if pause_flag.is_set() else tr("tray_title")
+
 def toggle_pause(icon=None, item=None):
     """切换暂停/恢复状态"""
     global TRAY_ICON
-    if pause_flag.is_set():
+    if get_specified_mouse_group():
+        clear_specified_mouse_group()
+        pause_flag.clear()
+        log.info("已解除指定光标组暂停，程序继续运行")
+        try:
+            触发刷新(target_wallpaper_id=None, changed_monitor_index=None)
+        except Exception as e:
+            log.error(f"解除指定光标组暂停后刷新失败: {e}")
+    elif pause_flag.is_set():
         pause_flag.clear()
         log.info("已解除暂停，程序继续运行")
-        if TRAY_ICON:
-            TRAY_ICON.title = tr("tray_title")
     else:
         pause_flag.set()
         log.info("已暂停，监听器停止工作")
-        if TRAY_ICON:
-            TRAY_ICON.title = tr("tray_title_paused")
     
     if TRAY_ICON:
+        TRAY_ICON.title = get_tray_title()
         TRAY_ICON.update_menu()
 
 def get_pause_menu_text(icon=None, item=None):
     """获取暂停菜单项的显示文本"""
+    if get_specified_mouse_group():
+        return tr("specified_mouse_group_paused")
     return tr("resume") if pause_flag.is_set() else tr("pause")
 
 def set_last_app_as_default():
@@ -322,11 +409,14 @@ def set_last_app_as_default():
             TRAY_ICON.notify(f"操作失败: {e}", "错误")
 
 def create_menu():
-    # 读取 show_more_menu 设置
+    # 读取菜单相关设置
     show_more_menu = False
+    use_new_menu = True
     try:
         config_data = toml.load(CONFIG_FILE_PATH)
-        show_more_menu = config_data.get("config", {}).get("show_more_menu", False)
+        config_section = config_data.get("config", {})
+        show_more_menu = config_section.get("show_more_menu", False)
+        use_new_menu = config_section.get("use_new_menu", True)
     except Exception as e:
         log.error(f"读取配置失败: {e}")
 
@@ -340,11 +430,16 @@ def create_menu():
             Menu.SEPARATOR,
         ])
     
-    # 基本菜单内容
+    if use_new_menu:
+        menu_items.append(MenuItem(tr("openMouseEngine"), open_mouseengine_ui, enabled=UI_IMPORT_SUCCESS))
+    else:
+        menu_items.extend([
+            MenuItem(tr("configure_mouse_groups"), open_config_mouse_gui, enabled=UI_IMPORT_SUCCESS),
+            MenuItem(tr("bind_mouse_groups"), open_bind_mouse_gui, enabled=UI_IMPORT_SUCCESS),
+            MenuItem(tr("settings"), open_settings_ui, enabled=UI_IMPORT_SUCCESS),
+        ])
+
     menu_items.extend([
-        MenuItem(tr("configure_mouse_groups"), open_config_mouse_gui, enabled=UI_IMPORT_SUCCESS),
-        MenuItem(tr("bind_mouse_groups"), open_bind_mouse_gui, enabled=UI_IMPORT_SUCCESS),
-        MenuItem(tr("settings"), open_settings_ui, enabled=UI_IMPORT_SUCCESS),
         Menu.SEPARATOR,
         MenuItem(get_pause_menu_text, toggle_pause),
         Menu.SEPARATOR,
@@ -375,7 +470,7 @@ def setup_pystray_icon():
 
     menu = create_menu()
 
-    TRAY_ICON = Icon("MouseEngine", image, tr("tray_title"), menu)
+    TRAY_ICON = Icon("MouseEngine", image, get_tray_title(), menu)
     return TRAY_ICON
 
 def 触发刷新(target_wallpaper_id=None, changed_monitor_index=None):
@@ -384,6 +479,7 @@ def 触发刷新(target_wallpaper_id=None, changed_monitor_index=None):
         log_func.val(f"CONFIG_FILE_PATH={CONFIG_FILE_PATH}")
         main_cfg = toml.load(CONFIG_FILE_PATH)
         enable_default = bool(main_cfg.get("config", {}).get("enable_default_icon_group", False))
+        specified_mouse_group = str(main_cfg.get("config", {}).get("specified_mouse_group", "") or "").strip()
         wallpaper_map = main_cfg.get("wallpaper", {}) or {}
         program_whitelist = main_cfg.get("program_whitelist", {}) or {}
     except FileNotFoundError:
@@ -392,6 +488,15 @@ def 触发刷新(target_wallpaper_id=None, changed_monitor_index=None):
     except Exception as e:
         log_func.error(f"读取主配置失败: {e}")
         return False
+
+    if specified_mouse_group:
+        if apply_mouse_group_by_name(specified_mouse_group, log_func):
+            return True
+        log_func.error(f"指定光标组无效，清空配置并继续原刷新逻辑: {specified_mouse_group}")
+        try:
+            clear_specified_mouse_group()
+        except Exception as e:
+            log_func.error(f"清空指定光标组失败: {e}")
 
     # 程序白名单检查
     current_process_name = get_process_name()
@@ -654,7 +759,7 @@ def json监听():
     # 循环监听
     try:
         while not stop_flag.is_set():#TODO 暂未对json做全屏暂停
-            if pause_flag.is_set():
+            if pause_flag.is_set() and not get_specified_mouse_group():
                 time.sleep(1)
                 continue
             
@@ -695,7 +800,7 @@ def 焦点监听():
     
     try:
         while not stop_flag.is_set():
-            if pause_flag.is_set():
+            if pause_flag.is_set() and not get_specified_mouse_group():
                 time.sleep(1)
                 continue
             
@@ -803,7 +908,7 @@ def ram监听():
     # 循环监听
     try:
         while not stop_flag.is_set():
-            if pause_flag.is_set():
+            if pause_flag.is_set() and not get_specified_mouse_group():
                 time.sleep(1)
                 continue
             

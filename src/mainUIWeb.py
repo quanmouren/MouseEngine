@@ -371,15 +371,21 @@ class Api:
 api = Api()
 # 使用绝对路径指向 HTML 文件
 main_html_path = resolve_path("html/mainUIWeb.html")
+win = None
 
-win = webview.create_window(
-    "MouseEngine",
-    main_html_path,
-    js_api=api,
-    width=1000,
-    height=900,
-    easy_drag=True
-)
+
+def create_window(html_path=None, api_instance=None, title="MouseEngine", width=1000, height=900):
+    global api, win
+    api = api_instance or api
+    win = webview.create_window(
+        title,
+        html_path or main_html_path,
+        js_api=api,
+        width=width,
+        height=height,
+        easy_drag=True
+    )
+    return win
 
 def safe_exit():
     try:
@@ -389,7 +395,13 @@ def safe_exit():
     except Exception as e:
         log.error(f"退出 Web UI 时出错：{e}")
 
-if log.on_DEBUG:
-    webview.start(debug=True, http_server=True)
-else:
-    webview.start(debug=False, http_server=True)
+def run():
+    create_window()
+    if log.on_DEBUG:
+        webview.start(debug=True, http_server=True)
+    else:
+        webview.start(debug=False, http_server=True)
+
+
+if __name__ == "__main__":
+    run()

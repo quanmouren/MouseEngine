@@ -23,6 +23,8 @@ wallpaper_engine_config = "{wallpaper_path.replace('\\', '/')}/config.json"
 [config]
 enable_default_icon_group = true
 pause_on_fullscreen = false
+specified_mouse_group = ""
+use_new_menu = true
 
 [program_whitelist]
 """

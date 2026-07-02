@@ -663,7 +663,11 @@ function showContextMenu(e, groupName) {
     contextMenu.style.top = top + 'px';
     contextMenu.style.position = 'fixed';
     
+    const applyItem = document.getElementById('applyGroupItem');
     const renameItem = document.getElementById('renameGroupItem');
+    
+    applyItem.classList.remove('disabled');
+    applyItem.onclick = () => handleApplyGroup(groupName);
     
     // 如果是默认组，禁用删除选项
     if (groupName === '默认组') {
@@ -761,6 +765,28 @@ async function clearInput(key) {
     }
     await setPreviewImage(key, '');
     hideInputContextMenu();
+}
+
+async function handleApplyGroup(groupName) {
+    if (!window.pywebview) {
+        alert(tr('thisFeatureAppOnly'));
+        hideContextMenu();
+        return;
+    }
+
+    try {
+        const result = await pywebview.api.apply_group(groupName);
+        if (result.status === 'success') {
+            showNotification(result.msg || tr('applyGroupSuccess'), 'success');
+        } else {
+            showNotification(result.msg || tr('applyGroupFailed'), 'error');
+        }
+    } catch (e) {
+        console.error('应用组失败', e);
+        showNotification(tr('applyGroupFailed'), 'error');
+    } finally {
+        hideContextMenu();
+    }
 }
 
 // 处理删除组操作

@@ -113,6 +113,10 @@ async function startLoadingSequence() {
         const showMoreMenuStatus = await pywebview.api.get_show_more_menu();
         const showMoreMenuEl = document.getElementById('showMoreMenu');
         if (showMoreMenuEl) showMoreMenuEl.checked = showMoreMenuStatus;
+
+        const useNewMenuStatus = await pywebview.api.get_use_new_menu();
+        const useNewMenuEl = document.getElementById('useNewMenu');
+        if (useNewMenuEl) useNewMenuEl.checked = useNewMenuStatus;
         
         console.log("所有配置项加载完成");
     } catch (e) {
@@ -232,6 +236,12 @@ function renderAdvancedSettings(container) {
                 <div class="settings-label"><span data-i18n="showMoreMenu">显示更多菜单内容</span> <span class="beta-badge">Beta</span></div>
             </div>
             <div class="settings-control"><input type="checkbox" id="showMoreMenu" onchange="handleShowMoreMenuChange(this.checked)"></div>
+        </div>
+        <div class="settings-item">
+            <div class="settings-label-container">
+                <div class="settings-label"><span data-i18n="useNewMenu">使用新版菜单</span> <span class="beta-badge">Beta</span></div>
+            </div>
+            <div class="settings-control"><input type="checkbox" id="useNewMenu" onchange="handleUseNewMenuChange(this.checked)"></div>
         </div>
     `;
 }
@@ -653,6 +663,15 @@ async function handleShowMoreMenuChange(checked) {
         console.log("显示更多菜单内容状态已更新为:", checked);
     } catch (e) {
         console.error("更新显示更多菜单内容状态失败:", e);
+    }
+}
+
+async function handleUseNewMenuChange(checked) {
+    try {
+        await pywebview.api.set_use_new_menu(checked);
+        console.log("使用新版菜单状态已更新为:", checked);
+    } catch (e) {
+        console.error("更新使用新版菜单状态失败:", e);
     }
 }
 

@@ -1,0 +1,76 @@
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    color: #f8fafc;
+    font-family: "Segoe UI", system-ui, sans-serif;
+    background: #0f172a;
+}
+
+.app-shell {
+    display: flex;
+    width: 100vw;
+    height: 100vh;
+    min-width: 900px;
+    background: #0f172a;
+}
+
+.sidebar {
+    width: 184px;
+    flex: 0 0 184px;
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
+    background: #111827;
+    border-right: 1px solid #243244;
+}
+
+.nav-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.nav-item {
+    width: 100%;
+    min-height: 38px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: #94a3b8;
+    text-align: left;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.nav-item:hover {
+    background: #1f2937;
+    color: #e5e7eb;
+}
+
+.nav-item.active {
+    background: #1d4ed8;
+    color: #ffffff;
+}
+
+.workspace {
+    flex: 1;
+    min-width: 0;
+    height: 100vh;
+    background: #0f172a;
+}
+
+#pageFrame {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: #0f172a;
+}

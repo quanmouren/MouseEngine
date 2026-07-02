@@ -13,5 +13,13 @@
     "Lua.workspace.library": [
         "${workspaceFolder}/cur2d_api.d.lua"
     ],
-    "liveServer.settings.port": 5502
+    "liveServer.settings.port": 5502,
+    "files.associations": {
+        "xutility": "cpp",
+        "algorithm": "cpp",
+        "xstring": "cpp",
+        "xiosbase": "cpp",
+        "vector": "cpp",
+        "filesystem": "cpp"
+    }
 }
