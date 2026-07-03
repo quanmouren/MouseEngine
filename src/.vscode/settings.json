@@ -20,6 +20,7 @@
         "xstring": "cpp",
         "xiosbase": "cpp",
         "vector": "cpp",
-        "filesystem": "cpp"
+        "filesystem": "cpp",
+        "stdint.h": "c"
     }
 }

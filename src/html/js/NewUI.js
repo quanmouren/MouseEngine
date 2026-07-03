@@ -13,6 +13,16 @@
         }
     }
 
+    function syncFrameLanguage() {
+        try {
+            if (frame.contentWindow && frame.contentWindow.MouseEngineI18n) {
+                frame.contentWindow.MouseEngineI18n.load();
+            }
+        } catch (error) {
+            console.warn("Unable to sync language with frame", error);
+        }
+    }
+
     function switchPage(button) {
         navItems.forEach((item) => item.classList.toggle("active", item === button));
         frame.src = button.dataset.target;
@@ -22,6 +32,10 @@
         button.addEventListener("click", () => switchPage(button));
     });
 
-    frame.addEventListener("load", sharePywebviewWithFrame);
+    frame.addEventListener("load", () => {
+        sharePywebviewWithFrame();
+        syncFrameLanguage();
+    });
     window.addEventListener("pywebviewready", sharePywebviewWithFrame);
+    window.addEventListener("mouseengine-language-applied", syncFrameLanguage);
 })();

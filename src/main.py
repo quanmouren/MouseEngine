@@ -8,8 +8,7 @@ import getpass
 import toml
 import sys
 import subprocess
-import win32gui
-import win32process
+import ctypes
 from getActiveWallpaper import get_active_ids
 #from test_测试句柄更新 import get_active_ids_optimized as get_active_ids
 try:
@@ -46,6 +45,8 @@ initial_loading_done = False
 last_in_whitelist = None
 pause_flag = threading.Event()  # 跟踪上一次焦点窗口是否在白名单中
 last_config_mtime = 0  # 用于跟踪配置文件修改时间
+FOCUS_CHECK_INTERVAL = 0.5
+STRICT_FOCUS_CHECK_INTERVAL = 0.2
 
 
 def update_tray_menu():
@@ -88,6 +89,72 @@ CURSOR_ORDER_MAPPING = [
 
 log = TLog("main")
 active_ui_processes = {}  
+
+ME_TITLE_LEN = 512
+ME_CLASS_LEN = 256
+
+
+class ME_WindowInfo(ctypes.Structure):
+    _fields_ = [
+        ("hwnd", ctypes.c_uint64),
+        ("pid", ctypes.c_uint32),
+        ("left", ctypes.c_int32),
+        ("top", ctypes.c_int32),
+        ("right", ctypes.c_int32),
+        ("bottom", ctypes.c_int32),
+        ("title", ctypes.c_wchar * ME_TITLE_LEN),
+        ("class_name", ctypes.c_wchar * ME_CLASS_LEN),
+    ]
+
+
+_mouse_probe_dll = None
+_mouse_probe_load_error = None
+
+
+def _get_mouse_probe_dll():
+    global _mouse_probe_dll
+    global _mouse_probe_load_error
+
+    if _mouse_probe_dll is not None:
+        return _mouse_probe_dll
+    if _mouse_probe_load_error is not None:
+        return None
+
+    candidates = [
+        resolve_path("mouse_probe.dll"),
+        os.path.abspath(os.path.join(PROJECT_ROOT, os.pardir, "mouse_probe.dll")),
+    ]
+    last_error = None
+
+    for dll_path in candidates:
+        if not os.path.exists(dll_path):
+            continue
+        try:
+            dll = ctypes.WinDLL(dll_path, use_last_error=True)
+            for func_name in ("get_fg_windows", "get_windows_at_mouse"):
+                func = getattr(dll, func_name)
+                func.argtypes = [ctypes.POINTER(ME_WindowInfo)]
+                func.restype = ctypes.c_int
+            _mouse_probe_dll = dll
+            log.info(f"mouse_probe.dll loaded: {dll_path}")
+            return _mouse_probe_dll
+        except Exception as e:
+            last_error = e
+            log.error(f"mouse_probe.dll load failed: {dll_path}, {e}")
+
+    _mouse_probe_load_error = last_error or FileNotFoundError("mouse_probe.dll")
+    log.error(f"mouse_probe.dll not found: {candidates}")
+    return None
+
+
+def is_strict_window_judgment_enabled(config_data=None):
+    try:
+        if config_data is None:
+            config_data = load_main_config()
+        return bool(config_data.get("config", {}).get("strict_window_judgment", False))
+    except Exception as e:
+        log.error(f"read strict_window_judgment failed: {e}")
+        return False
 
 
 def load_main_config():
@@ -159,22 +226,39 @@ def apply_mouse_group_by_name(group_name, log_func=None):
         return False
 
 
-def get_process_name():
-    """获取当前焦点窗口的进程名"""
+def get_process_name(config_data=None):
+    """Get the process name reported by mouse_probe.dll."""
+    if psutil is None:
+        log.error("psutil 模块不可用，无法根据 PID 获取进程名")
+        return "N/A"
+
+    dll = _get_mouse_probe_dll()
+    if dll is None:
+        return "N/A"
+
+    use_strict = is_strict_window_judgment_enabled(config_data)
+    func_name = "get_windows_at_mouse" if use_strict else "get_fg_windows"
+    func = getattr(dll, func_name, None)
+    if func is None:
+        log.error(f"mouse_probe.dll 缺少导出函数: {func_name}")
+        return "N/A"
+
+    window_info = ME_WindowInfo()
     try:
-        # 获取当前前台窗口句柄
-        hwnd = win32gui.GetForegroundWindow()
-        if hwnd:
-            # 获取进程ID
-            _, pid = win32process.GetWindowThreadProcessId(hwnd)
-            try:
-                # 获取进程名
-                proc = psutil.Process(pid)
-                proc_name = proc.name()
-                return proc_name
-            except psutil.NoSuchProcess:
-                return "N/A"
+        ok = func(ctypes.byref(window_info))
+        if not ok or not window_info.pid:
+            log.debug(f"{func_name} 未返回有效窗口信息")
+            return "N/A"
+
+        try:
+            return psutil.Process(int(window_info.pid)).name()
+        except psutil.NoSuchProcess:
+            return "N/A"
+        except Exception as e:
+            log.error(f"根据 PID 获取进程名失败: pid={window_info.pid}, {e}")
+            return "N/A"
     except Exception as e:
+        log.error(f"调用 {func_name} 失败: {e}")
         return "N/A"
 
 def _script_abs_path(filename: str) -> str:
@@ -369,8 +453,8 @@ def set_last_app_as_default():
                 TRAY_ICON.notify("未能获取上一焦点窗口", "操作失败")
             return
 
-        with open(temp_storage_path, 'r', encoding='utf-8') as f:
-            data = toml.load(f)
+        with TEMP_STORAGE_LOCK:
+            data = load_temp_storage(log_func)
 
         focus_info = data.get('FocusInfo', {})
         last_app = focus_info.get('last_app')
@@ -499,7 +583,7 @@ def 触发刷新(target_wallpaper_id=None, changed_monitor_index=None):
             log_func.error(f"清空指定光标组失败: {e}")
 
     # 程序白名单检查
-    current_process_name = get_process_name()
+    current_process_name = get_process_name(main_cfg)
     if current_process_name:
         log_func.debug(f"当前焦点程序: {current_process_name}")
         whitelist_theme = program_whitelist.get(current_process_name)
@@ -653,6 +737,45 @@ def 触发刷新(target_wallpaper_id=None, changed_monitor_index=None):
         return False
 
 LAST_JSON_TRIGGER_TIME = 0 # ram更新锁
+TEMP_STORAGE_LOCK = threading.Lock()
+
+
+def load_temp_storage(log_func=None):
+    logger = log_func or log
+    temp_storage_path = resolve_path('temp_storage.toml')
+
+    if not os.path.exists(temp_storage_path):
+        return {}
+
+    try:
+        with open(temp_storage_path, 'r', encoding='utf-8') as f:
+            data = toml.load(f)
+        return data if isinstance(data, dict) else {}
+    except Exception as e:
+        logger.error(f"temp_storage.toml is invalid, rebuilding it: {e}")
+        return {}
+
+
+def save_temp_storage(data, log_func=None):
+    logger = log_func or log
+    temp_storage_path = resolve_path('temp_storage.toml')
+    temp_dir = os.path.dirname(temp_storage_path)
+    os.makedirs(temp_dir, exist_ok=True)
+    temp_path = temp_storage_path + ".tmp"
+
+    try:
+        with open(temp_path, 'w', encoding='utf-8') as f:
+            toml.dump(data, f)
+        os.replace(temp_path, temp_storage_path)
+        return True
+    except Exception as e:
+        logger.error(f"save temp_storage.toml failed: {e}")
+        try:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+        except Exception:
+            pass
+        return False
 
 # 保存活跃壁纸ID到temp_storage.toml文件
 def save_active_wallpaper_id(wallpaper_id, log_func):
@@ -667,23 +790,12 @@ def save_active_wallpaper_id(wallpaper_id, log_func):
     log.val(f"temp_storage_path={temp_storage_path}")
     
     try:
-        # 读取现有内容或创建新内容
-        if os.path.exists(temp_storage_path):
-            with open(temp_storage_path, 'r', encoding='utf-8') as f:
-                data = toml.load(f)
-        else:
-            data = {}
-        
-        # 确保 [Wallpaper Engine] 部分存在
-        if 'Wallpaper Engine' not in data:
-            data['Wallpaper Engine'] = {}
-        
-        # 保存 active 项
-        data['Wallpaper Engine']['active'] = wallpaper_id
-        
-        # 写回文件
-        with open(temp_storage_path, 'w', encoding='utf-8') as f:
-            toml.dump(data, f)
+        with TEMP_STORAGE_LOCK:
+            data = load_temp_storage(log_func)
+            if 'Wallpaper Engine' not in data:
+                data['Wallpaper Engine'] = {}
+            data['Wallpaper Engine']['active'] = wallpaper_id
+            save_temp_storage(data, log_func)
     except Exception as e:
         log_func.error(f"保存文件失败: {e}")
 
@@ -695,21 +807,15 @@ def save_focus_info(current_app, last_app, log_func, last_app_1):
     temp_storage_path = resolve_path('temp_storage.toml')
     
     try:
-        if os.path.exists(temp_storage_path):
-            with open(temp_storage_path, 'r', encoding='utf-8') as f:
-                data = toml.load(f)
-        else:
-            data = {}
-        
-        if 'FocusInfo' not in data:
-            data['FocusInfo'] = {}
-            
-        data['FocusInfo']['current_app'] = current_app if current_app else ""
-        data['FocusInfo']['last_app'] = last_app if last_app else ""
-        data['FocusInfo']['last_app_1'] = last_app_1 if last_app_1 else ""
-        
-        with open(temp_storage_path, 'w', encoding='utf-8') as f:
-            toml.dump(data, f)
+        with TEMP_STORAGE_LOCK:
+            data = load_temp_storage(log_func)
+            if 'FocusInfo' not in data:
+                data['FocusInfo'] = {}
+                
+            data['FocusInfo']['current_app'] = current_app if current_app else ""
+            data['FocusInfo']['last_app'] = last_app if last_app else ""
+            data['FocusInfo']['last_app_1'] = last_app_1 if last_app_1 else ""
+            save_temp_storage(data, log_func)
     except Exception as e:
         log_func.error(f"保存焦点信息失败: {e}")
 
@@ -797,6 +903,7 @@ def 焦点监听():
     last_process_name = None
     last_process_name_1 = None
     check_count = 0
+    focus_check_interval = FOCUS_CHECK_INTERVAL
     
     try:
         while not stop_flag.is_set():
@@ -805,7 +912,13 @@ def 焦点监听():
                 continue
             
             try:
-                current_process_name = get_process_name()
+                main_cfg = load_main_config()
+                focus_check_interval = (
+                    STRICT_FOCUS_CHECK_INTERVAL
+                    if is_strict_window_judgment_enabled(main_cfg)
+                    else FOCUS_CHECK_INTERVAL
+                )
+                current_process_name = get_process_name(main_cfg)
                 check_count += 1
                 
                 if check_count % 25 == 0:
@@ -825,7 +938,6 @@ def 焦点监听():
                     
                     # 检查当前和上一次进程是否在白名单中
                     try:
-                        main_cfg = toml.load(CONFIG_FILE_PATH)
                         program_whitelist = main_cfg.get("program_whitelist", {}) or {}
                         
                         current_in_whitelist = current_process_name in program_whitelist
@@ -859,7 +971,7 @@ def 焦点监听():
             except Exception as e:
                 log_func.error(f"焦点监听异常: {e}")
             
-            time.sleep(0.5)
+            time.sleep(focus_check_interval)
     
     except Exception as e:
         log_func.error(f"焦点监听循环异常: {e}")
