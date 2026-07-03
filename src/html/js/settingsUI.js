@@ -233,6 +233,12 @@ function renderAdvancedSettings(container) {
         </div>
         <div class="settings-item">
             <div class="settings-label-container">
+                <div class="settings-label"><span data-i18n="strictWindowCheck">严格窗口判定</span> <span class="performance-badge" data-i18n="performanceImpactHigh">性能影响大</span></div>
+            </div>
+            <div class="settings-control"><input type="checkbox" id="strictWindowCheck" onchange="handleStrictWindowCheckChange(this.checked)"></div>
+        </div>
+        <div class="settings-item">
+            <div class="settings-label-container">
                 <div class="settings-label"><span data-i18n="showMoreMenu">显示更多菜单内容</span> <span class="beta-badge">Beta</span></div>
             </div>
             <div class="settings-control"><input type="checkbox" id="showMoreMenu" onchange="handleShowMoreMenuChange(this.checked)"></div>
