@@ -8,9 +8,13 @@ import getpass
 import toml
 import sys
 import subprocess
-import win32gui
-import win32process
-from getActiveWallpaper import get_active_ids
+import ctypes
+from getActiveWallpaper import (
+    getPlayliststateID,
+    get_active_ids,
+    get_mouse_monitor_python_fallback,
+    get_mouse_playliststate_detail,
+)
 #from test_测试句柄更新 import get_active_ids_optimized as get_active_ids
 try:
     import psutil
@@ -36,6 +40,7 @@ except ImportError:
 UI_IMPORT_SUCCESS = True
 
 from path_utils import get_project_root
+from i18n_utils import tr
 PROJECT_ROOT = get_project_root()
 
 stop_flag = threading.Event()
@@ -45,11 +50,14 @@ initial_loading_done = False
 last_in_whitelist = None
 pause_flag = threading.Event()  # 跟踪上一次焦点窗口是否在白名单中
 last_config_mtime = 0  # 用于跟踪配置文件修改时间
+FOCUS_CHECK_INTERVAL = 0.5
+STRICT_FOCUS_CHECK_INTERVAL = 0.2
 
 
 def update_tray_menu():
     """更新系统托盘菜单"""
     if TRAY_ICON:
+        TRAY_ICON.title = get_tray_title()
         TRAY_ICON.menu = create_menu()
         TRAY_ICON.update_menu()
         log.info("系统托盘菜单已更新。")
@@ -86,22 +94,176 @@ CURSOR_ORDER_MAPPING = [
 
 log = TLog("main")
 active_ui_processes = {}  
-def get_process_name():
-    """获取当前焦点窗口的进程名"""
+
+ME_TITLE_LEN = 512
+ME_CLASS_LEN = 256
+
+
+class ME_WindowInfo(ctypes.Structure):
+    _fields_ = [
+        ("hwnd", ctypes.c_uint64),
+        ("pid", ctypes.c_uint32),
+        ("left", ctypes.c_int32),
+        ("top", ctypes.c_int32),
+        ("right", ctypes.c_int32),
+        ("bottom", ctypes.c_int32),
+        ("title", ctypes.c_wchar * ME_TITLE_LEN),
+        ("class_name", ctypes.c_wchar * ME_CLASS_LEN),
+    ]
+
+
+_mouse_probe_dll = None
+_mouse_probe_load_error = None
+
+
+def _get_mouse_probe_dll():
+    global _mouse_probe_dll
+    global _mouse_probe_load_error
+
+    if _mouse_probe_dll is not None:
+        return _mouse_probe_dll
+    if _mouse_probe_load_error is not None:
+        return None
+
+    candidates = [
+        resolve_path("mouse_probe.dll"),
+        os.path.abspath(os.path.join(PROJECT_ROOT, os.pardir, "mouse_probe.dll")),
+    ]
+    last_error = None
+
+    for dll_path in candidates:
+        if not os.path.exists(dll_path):
+            continue
+        try:
+            dll = ctypes.WinDLL(dll_path, use_last_error=True)
+            for func_name in ("get_fg_windows", "get_windows_at_mouse"):
+                func = getattr(dll, func_name)
+                func.argtypes = [ctypes.POINTER(ME_WindowInfo)]
+                func.restype = ctypes.c_int
+            _mouse_probe_dll = dll
+            log.info(f"mouse_probe.dll loaded: {dll_path}")
+            return _mouse_probe_dll
+        except Exception as e:
+            last_error = e
+            log.error(f"mouse_probe.dll load failed: {dll_path}, {e}")
+
+    _mouse_probe_load_error = last_error or FileNotFoundError("mouse_probe.dll")
+    log.error(f"mouse_probe.dll not found: {candidates}")
+    return None
+
+
+def is_strict_window_judgment_enabled(config_data=None):
     try:
-        # 获取当前前台窗口句柄
-        hwnd = win32gui.GetForegroundWindow()
-        if hwnd:
-            # 获取进程ID
-            _, pid = win32process.GetWindowThreadProcessId(hwnd)
-            try:
-                # 获取进程名
-                proc = psutil.Process(pid)
-                proc_name = proc.name()
-                return proc_name
-            except psutil.NoSuchProcess:
-                return "N/A"
+        if config_data is None:
+            config_data = load_main_config()
+        return bool(config_data.get("config", {}).get("strict_window_judgment", False))
     except Exception as e:
+        log.error(f"read strict_window_judgment failed: {e}")
+        return False
+
+
+def load_main_config():
+    try:
+        if os.path.exists(CONFIG_FILE_PATH):
+            return toml.load(CONFIG_FILE_PATH)
+    except Exception as e:
+        log.error(f"读取主配置失败: {e}")
+    return {}
+
+
+def save_main_config(config_data):
+    with open(CONFIG_FILE_PATH, "w", encoding="utf-8") as f:
+        toml.dump(config_data, f)
+
+
+def get_specified_mouse_group():
+    config_data = load_main_config()
+    return str(config_data.get("config", {}).get("specified_mouse_group", "") or "").strip()
+
+
+def set_specified_mouse_group(group_name):
+    config_data = load_main_config()
+    config_data.setdefault("config", {})
+    config_data["config"]["specified_mouse_group"] = str(group_name or "")
+    save_main_config(config_data)
+
+
+def clear_specified_mouse_group():
+    set_specified_mouse_group("")
+
+
+def apply_mouse_group_by_name(group_name, log_func=None):
+    logger = log_func or log
+    theme_dir = str(group_name or "").strip().strip('"').strip("'")
+    if not theme_dir:
+        return False
+
+    theme_dir = theme_dir.replace("/", os.sep).replace("\\", os.sep)
+    if os.path.isabs(theme_dir):
+        theme_dir = os.path.abspath(theme_dir)
+    elif theme_dir.lower().startswith("mouses" + os.sep):
+        theme_dir = resolve_path(theme_dir)
+    elif (os.sep not in theme_dir) and (not theme_dir.lower().startswith("mouses")):
+        theme_dir = os.path.join(MOUSE_THEMES_DIR, theme_dir)
+
+    group_config_path = os.path.join(theme_dir, "config.toml")
+    logger.val(f"group_config_path={group_config_path}")
+    if not os.path.exists(group_config_path):
+        logger.error(f"指定光标组配置不存在: {group_config_path}")
+        return False
+
+    try:
+        group_cfg = toml.load(group_config_path)
+        mouses_section = group_cfg.get("mouses", {})
+        if not isinstance(mouses_section, dict):
+            logger.error(f"指定光标组配置格式无效: {group_config_path}")
+            return False
+
+        cursor_paths_list = [mouses_section.get(name, "") for name in CURSOR_ORDER_MAPPING]
+        ok = 设置鼠标指针(cursor_paths_list)
+        if ok:
+            logger.info(f"已应用指定光标组: {group_name}")
+        else:
+            logger.error(f"应用指定光标组失败: {group_name}")
+        return ok
+    except Exception as e:
+        logger.error(f"处理指定光标组失败: {e}")
+        return False
+
+
+def get_process_name(config_data=None):
+    """Get the process name reported by mouse_probe.dll."""
+    if psutil is None:
+        log.error("psutil 模块不可用，无法根据 PID 获取进程名")
+        return "N/A"
+
+    dll = _get_mouse_probe_dll()
+    if dll is None:
+        return "N/A"
+
+    use_strict = is_strict_window_judgment_enabled(config_data)
+    func_name = "get_windows_at_mouse" if use_strict else "get_fg_windows"
+    func = getattr(dll, func_name, None)
+    if func is None:
+        log.error(f"mouse_probe.dll 缺少导出函数: {func_name}")
+        return "N/A"
+
+    window_info = ME_WindowInfo()
+    try:
+        ok = func(ctypes.byref(window_info))
+        if not ok or not window_info.pid:
+            log.debug(f"{func_name} 未返回有效窗口信息")
+            return "N/A"
+
+        try:
+            return psutil.Process(int(window_info.pid)).name()
+        except psutil.NoSuchProcess:
+            return "N/A"
+        except Exception as e:
+            log.error(f"根据 PID 获取进程名失败: pid={window_info.pid}, {e}")
+            return "N/A"
+    except Exception as e:
+        log.error(f"调用 {func_name} 失败: {e}")
         return "N/A"
 
 def _script_abs_path(filename: str) -> str:
@@ -246,26 +408,42 @@ def open_settings_ui(icon=None, item=None):
     """打开 '设置' UI"""
     run_ui_in_process(["Settings.exe", "settingsUIWeb.py"], "设置")
 
+def open_mouseengine_ui(icon=None, item=None):
+    """打开新版统一 UI"""
+    run_ui_in_process(["MouseEngineUI.exe", "NewUI.py"], "MouseEngine")
+
+def get_tray_title():
+    if get_specified_mouse_group():
+        return tr("tray_title_specified_mouse_group_paused")
+    return tr("tray_title_paused") if pause_flag.is_set() else tr("tray_title")
+
 def toggle_pause(icon=None, item=None):
     """切换暂停/恢复状态"""
     global TRAY_ICON
-    if pause_flag.is_set():
+    if get_specified_mouse_group():
+        clear_specified_mouse_group()
+        pause_flag.clear()
+        log.info("已解除指定光标组暂停，程序继续运行")
+        try:
+            触发刷新(target_wallpaper_id=None, changed_monitor_index=None)
+        except Exception as e:
+            log.error(f"解除指定光标组暂停后刷新失败: {e}")
+    elif pause_flag.is_set():
         pause_flag.clear()
         log.info("已解除暂停，程序继续运行")
-        if TRAY_ICON:
-            TRAY_ICON.title = "光标引擎"
     else:
         pause_flag.set()
         log.info("已暂停，监听器停止工作")
-        if TRAY_ICON:
-            TRAY_ICON.title = "光标引擎 (已暂停)"
     
     if TRAY_ICON:
+        TRAY_ICON.title = get_tray_title()
         TRAY_ICON.update_menu()
 
 def get_pause_menu_text(icon=None, item=None):
     """获取暂停菜单项的显示文本"""
-    return "解除暂停" if pause_flag.is_set() else "暂停"
+    if get_specified_mouse_group():
+        return tr("specified_mouse_group_paused")
+    return tr("resume") if pause_flag.is_set() else tr("pause")
 
 def set_last_app_as_default():
     """
@@ -280,11 +458,13 @@ def set_last_app_as_default():
                 TRAY_ICON.notify("未能获取上一焦点窗口", "操作失败")
             return
 
-        with open(temp_storage_path, 'r', encoding='utf-8') as f:
-            data = toml.load(f)
+        with TEMP_STORAGE_LOCK:
+            data = load_temp_storage(log_func)
 
         focus_info = data.get('FocusInfo', {})
         last_app = focus_info.get('last_app')
+        if last_app == "explorer.exe":
+            last_app = focus_info.get('last_app_1')
 
         if not last_app:
             log_func.warning("temp_storage.toml 中没有找到 last_app。")
@@ -318,11 +498,14 @@ def set_last_app_as_default():
             TRAY_ICON.notify(f"操作失败: {e}", "错误")
 
 def create_menu():
-    # 读取 show_more_menu 设置
+    # 读取菜单相关设置
     show_more_menu = False
+    use_new_menu = True
     try:
         config_data = toml.load(CONFIG_FILE_PATH)
-        show_more_menu = config_data.get("config", {}).get("show_more_menu", False)
+        config_section = config_data.get("config", {})
+        show_more_menu = config_section.get("show_more_menu", False)
+        use_new_menu = config_section.get("use_new_menu", True)
     except Exception as e:
         log.error(f"读取配置失败: {e}")
 
@@ -332,19 +515,24 @@ def create_menu():
     # 更多菜单内容
     if show_more_menu:
         menu_items.extend([
-            MenuItem("将上一焦点窗口设为默认", set_last_app_as_default),
+            MenuItem(tr("set_last_focus_default"), set_last_app_as_default),
             Menu.SEPARATOR,
         ])
     
-    # 基本菜单内容
+    if use_new_menu:
+        menu_items.append(MenuItem(tr("openMouseEngine"), open_mouseengine_ui, enabled=UI_IMPORT_SUCCESS))
+    else:
+        menu_items.extend([
+            MenuItem(tr("configure_mouse_groups"), open_config_mouse_gui, enabled=UI_IMPORT_SUCCESS),
+            MenuItem(tr("bind_mouse_groups"), open_bind_mouse_gui, enabled=UI_IMPORT_SUCCESS),
+            MenuItem(tr("settings"), open_settings_ui, enabled=UI_IMPORT_SUCCESS),
+        ])
+
     menu_items.extend([
-        MenuItem("配置鼠标组", open_config_mouse_gui, enabled=UI_IMPORT_SUCCESS),
-        MenuItem("绑定鼠标组", open_bind_mouse_gui, enabled=UI_IMPORT_SUCCESS),
-        MenuItem("设置", open_settings_ui, enabled=UI_IMPORT_SUCCESS),
         Menu.SEPARATOR,
         MenuItem(get_pause_menu_text, toggle_pause),
         Menu.SEPARATOR,
-        MenuItem("退出", on_exit_request),
+        MenuItem(tr("exit"), on_exit_request),
     ])
 
     return Menu(*menu_items)
@@ -371,7 +559,7 @@ def setup_pystray_icon():
 
     menu = create_menu()
 
-    TRAY_ICON = Icon("MouseEngine", image, "光标引擎", menu)
+    TRAY_ICON = Icon("MouseEngine", image, get_tray_title(), menu)
     return TRAY_ICON
 
 def 触发刷新(target_wallpaper_id=None, changed_monitor_index=None):
@@ -380,6 +568,7 @@ def 触发刷新(target_wallpaper_id=None, changed_monitor_index=None):
         log_func.val(f"CONFIG_FILE_PATH={CONFIG_FILE_PATH}")
         main_cfg = toml.load(CONFIG_FILE_PATH)
         enable_default = bool(main_cfg.get("config", {}).get("enable_default_icon_group", False))
+        specified_mouse_group = str(main_cfg.get("config", {}).get("specified_mouse_group", "") or "").strip()
         wallpaper_map = main_cfg.get("wallpaper", {}) or {}
         program_whitelist = main_cfg.get("program_whitelist", {}) or {}
     except FileNotFoundError:
@@ -389,8 +578,17 @@ def 触发刷新(target_wallpaper_id=None, changed_monitor_index=None):
         log_func.error(f"读取主配置失败: {e}")
         return False
 
+    if specified_mouse_group:
+        if apply_mouse_group_by_name(specified_mouse_group, log_func):
+            return True
+        log_func.error(f"指定光标组无效，清空配置并继续原刷新逻辑: {specified_mouse_group}")
+        try:
+            clear_specified_mouse_group()
+        except Exception as e:
+            log_func.error(f"清空指定光标组失败: {e}")
+
     # 程序白名单检查
-    current_process_name = get_process_name()
+    current_process_name = get_process_name(main_cfg)
     if current_process_name:
         log_func.debug(f"当前焦点程序: {current_process_name}")
         whitelist_theme = program_whitelist.get(current_process_name)
@@ -455,18 +653,15 @@ def 触发刷新(target_wallpaper_id=None, changed_monitor_index=None):
         log_func.debug("无法获取当前焦点程序名，继续使用壁纸ID匹配")
 
     if target_wallpaper_id is None:
-        log_func.debug("未提供 target_wallpaper_id，尝试获取当前活跃壁纸ID")
+        log_func.debug("未提供 target_wallpaper_id，尝试获取鼠标所在显示器的当前壁纸ID")
         try:
-            # 尝试获取当前活跃的壁纸ID
-            active_ids = get_active_ids()
-            if active_ids:
-                target_wallpaper_id = list(active_ids)[0]
-                log_func.info(f"获取到当前活跃壁纸ID: {target_wallpaper_id}")
-            else:
-                log_func.error("未获取到活跃壁纸ID，无法应用主题。")
+            target_wallpaper_id = getPlayliststateID()
+            if not target_wallpaper_id:
+                log_func.error("未获取到鼠标所在显示器的壁纸ID，无法应用主题。")
                 return False
+            log_func.info(f"获取到鼠标所在显示器壁纸ID: {target_wallpaper_id}")
         except Exception as e:
-            log_func.error(f"获取活跃壁纸ID失败: {e}")
+            log_func.error(f"获取鼠标所在显示器壁纸ID失败: {e}")
             return False
 
     target_id_str = str(target_wallpaper_id).strip()
@@ -544,6 +739,45 @@ def 触发刷新(target_wallpaper_id=None, changed_monitor_index=None):
         return False
 
 LAST_JSON_TRIGGER_TIME = 0 # ram更新锁
+TEMP_STORAGE_LOCK = threading.Lock()
+
+
+def load_temp_storage(log_func=None):
+    logger = log_func or log
+    temp_storage_path = resolve_path('temp_storage.toml')
+
+    if not os.path.exists(temp_storage_path):
+        return {}
+
+    try:
+        with open(temp_storage_path, 'r', encoding='utf-8') as f:
+            data = toml.load(f)
+        return data if isinstance(data, dict) else {}
+    except Exception as e:
+        logger.error(f"temp_storage.toml is invalid, rebuilding it: {e}")
+        return {}
+
+
+def save_temp_storage(data, log_func=None):
+    logger = log_func or log
+    temp_storage_path = resolve_path('temp_storage.toml')
+    temp_dir = os.path.dirname(temp_storage_path)
+    os.makedirs(temp_dir, exist_ok=True)
+    temp_path = temp_storage_path + ".tmp"
+
+    try:
+        with open(temp_path, 'w', encoding='utf-8') as f:
+            toml.dump(data, f)
+        os.replace(temp_path, temp_storage_path)
+        return True
+    except Exception as e:
+        logger.error(f"save temp_storage.toml failed: {e}")
+        try:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+        except Exception:
+            pass
+        return False
 
 # 保存活跃壁纸ID到temp_storage.toml文件
 def save_active_wallpaper_id(wallpaper_id, log_func):
@@ -558,27 +792,16 @@ def save_active_wallpaper_id(wallpaper_id, log_func):
     log.val(f"temp_storage_path={temp_storage_path}")
     
     try:
-        # 读取现有内容或创建新内容
-        if os.path.exists(temp_storage_path):
-            with open(temp_storage_path, 'r', encoding='utf-8') as f:
-                data = toml.load(f)
-        else:
-            data = {}
-        
-        # 确保 [Wallpaper Engine] 部分存在
-        if 'Wallpaper Engine' not in data:
-            data['Wallpaper Engine'] = {}
-        
-        # 保存 active 项
-        data['Wallpaper Engine']['active'] = wallpaper_id
-        
-        # 写回文件
-        with open(temp_storage_path, 'w', encoding='utf-8') as f:
-            toml.dump(data, f)
+        with TEMP_STORAGE_LOCK:
+            data = load_temp_storage(log_func)
+            if 'Wallpaper Engine' not in data:
+                data['Wallpaper Engine'] = {}
+            data['Wallpaper Engine']['active'] = wallpaper_id
+            save_temp_storage(data, log_func)
     except Exception as e:
         log_func.error(f"保存文件失败: {e}")
 
-def save_focus_info(current_app, last_app, log_func):
+def save_focus_info(current_app, last_app, log_func, last_app_1):
     """
     保存当前和上一个焦点应用到 temp_storage.toml 文件
     """
@@ -586,20 +809,15 @@ def save_focus_info(current_app, last_app, log_func):
     temp_storage_path = resolve_path('temp_storage.toml')
     
     try:
-        if os.path.exists(temp_storage_path):
-            with open(temp_storage_path, 'r', encoding='utf-8') as f:
-                data = toml.load(f)
-        else:
-            data = {}
-        
-        if 'FocusInfo' not in data:
-            data['FocusInfo'] = {}
-            
-        data['FocusInfo']['current_app'] = current_app if current_app else ""
-        data['FocusInfo']['last_app'] = last_app if last_app else ""
-        
-        with open(temp_storage_path, 'w', encoding='utf-8') as f:
-            toml.dump(data, f)
+        with TEMP_STORAGE_LOCK:
+            data = load_temp_storage(log_func)
+            if 'FocusInfo' not in data:
+                data['FocusInfo'] = {}
+                
+            data['FocusInfo']['current_app'] = current_app if current_app else ""
+            data['FocusInfo']['last_app'] = last_app if last_app else ""
+            data['FocusInfo']['last_app_1'] = last_app_1 if last_app_1 else ""
+            save_temp_storage(data, log_func)
     except Exception as e:
         log_func.error(f"保存焦点信息失败: {e}")
 
@@ -649,7 +867,7 @@ def json监听():
     # 循环监听
     try:
         while not stop_flag.is_set():#TODO 暂未对json做全屏暂停
-            if pause_flag.is_set():
+            if pause_flag.is_set() and not get_specified_mouse_group():
                 time.sleep(1)
                 continue
             
@@ -685,16 +903,24 @@ def 焦点监听():
     log_func.info("初始化焦点监听器")
     
     last_process_name = None
+    last_process_name_1 = None
     check_count = 0
+    focus_check_interval = FOCUS_CHECK_INTERVAL
     
     try:
         while not stop_flag.is_set():
-            if pause_flag.is_set():
+            if pause_flag.is_set() and not get_specified_mouse_group():
                 time.sleep(1)
                 continue
             
             try:
-                current_process_name = get_process_name()
+                main_cfg = load_main_config()
+                focus_check_interval = (
+                    STRICT_FOCUS_CHECK_INTERVAL
+                    if is_strict_window_judgment_enabled(main_cfg)
+                    else FOCUS_CHECK_INTERVAL
+                )
+                current_process_name = get_process_name(main_cfg)
                 check_count += 1
                 
                 if check_count % 25 == 0:
@@ -707,13 +933,13 @@ def 焦点监听():
                         log_func.info(f"初始焦点窗口: {current_process_name}")
                     
                     # 保存焦点信息
-                    save_focus_info(current_process_name, last_process_name, log_func)
-
-                    last_process_name = current_process_name
+                    save_focus_info(current_process_name, last_process_name, log_func, last_process_name_1)
+                    
+                    last_process_name_1 = last_process_name
+                    last_process_name = current_process_name  
                     
                     # 检查当前和上一次进程是否在白名单中
                     try:
-                        main_cfg = toml.load(CONFIG_FILE_PATH)
                         program_whitelist = main_cfg.get("program_whitelist", {}) or {}
                         
                         current_in_whitelist = current_process_name in program_whitelist
@@ -747,7 +973,7 @@ def 焦点监听():
             except Exception as e:
                 log_func.error(f"焦点监听异常: {e}")
             
-            time.sleep(0.5)
+            time.sleep(focus_check_interval)
     
     except Exception as e:
         log_func.error(f"焦点监听循环异常: {e}")
@@ -796,7 +1022,7 @@ def ram监听():
     # 循环监听
     try:
         while not stop_flag.is_set():
-            if pause_flag.is_set():
+            if pause_flag.is_set() and not get_specified_mouse_group():
                 time.sleep(1)
                 continue
             
@@ -840,6 +1066,80 @@ def ram监听():
             time.sleep(10)
     except Exception as e:
         log_func.error(f"RAM监听循环异常: {e}")
+
+
+def 获取鼠标所在显示器名称():
+    mouse_monitor = get_mouse_monitor_python_fallback()
+
+    name_parts = []
+    for key in ("device_name", "display_name"):
+        value = str(mouse_monitor.get(key) or "").strip()
+        if value:
+            name_parts.append(value)
+
+    if not name_parts:
+        rect = mouse_monitor.get("rect")
+        if rect:
+            name_parts.append(str(rect))
+
+    return " | ".join(name_parts) if name_parts else ""
+
+
+def 获取bin当前壁纸ID():
+    detail = get_mouse_playliststate_detail()
+    return str(detail.get("current_id") or "").strip()
+
+
+def bin监听():
+    """
+    监听鼠标所在显示器和 playliststate 当前壁纸变化。
+    """
+    log_func = TLog(获得函数名())
+    log_func.info("初始化 bin 监听器")
+
+    last_monitor_name = None
+    last_wallpaper_id = None
+    last_wallpaper_check_time = 0.0
+    monitor_check_interval = 0.2
+    wallpaper_check_interval = 2.0
+
+    try:
+        while not stop_flag.is_set():
+            if pause_flag.is_set() and not get_specified_mouse_group():
+                time.sleep(monitor_check_interval)
+                continue
+
+            try:
+                current_monitor_name = 获取鼠标所在显示器名称()
+                if current_monitor_name:
+                    if last_monitor_name is None:
+                        last_monitor_name = current_monitor_name
+                        log_func.info(f"初始鼠标所在显示器: {current_monitor_name}")
+                    elif current_monitor_name != last_monitor_name:
+                        log_func.info(f"鼠标所在显示器变化: {last_monitor_name} -> {current_monitor_name}")
+                        last_monitor_name = current_monitor_name
+                        触发刷新(target_wallpaper_id=None, changed_monitor_index=None)
+
+                now = time.time()
+                if now - last_wallpaper_check_time >= wallpaper_check_interval:
+                    last_wallpaper_check_time = now
+                    current_wallpaper_id = 获取bin当前壁纸ID()
+                    if current_wallpaper_id:
+                        if last_wallpaper_id is None:
+                            last_wallpaper_id = current_wallpaper_id
+                            log_func.info(f"初始bin壁纸ID: {current_wallpaper_id}")
+                        elif current_wallpaper_id != last_wallpaper_id:
+                            log_func.info(f"bin壁纸ID变化: {last_wallpaper_id} -> {current_wallpaper_id}")
+                            last_wallpaper_id = current_wallpaper_id
+                            save_active_wallpaper_id(current_wallpaper_id, log_func)
+                            触发刷新(target_wallpaper_id=current_wallpaper_id, changed_monitor_index=None)
+            except Exception as e:
+                log_func.error(f"bin监听异常: {e}")
+
+            time.sleep(monitor_check_interval)
+    except Exception as e:
+        log_func.error(f"bin监听循环异常: {e}")
+
 
 def is_fullscreen_app_running():
     """
@@ -967,13 +1267,18 @@ def 运行占用监控():
 
 if __name__ == "__main__":
     # 启动后台线程
-    t1 = start_thread(json监听, "JsonListener")
+    t1 = None
+    if False:
+        t1 = start_thread(json监听, "JsonListener")
     t2 = None
     if log.on_DEBUG == True:
         t2 = start_thread(运行占用监控, "ResourceMonitor")
-    t3 = start_thread(ram监听, "RamListener")
+    t3 = None
+    if False:
+        t3 = start_thread(ram监听, "RamListener")
     t4 = start_thread(焦点监听, "FocusListener")
     t5 = start_thread(settings_watcher, "SettingsWatcher")
+    t6 = start_thread(bin监听, "BinListener")
     
     log.info("所有后台线程已启动。")
 
@@ -997,7 +1302,7 @@ if __name__ == "__main__":
             stop_flag.set()
 
     log.info("等待后台线程结束...")
-    for t in [t1, t2, t3]:
+    for t in [t1, t2, t3, t4, t5, t6]:
         if t and t.is_alive():
             log.info(f"正在等待 {t.name} 退出...")
             t.join(timeout=5)
