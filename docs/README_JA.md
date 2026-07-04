@@ -26,12 +26,13 @@ MouseEngine は **Wallpaper Engine と連動して Windows のマウスカーソ
 
 ## 動作の仕組み
 
-1. Wallpaper Engine の `config.json` を読み取ります。
-2. 現在のディスプレイで使用中の壁紙プロジェクト ID を取得します。
-3. `config.toml` から、その壁紙 ID に対応するカーソルグループを探します。
+1. `config.toml` から Wallpaper Engine のインストール / 設定パスを読み取ります。
+2. `playliststate_reader.dll` を使って、Wallpaper Engine の実行時 `playliststate.bin` を読み取ります。
+3. マウスがあるディスプレイで現在再生中の壁紙プロジェクト ID を解析します。
 4. 現在の前面アプリがホワイトリストに一致する場合、ホワイトリストのカーソルグループを優先します。
-5. Windows API を使ってカーソルテーマを適用します。
-6. 一致するルールがない場合、設定に応じてデフォルトのカーソルグループを使用します。
+5. それ以外の場合は、`config.toml` から壁紙 ID に対応するカーソルグループを探します。
+6. Windows API を使ってカーソルテーマを適用します。
+7. 一致するルールがない場合、設定に応じてデフォルトのカーソルグループを使用します。
 
 ---
 
@@ -190,14 +191,20 @@ wallpaper_engine_config = "D:/Steam/steamapps/common/wallpaper_engine/config.jso
 [config]
 enable_default_icon_group = true
 pause_on_fullscreen = false
+strict_window_judgment = false
 show_more_menu = false
 language = "zh-CN"
+specified_mouse_group = ""
+use_new_menu = true
 ```
 
 - `enable_default_icon_group`: ルールに一致しない場合、デフォルトのカーソルグループを有効にします。
 - `pause_on_fullscreen`: フルスクリーンアプリを検出したときにカーソル切り替えを一時停止します。
+- `strict_window_judgment`: マウス位置を使った、より厳密なウィンドウ判定を使用します。
 - `show_more_menu`: 追加のトレイメニュー項目を表示します。
 - `language`: UI 言語です。現在は `zh-CN`、`en`、`ja` に対応しています。
+- `specified_mouse_group`: 一時的に使用するカーソルグループを強制指定します。空欄の場合は強制指定しません。
+- `use_new_menu`: 新しい統一トレイメニュー入口を使用します。
 
 ### 4. プログラム別ホワイトリスト
 

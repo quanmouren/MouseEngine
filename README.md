@@ -23,12 +23,13 @@ MouseEngine 是一个 **基于 Wallpaper Engine 的 Windows 鼠标指针自动�
 
 ## 🧩 工作原理
 
-1. 读取 Wallpaper Engine 的 `config.json`。
-2. 获取当前显示器正在使用的壁纸项目 ID。
-3. 在 `config.toml` 中查找壁纸 ID 对应的鼠标组。
+1. 从 `config.toml` 读取 Wallpaper Engine 的安装 / 配置路径。
+2. 通过 `playliststate_reader.dll` 读取 Wallpaper Engine 运行时的 `playliststate.bin`。
+3. 根据鼠标所在显示器，解析该显示器当前正在播放的壁纸项目 ID。
 4. 如当前前台程序命中白名单，则优先使用白名单绑定的鼠标组。
-5. 调用 Windows API 应用鼠标指针。
-6. 若无匹配项，则根据设置决定是否使用默认鼠标组。
+5. 否则在 `config.toml` 中查找壁纸 ID 对应的鼠标组。
+6. 调用 Windows API 应用鼠标指针。
+7. 若无匹配项，则根据设置决定是否使用默认鼠标组。
 
 ---
 
@@ -125,19 +126,21 @@ MouseEngine/
 ├─ LICENSE.txt                       # 开源许可证
 ├─ FINAL_THIRD_PARTY_NOTICES.txt     # 第三方依赖许可证汇总
 ├─ requirements.txt                  # Python 依赖列表
+├─ setMouse.dll                      # Windows 光标应用原生库
 ├─ docs/
 │  ├─ README_EN.md                   # English documentation
 │  ├─ README_JA.md                   # 日本語ドキュメント
-│  └─ images/                        # 文档图片
+│  └─ images/                        # 中 / 英 / 日文档截图与 Logo
 │
 └─ src/                              # ⭐ 程序运行目录，命令行启动请先进入此目录
-   ├─ main.py                        # 主入口：壁纸监听、托盘菜单、暂停/退出
+   ├─ main.py                        # 主入口：监听器、托盘菜单、暂停/退出
    ├─ Initialize.py                  # 首次启动初始化与配置修复
    ├─ WelcomeUI.py                   # 首次启动向导与旧版本清理确认
+   ├─ NewUI.py                       # 统一控制中心入口
    ├─ mainUIWeb.py                   # 壁纸与鼠标组绑定界面 API
    ├─ mouseUI.py                     # 鼠标组编辑器 API
    ├─ settingsUIWeb.py               # 设置界面 API
-   ├─ getActiveWallpaper.py          # 获取当前活跃壁纸
+   ├─ getActiveWallpaper.py          # 基于 playliststate 的当前壁纸 / 显示器读取
    ├─ getWallpaperConfig.py          # 解析 Wallpaper Engine 配置
    ├─ setMouse.py                    # Windows 鼠标指针应用逻辑
    ├─ mouses.py                      # 鼠标组保存、读取与显示器映射
@@ -146,14 +149,24 @@ MouseEngine/
    ├─ Tlog.py                        # 日志模块
    ├─ ani_to_gif.py                  # ani 光标预览转换
    ├─ cur_to_png.py                  # cur 光标预览转换
+   ├─ mouse_probe.dll                # 窗口 / 鼠标所在显示器探测原生库
+   ├─ playliststate_reader.dll       # Wallpaper Engine playliststate 读取原生库
    ├─ config.toml                    # 主配置文件
    ├─ temp_storage.toml              # 运行时临时状态
    ├─ version.toml                   # 程序版本信息
+   ├─ *.spec                         # PyInstaller 打包配置
    │
    ├─ mouses/                        # 鼠标组目录，每个子目录是一套光标主题
    │
    ├─ html/
-   │  ├─ js/                         # 页面脚本与前端 i18n
+   │  ├─ NewUI.html                  # 统一控制中心页面
+   │  ├─ mainUIWeb.html              # 壁纸绑定页面
+   │  ├─ mouseUI.html                # 鼠标组编辑页面
+   │  ├─ settingsUI.html             # 设置页面
+   │  ├─ welcomeUIWeb.html           # 欢迎 / 初始化页面
+   │  ├─ upgradeConfirm.html         # 升级确认页面
+   │  ├─ js/                         # 页面脚本、前端 i18n 与 pywebview 桥接
+   │  ├─ css/                        # 页面样式
    │  ├─ components/                 # 复用组件
    │  ├─ image/                      # 前端图片资源
    │  └─ cache/                      # 预览图缓存
@@ -162,6 +175,11 @@ MouseEngine/
    │  ├─ INFParser.py                # 解析 .inf 光标主题文件
    │  ├─ imgObj_to_cur.py            # 2D 编辑器导出 cur
    │  └─ get_monitor_by_cursor.py    # 根据光标位置识别显示器
+   │
+   ├─ native/                        # 原生 DLL 源码
+   │  ├─ mouse_probe.c               # 窗口 / 鼠标所在显示器探测
+   │  ├─ playliststate_reader.c      # playliststate.bin 解析
+   │  └─ setMouse.c                  # 系统光标应用
    │
    ├─ projects/                      # 2D 编辑器项目目录
    │  └─ test_mouse/                 # 示例项目
@@ -214,15 +232,21 @@ wallpaper_engine_config = "D:/Steam/steamapps/common/wallpaper_engine/config.jso
 [config]
 enable_default_icon_group = true
 pause_on_fullscreen = false
+strict_window_judgment = false
 show_more_menu = false
 language = "zh-CN"
+specified_mouse_group = ""
+use_new_menu = true
 ```
 
 说明：
 - `enable_default_icon_group`：未匹配到鼠标组时是否启用默认鼠标组。
 - `pause_on_fullscreen`：检测到全屏程序时是否暂停切换。
+- `strict_window_judgment`：是否使用更严格的鼠标所在窗口判定。
 - `show_more_menu`：是否显示更多托盘菜单项。
 - `language`：界面语言，目前支持 `zh-CN`、`en` 与 `ja`。
+- `specified_mouse_group`：临时指定使用的鼠标组，留空表示不强制指定。
+- `use_new_menu`：是否使用新版统一托盘菜单入口。
 
 ---
 

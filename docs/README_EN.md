@@ -24,12 +24,13 @@ It reads the Wallpaper Engine wallpaper currently active on your display and aut
 
 ## How It Works
 
-1. Reads Wallpaper Engine's `config.json`.
-2. Gets the wallpaper project ID currently active on the display.
-3. Looks up the matching cursor group in `config.toml`.
+1. Reads the Wallpaper Engine installation / configuration path from `config.toml`.
+2. Uses `playliststate_reader.dll` to read Wallpaper Engine's runtime `playliststate.bin`.
+3. Resolves the wallpaper project ID currently playing on the display where the mouse is located.
 4. If the foreground program matches the whitelist, the whitelist cursor group is used first.
-5. Applies the cursor theme through Windows APIs.
-6. If no rule matches, the app uses the default cursor group depending on the current settings.
+5. Otherwise, looks up the matching cursor group in `config.toml`.
+6. Applies the cursor theme through Windows APIs.
+7. If no rule matches, the app uses the default cursor group depending on the current settings.
 
 ---
 
@@ -188,14 +189,20 @@ The first-launch wizard and the Settings page can write this path automatically 
 [config]
 enable_default_icon_group = true
 pause_on_fullscreen = false
+strict_window_judgment = false
 show_more_menu = false
 language = "zh-CN"
+specified_mouse_group = ""
+use_new_menu = true
 ```
 
 - `enable_default_icon_group`: Enables the default cursor group when no rule matches.
 - `pause_on_fullscreen`: Pauses cursor switching when a fullscreen program is detected.
+- `strict_window_judgment`: Uses stricter mouse-position-based window detection.
 - `show_more_menu`: Shows additional tray menu items.
 - `language`: UI language. Currently supports `zh-CN`, `en`, and `ja`.
+- `specified_mouse_group`: Temporarily forces a cursor group. Leave empty to disable forced selection.
+- `use_new_menu`: Uses the new unified tray menu entry.
 
 ### 4. Program Whitelist
 

@@ -1,5 +1,5 @@
-__version__ = "V2.0"
-MAJOR = 2
-MINOR = 0
+__version__ = "V1.1_TEST"
+MAJOR = 1
+MINOR = 1
 PATCH = 0
 RELEASE = "V"
