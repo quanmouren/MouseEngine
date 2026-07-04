@@ -6,11 +6,57 @@ window.onload = function() {
     const pathInput = document.getElementById('pathInput');
     const folderInput = document.getElementById('folderInput');
     const defaultCursorCheck = document.getElementById('defaultCursorCheck');
+    const languageToggle = document.getElementById('languageToggle');
+    const languageMenu = document.getElementById('languageMenu');
+    const languageOptions = document.querySelectorAll('.language-option');
+
+    function tr(key, params) {
+        return window.MouseEngineI18n ? MouseEngineI18n.t(key, params) : key;
+    }
     
     // 检查 pywebview 是否可用
     function checkPyWebView() {
         return typeof window.pywebview !== 'undefined' && window.pywebview.api;
     }
+
+    function syncLanguageMenu() {
+        if (!window.MouseEngineI18n) return;
+        const currentLanguage = MouseEngineI18n.getLanguage();
+        languageOptions.forEach(option => {
+            option.classList.toggle('active', option.dataset.language === currentLanguage);
+        });
+    }
+
+    function closeLanguageMenu() {
+        languageMenu.classList.add('hidden');
+        languageToggle.classList.remove('active');
+    }
+
+    languageToggle.addEventListener('click', function(event) {
+        event.stopPropagation();
+        languageMenu.classList.toggle('hidden');
+        languageToggle.classList.toggle('active', !languageMenu.classList.contains('hidden'));
+    });
+
+    languageOptions.forEach(option => {
+        option.addEventListener('click', async function() {
+            if (window.MouseEngineI18n) {
+                await MouseEngineI18n.setLanguage(this.dataset.language);
+            } else if (checkPyWebView() && window.pywebview.api.set_language) {
+                await window.pywebview.api.set_language(this.dataset.language);
+            }
+            syncLanguageMenu();
+            closeLanguageMenu();
+        });
+    });
+
+    document.addEventListener('click', function(event) {
+        if (!languageMenu.contains(event.target) && !languageToggle.contains(event.target)) {
+            closeLanguageMenu();
+        }
+    });
+
+    window.addEventListener('mouseengine-language-applied', syncLanguageMenu);
     
     // 更新确认按钮状态
     function updateContinueButton(isValid) {
@@ -53,13 +99,13 @@ window.onload = function() {
         }
         
         autoFindBtn.disabled = true;
-        autoFindBtn.textContent = '🔍 正在查找...\n(steam)  ';
+        autoFindBtn.textContent = tr('autoFindingSteam');
         autoFindBtn.classList.add('loading');
         
         // 调用 Python 端的自动查找方法
         window.pywebview.api.auto_find_wallpaper_engine().then(function(result) {
             autoFindBtn.disabled = false;
-            autoFindBtn.textContent = '⚙️ 自动查找 (Steam)';
+            autoFindBtn.textContent = tr('autoFindSteam');
             autoFindBtn.classList.remove('loading');
             
             if (result.success && result.path) {
@@ -69,7 +115,7 @@ window.onload = function() {
             }
         }).catch(function(error) {
             autoFindBtn.disabled = false;
-            autoFindBtn.textContent = '⚙️ 自动查找 (Steam)';
+            autoFindBtn.textContent = tr('autoFindSteam');
             autoFindBtn.classList.remove('loading');
         });
     });
@@ -139,6 +185,7 @@ window.onload = function() {
     
     // 初始化确认按钮状态
     updateContinueButton(false);
+    syncLanguageMenu();
     
     // 页面加载时自动执行一次查找
     setTimeout(function() {

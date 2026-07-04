@@ -9,32 +9,47 @@
 <body>
     <div class="container">
         <div class="welcome-card">
+            <div class="language-picker">
+                <button id="languageToggle" class="language-toggle" type="button" title="语言" data-i18n-title="language" aria-label="语言">
+                    <svg class="language-icon" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M315.733333 213.333333a32 32 0 0 1 64 0v9.216H512a32 32 0 0 1 0 64h-51.328c-15.786667 43.946667-40.32 85.034667-67.626667 122.026667l38.528 40.064a32 32 0 0 1-46.08 44.373333l-33.066666-34.346666c-25.685333 29.013333-52.053333 54.997333-75.861334 76.885333a32 32 0 1 1-43.264-47.104 965.632 965.632 0 0 0 76.16-77.909333c-5.333333-6.826667-10.666667-13.952-15.658666-20.906667-10.069333-13.909333-20.394667-29.312-25.6-40.576a32 32 0 0 1 57.984-27.050667c2.389333 5.205333 9.386667 16.213333 19.541333 30.250667 1.450667 2.048 3.072 4.096 4.608 6.144 16.213333-23.168 30.421333-47.274667 41.344-71.850667H213.333333a32 32 0 0 1 0-64h102.4V213.333333z"></path>
+                        <path d="M906.666667 618.666667c0-70.912-0.042667-121.301333-4.608-159.957334-4.48-37.930667-12.928-60.373333-26.88-77.354666a139.093333 139.093333 0 0 0-19.2-19.2c-22.698667-18.645333-54.528-27.008-118.058667-29.952l-405.76 404.821333c2.901333 64.128 11.264 96.128 29.952 118.912 5.76 7.04 12.245333 13.525333 19.242667 19.285333 16.981333 13.909333 39.424 22.314667 77.354666 26.837334 38.656 4.565333 89.045333 4.608 159.957334 4.608s121.301333-0.042667 159.957333-4.608c37.930667-4.48 60.373333-12.928 77.354667-26.88 6.997333-5.717333 13.482667-12.202667 19.2-19.2 13.952-16.981333 22.357333-39.424 26.88-77.354667 4.565333-38.656 4.608-89.045333 4.608-159.957333z m64 0c0 69.333333 0 124.16-5.12 167.466666-5.162667 43.946667-16.042667 80.213333-40.874667 110.464a202.666667 202.666667 0 0 1-28.074667 28.074667c-30.293333 24.832-66.474667 35.712-110.506666 40.917333-43.264 5.12-98.090667 5.077333-167.424 5.077334s-124.16 0-167.466667-5.12c-43.946667-5.162667-80.213333-16.042667-110.464-40.874667a202.666667 202.666667 0 0 1-28.074667-28.074667c-30.122667-36.693333-40.021333-82.688-43.648-141.653333-58.922667-3.626667-104.917333-13.525333-141.610666-43.605333a202.666667 202.666667 0 0 1-28.074667-28.074667c-24.832-30.293333-35.712-66.474667-40.917333-110.506667-5.12-43.264-5.077334-98.090667-5.077334-167.424s0-124.16 5.12-167.466666c5.162667-43.946667 16.042667-80.213333 40.874667-110.464 8.405333-10.24 17.834667-19.626667 28.074667-28.074667 30.293333-24.832 66.474667-35.712 110.506666-40.917333C281.173333 53.333333 335.957333 53.333333 405.333333 53.333333s124.16 0 167.466667 5.12c43.946667 5.162667 80.213333 16.042667 110.464 40.874667 10.24 8.405333 19.626667 17.834667 28.074667 28.074667 30.08 36.693333 39.936 82.645333 43.605333 141.568 58.965333 3.626667 104.96 13.568 141.653333 43.690666 10.24 8.405333 19.626667 17.834667 28.074667 28.074667 24.832 30.293333 35.712 66.474667 40.917333 110.506667 5.12 43.264 5.077333 98.090667 5.077334 167.424z m-853.333334-213.333334c0 70.912 0.042667 121.301333 4.608 159.957334 4.48 37.930667 12.928 60.373333 26.88 77.354666 5.717333 6.997333 12.202667 13.482667 19.2 19.2 22.784 18.730667 54.826667 27.050667 118.912 29.952l404.906667-403.925333c-2.858667-64.725333-11.178667-96.938667-29.952-119.850667a139.093333 139.093333 0 0 0-19.242667-19.2c-16.981333-13.952-39.424-22.4-77.354666-26.88-38.656-4.565333-89.045333-4.608-159.957334-4.608s-121.301333 0.042667-159.957333 4.608c-37.930667 4.48-60.373333 12.928-77.354667 26.88a139.093333 139.093333 0 0 0-19.2 19.2c-13.952 16.981333-22.4 39.424-26.88 77.354667-4.565333 38.656-4.608 89.045333-4.608 159.957333z"></path>
+                        <path d="M661.333333 522.666667a32 32 0 0 1 29.525334 19.712l106.666666 256a32 32 0 0 1-59.050666 24.576l-27.349334-65.621334h-99.584l-27.306666 65.621334a32 32 0 0 1-59.093334-24.576l106.666667-256a32 32 0 0 1 29.525333-19.712z m-23.125333 170.666666h46.250667l-23.125334-55.466666-23.125333 55.466666z"></path>
+                    </svg>
+                </button>
+                <div id="languageMenu" class="language-menu hidden">
+                    <button class="language-option" type="button" data-language="zh-CN">简体中文</button>
+                    <button class="language-option" type="button" data-language="en">English</button>
+                    <button class="language-option" type="button" data-language="ja">日本語</button>
+                </div>
+            </div>
             <div class="header">
-                <div class="title">✨ 欢迎使用 MouseEngine</div>
-                <div class="subtitle">程序首次运行，请指定 Wallpaper Engine 的安装位置。</div>
+                <div class="title" data-i18n="welcomeHeading">✨ 欢迎使用 MouseEngine</div>
+                <div class="subtitle" data-i18n="welcomeSubtitle">程序首次运行，请指定 Wallpaper Engine 的安装位置。</div>
             </div>
             
             <div class="content">
                 <div class="path-section">
-                    <label for="pathInput" class="path-label">Wallpaper Engine 根目录:</label>
-                    <input type="text" id="pathInput" class="path-input" placeholder="输入路径，或使用下方的查找按钮">
+                    <label for="pathInput" class="path-label" data-i18n="wallpaperEngineRoot">Wallpaper Engine 根目录:</label>
+                    <input type="text" id="pathInput" class="path-input" placeholder="输入路径，或使用下方的查找按钮" data-i18n-placeholder="enterPathOrFind">
                     <input type="file" id="folderInput" class="folder-input" webkitdirectory directory multiple style="display: none;">
                 </div>
                 
                 <div class="button-section">
-                    <button id="autoFindBtn" class="btn primary">⚙️ 自动查找 (Steam)</button>
-                    <button id="browseBtn" class="btn secondary">📂 浏览文件夹</button>
-                    <button id="continueBtn" class="btn success">✅ 确认并继续</button>
+                    <button id="autoFindBtn" class="btn primary" data-i18n="autoFindSteam">⚙️ 自动查找 (Steam)</button>
+                    <button id="browseBtn" class="btn secondary" data-i18n="browseFolder">📂 浏览文件夹</button>
+                    <button id="continueBtn" class="btn success" data-i18n="confirmAndContinue">✅ 确认并继续</button>
                 </div>
                 
                 <div class="checkbox-section">
                     <input type="checkbox" id="defaultCursorCheck" class="checkbox" checked>
-                    <label for="defaultCursorCheck" class="checkbox-label">使用Windows默认光标创建默认光标组</label>
+                    <label for="defaultCursorCheck" class="checkbox-label" data-i18n="useDefaultWindowsCursor">使用Windows默认光标创建默认光标组</label>
                 </div>
             </div>
         </div>
     </div>
 
+    <script src="js/i18n.js"></script>
     <script src="js/welcomeUIWeb.js"></script>
 </body>
 </html>

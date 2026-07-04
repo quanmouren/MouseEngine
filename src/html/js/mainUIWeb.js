@@ -21,6 +21,25 @@
     // 鼠标组图标缓存
     const mouseGroupIconsCache = {};
 
+    let lastPlaylistState = { items: [], name: '', monitors: [] };
+    let lastAppliedLanguage = null;
+
+    function tr(key, params) {
+        return window.MouseEngineI18n ? MouseEngineI18n.t(key, params) : key;
+    }
+
+    function applyLanguage(root = document) {
+        if (window.MouseEngineI18n) MouseEngineI18n.apply(root);
+    }
+
+    function setTypeText(typeValue) {
+        const detailType = document.getElementById('detailType');
+        if (!detailType) return;
+        detailType.dataset.i18nPrefix = 'type';
+        detailType.dataset.i18nValue = typeValue || '-';
+        detailType.textContent = `${tr('type')}：${typeValue || '-'}`;
+    }
+
     // 初始化函数：自动调用Python API，3秒超时使用测试数据
     async function initApp() {
         try {
@@ -74,9 +93,17 @@
         previewImg.alt = '';
         previewImg.style.display = 'none';
         
-        document.getElementById('detailTitle').textContent = '请选择壁纸';
-        document.getElementById('detailSubtitle').textContent = '暂无信息';
-        document.getElementById('detailType').textContent = '类型：-';
+        const detailTitle = document.getElementById('detailTitle');
+        const detailSubtitle = document.getElementById('detailSubtitle');
+        if (detailTitle) {
+            detailTitle.dataset.i18n = 'selectWallpaper';
+            detailTitle.textContent = tr('selectWallpaper');
+        }
+        if (detailSubtitle) {
+            detailSubtitle.dataset.i18n = 'noInfo';
+            detailSubtitle.textContent = tr('noInfo');
+        }
+        setTypeText('-');
     }
 
     // 更新右侧预览面板
@@ -95,7 +122,7 @@
         const previewImg = document.getElementById('previewImg');
         if (imagePath) {
             previewImg.src = imagePath.replace(/\\/g, '/');
-            previewImg.alt = name || '预览图';
+            previewImg.alt = name || tr('preview');
             previewImg.style.display = 'block';
             // 图片加载失败时隐藏
             previewImg.onerror = function() {
@@ -110,13 +137,17 @@
         }
         
         // 更新标题
-        document.getElementById('detailTitle').textContent = name || '未知壁纸';
+        const detailTitle = document.getElementById('detailTitle');
+        if (detailTitle) {
+            delete detailTitle.dataset.i18n;
+            detailTitle.textContent = name || tr('unknownWallpaper');
+        }
         
         // 更新副标题
         document.getElementById('detailSubtitle').textContent = `ID: ${id}`;
         
         // 更新类型
-        document.getElementById('detailType').textContent = `类型：${type || '未知'}`;
+        setTypeText(type || tr('unknown'));
         
         // 加载鼠标组列表并更新选择框
         loadMouseGroups();
@@ -128,7 +159,7 @@
         grid.innerHTML = '';
 
         if (!wallpaperList || wallpaperList.length === 0) {
-            grid.innerHTML = '<div class="error-placeholder">暂无壁纸数据</div>';
+            grid.innerHTML = `<div class="error-placeholder" data-i18n="noWallpaperData">${tr('noWallpaperData')}</div>`;
             return;
         }
 
@@ -151,7 +182,7 @@
                 const img = document.createElement('img');
                 // 兼容Windows路径
                 img.src = imagePath.replace(/\\/g, '/');
-                img.alt = name || '壁纸';
+                img.alt = name || tr('unknownWallpaper');
                 // 图片加载失败的兜底
                 img.onerror = function() {
                     this.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgZmlsbD0iIzMzNDE1NSIvPjx0ZXh0IHg9IjkwIiB5PSI5MCIgZm9udC1mYW1pbHk9IkxlZnQgVUlUIiwgZm9udC1zaXplPSIxMiIgZmlsbD0iIzlhYjNjOCIgbGV0dGVyLXNwYWNpbmc9Im5vcm1hbCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+5Zu+54mH5Lu25Lq6PC90ZXh0Pjwvc3ZnPg==';
@@ -175,11 +206,13 @@
                     overlay.style.fontWeight = 'bold';
                     overlay.style.textAlign = 'center';
                     overlay.style.padding = '10px';
-                    overlay.textContent = type.toLowerCase() === 'web' ? '暂不支持Web壁纸' : '不支持应用程序壁纸';
+                    const overlayKey = type.toLowerCase() === 'web' ? 'unsupportedWebWallpaper' : 'unsupportedApplicationWallpaper';
+                    overlay.dataset.i18n = overlayKey;
+                    overlay.textContent = tr(overlayKey);
                     thumbEl.appendChild(overlay);
                 }
             } else {
-                thumbEl.innerHTML = '<span style="color:#94a3b8; font-size:12px;">无图片</span>';
+                thumbEl.innerHTML = `<span style="color:#94a3b8; font-size:12px;" data-i18n="noImage">${tr('noImage')}</span>`;
             }
 
             // 右上角鼠标组图标区域
@@ -226,13 +259,13 @@
                 // 添加默认选项
                 const defaultOption = document.createElement('option');
                 defaultOption.value = '';
-                defaultOption.textContent = '请选择';
+                defaultOption.textContent = tr('select');
                 selectElement.appendChild(defaultOption);
                 
                 // 添加"未绑定"选项
                 const unbindOption = document.createElement('option');
                 unbindOption.value = '未绑定';
-                unbindOption.textContent = '未绑定';
+                unbindOption.textContent = tr('unbound');
                 selectElement.appendChild(unbindOption);
                 
                 // 添加鼠标组选项
@@ -434,7 +467,8 @@
             const playlistTitle = document.querySelector('.playlist-title');
             const playlistLoading = document.querySelector('.playlist-loading');
             if (playlistTitle) {
-                playlistTitle.textContent = '当前播放列表: 加载中...';
+                playlistTitle.dataset.i18n = 'currentPlaylistLoading';
+                playlistTitle.textContent = tr('currentPlaylistLoading');
             }
             if (playlistLoading) {
                 playlistLoading.style.display = 'block';
@@ -477,6 +511,7 @@
     
     // 渲染播放列表
     function renderPlaylist(items, name, monitors) {
+        lastPlaylistState = { items: items || [], name: name || '', monitors: monitors || [] };
         const playlistContent = document.querySelector('.playlist-content');
         const playlistTitle = document.querySelector('.playlist-title');
         
@@ -492,9 +527,11 @@
         
         if (monitors && monitors.length > 1) {
             const monitorNames = monitors.map(m => m.name).join('，');
-            playlistTitle.textContent = `多个播放列表（${monitorNames}）(共 ${count} 项)`;
+            delete playlistTitle.dataset.i18n;
+            playlistTitle.textContent = tr('multiplePlaylists', { names: monitorNames, count });
         } else {
-            playlistTitle.textContent = `当前播放列表: ${name || '未命名'} (共 ${count} 项)`;
+            delete playlistTitle.dataset.i18n;
+            playlistTitle.textContent = tr('currentPlaylist', { name: name || tr('unnamed'), count });
         }
         
         // 更新播放列表壁纸ID集合
@@ -539,14 +576,15 @@
                 img.style.webkitBackfaceVisibility = 'hidden';
                 img.onerror = function() {
                     // 图片加载失败时显示默认内容
-                    this.parentElement.innerHTML = '<div class="playlist-item-no-image">无预览图</div>';
+                    this.parentElement.innerHTML = `<div class="playlist-item-no-image" data-i18n="noPreview">${tr('noPreview')}</div>`;
                 };
                 playlistItem.appendChild(img);
             } else {
                 // 无预览图时显示默认内容
                 const noImageDiv = document.createElement('div');
                 noImageDiv.className = 'playlist-item-no-image';
-                noImageDiv.textContent = '无预览图';
+                noImageDiv.dataset.i18n = 'noPreview';
+                noImageDiv.textContent = tr('noPreview');
                 playlistItem.appendChild(noImageDiv);
             }
             
@@ -647,3 +685,18 @@
         console.log('过滤后的壁纸数量:', filteredWallpapers.length);
         renderWallpapers(filteredWallpapers);
     }
+
+    window.addEventListener('mouseengine-language-applied', (event) => {
+        const nextLanguage = event.detail && event.detail.language;
+        if (nextLanguage === lastAppliedLanguage) return;
+        lastAppliedLanguage = nextLanguage;
+        if (allWallpapersData.length) {
+            renderWallpapers(showPlaylistOnly ? allWallpapersData.filter(wallpaper => playlistWallpaperIds.has(wallpaper[0])) : allWallpapersData);
+        }
+        if (lastPlaylistState.items) {
+            renderPlaylist(lastPlaylistState.items, lastPlaylistState.name, lastPlaylistState.monitors);
+        }
+        if (!currentWallpaperId) {
+            initPreviewPanel();
+        }
+    });

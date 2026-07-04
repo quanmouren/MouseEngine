@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MouseEngine-Mouse Group Edit</title>
+    <title>MouseEngine-鼠标组编辑器</title>
     <link rel="stylesheet" href="css/mouseUI.css">
 </head>
 <body>
     <div class="container">
         <div class="header">
             <div class="header-left">
-                <div class="header-title">Mouse Group Edit</div>
+                <div class="header-title" data-i18n="mouseGroupEditor">MouseEngine-鼠标组编辑器</div>
             </div>
             <div class="header-right">
-                <div class="header-btn" onclick="importGroup()">导入组</div>
-                <div class="header-btn" onclick="createEmptyGroup()">新建组</div>
+                <div class="header-btn" onclick="importGroup()" data-i18n="importGroup">导入组</div>
+                <div class="header-btn" onclick="createEmptyGroup()" data-i18n="newGroup">新建组</div>
             </div>
         </div>
         
@@ -30,8 +30,8 @@
                 <!-- 鼠标编辑器核心 -->
                 <div class="mouse-editor-section">
                     <div class="editor-header">
-                        <div class="editor-title" id="editorTitle">编辑鼠标组</div>
-                        <button class="save-button" onclick="saveData()">保存当前组</button>
+                        <div class="editor-title" id="editorTitle" data-i18n="editMouseGroup">编辑鼠标组</div>
+                        <button class="save-button" onclick="saveData()" data-i18n="saveCurrentGroup">保存当前组</button>
                     </div>
 
                     <div class="header-row" onclick="showDropdown()">
@@ -48,38 +48,41 @@
     <!-- 组名输入悬浮窗 -->
     <div id="groupNameModal" class="modal-overlay">
         <div class="modal-content">
-            <h3>新建鼠标组</h3>
-            <input type="text" id="groupNameInput" placeholder="请输入组名" class="modal-input">
+            <h3 data-i18n="newMouseGroup">新建鼠标组</h3>
+            <input type="text" id="groupNameInput" placeholder="请输入组名" class="modal-input" data-i18n-placeholder="enterGroupName">
             <div class="modal-buttons">
-                <button id="cancelBtn" class="modal-button cancel">取消</button>
-                <button id="confirmBtn" class="modal-button confirm">确认</button>
+                <button id="cancelBtn" class="modal-button cancel" data-i18n="cancel">取消</button>
+                <button id="confirmBtn" class="modal-button confirm" data-i18n="confirm">确认</button>
             </div>
         </div>
     </div>
 
     <!-- 右键菜单 -->
     <div id="contextMenu" class="context-menu">
-        <div id="renameGroupItem" class="context-menu-item">重命名</div>
-        <div id="deleteGroupItem" class="context-menu-item">删除此组</div>
+        <div id="applyGroupItem" class="context-menu-item" data-i18n="applyGroup">应用该组</div>
+        <div id="renameGroupItem" class="context-menu-item" data-i18n="rename">重命名</div>
+        <div id="deleteGroupItem" class="context-menu-item" data-i18n="deleteThisGroup">删除此组</div>
     </div>
 
     <!-- 输入框右键菜单 -->
     <div id="inputContextMenu" class="context-menu">
-        <div id="clearInputItem" class="context-menu-item">清空</div>
+        <div id="clearInputItem" class="context-menu-item" data-i18n="empty">清空</div>
     </div>
 
     <!-- 重命名弹窗 -->
     <div id="renameModal" class="modal-overlay">
         <div class="modal-content">
-            <h3>重命名鼠标组</h3>
-            <input type="text" id="renameInput" placeholder="请输入新组名" class="modal-input">
+            <h3 data-i18n="renameMouseGroup">重命名鼠标组</h3>
+            <input type="text" id="renameInput" placeholder="请输入新组名" class="modal-input" data-i18n-placeholder="enterNewGroupName">
             <div class="modal-buttons">
-                <button id="renameCancelBtn" class="modal-button cancel">取消</button>
-                <button id="renameConfirmBtn" class="modal-button confirm">确认</button>
+                <button id="renameCancelBtn" class="modal-button cancel" data-i18n="cancel">取消</button>
+                <button id="renameConfirmBtn" class="modal-button confirm" data-i18n="confirm">确认</button>
             </div>
         </div>
     </div>
 
+    <script src="js/pywebviewBridge.js"></script>
+    <script src="js/i18n.js"></script>
     <script src="js/mouseUI.js"></script>
 </body>
 </html>

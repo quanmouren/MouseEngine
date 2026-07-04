@@ -9,12 +9,7 @@ import toml
 import sys
 import subprocess
 import ctypes
-from getActiveWallpaper import (
-    getPlayliststateID,
-    get_active_ids,
-    get_mouse_monitor_python_fallback,
-    get_mouse_playliststate_detail,
-)
+from getActiveWallpaper import get_active_ids
 #from test_测试句柄更新 import get_active_ids_optimized as get_active_ids
 try:
     import psutil
@@ -653,15 +648,18 @@ def 触发刷新(target_wallpaper_id=None, changed_monitor_index=None):
         log_func.debug("无法获取当前焦点程序名，继续使用壁纸ID匹配")
 
     if target_wallpaper_id is None:
-        log_func.debug("未提供 target_wallpaper_id，尝试获取鼠标所在显示器的当前壁纸ID")
+        log_func.debug("未提供 target_wallpaper_id，尝试获取当前活跃壁纸ID")
         try:
-            target_wallpaper_id = getPlayliststateID()
-            if not target_wallpaper_id:
-                log_func.error("未获取到鼠标所在显示器的壁纸ID，无法应用主题。")
+            # 尝试获取当前活跃的壁纸ID
+            active_ids = get_active_ids()
+            if active_ids:
+                target_wallpaper_id = list(active_ids)[0]
+                log_func.info(f"获取到当前活跃壁纸ID: {target_wallpaper_id}")
+            else:
+                log_func.error("未获取到活跃壁纸ID，无法应用主题。")
                 return False
-            log_func.info(f"获取到鼠标所在显示器壁纸ID: {target_wallpaper_id}")
         except Exception as e:
-            log_func.error(f"获取鼠标所在显示器壁纸ID失败: {e}")
+            log_func.error(f"获取活跃壁纸ID失败: {e}")
             return False
 
     target_id_str = str(target_wallpaper_id).strip()
@@ -1067,80 +1065,6 @@ def ram监听():
     except Exception as e:
         log_func.error(f"RAM监听循环异常: {e}")
 
-
-def 获取鼠标所在显示器名称():
-    mouse_monitor = get_mouse_monitor_python_fallback()
-
-    name_parts = []
-    for key in ("device_name", "display_name"):
-        value = str(mouse_monitor.get(key) or "").strip()
-        if value:
-            name_parts.append(value)
-
-    if not name_parts:
-        rect = mouse_monitor.get("rect")
-        if rect:
-            name_parts.append(str(rect))
-
-    return " | ".join(name_parts) if name_parts else ""
-
-
-def 获取bin当前壁纸ID():
-    detail = get_mouse_playliststate_detail()
-    return str(detail.get("current_id") or "").strip()
-
-
-def bin监听():
-    """
-    监听鼠标所在显示器和 playliststate 当前壁纸变化。
-    """
-    log_func = TLog(获得函数名())
-    log_func.info("初始化 bin 监听器")
-
-    last_monitor_name = None
-    last_wallpaper_id = None
-    last_wallpaper_check_time = 0.0
-    monitor_check_interval = 0.2
-    wallpaper_check_interval = 2.0
-
-    try:
-        while not stop_flag.is_set():
-            if pause_flag.is_set() and not get_specified_mouse_group():
-                time.sleep(monitor_check_interval)
-                continue
-
-            try:
-                current_monitor_name = 获取鼠标所在显示器名称()
-                if current_monitor_name:
-                    if last_monitor_name is None:
-                        last_monitor_name = current_monitor_name
-                        log_func.info(f"初始鼠标所在显示器: {current_monitor_name}")
-                    elif current_monitor_name != last_monitor_name:
-                        log_func.info(f"鼠标所在显示器变化: {last_monitor_name} -> {current_monitor_name}")
-                        last_monitor_name = current_monitor_name
-                        触发刷新(target_wallpaper_id=None, changed_monitor_index=None)
-
-                now = time.time()
-                if now - last_wallpaper_check_time >= wallpaper_check_interval:
-                    last_wallpaper_check_time = now
-                    current_wallpaper_id = 获取bin当前壁纸ID()
-                    if current_wallpaper_id:
-                        if last_wallpaper_id is None:
-                            last_wallpaper_id = current_wallpaper_id
-                            log_func.info(f"初始bin壁纸ID: {current_wallpaper_id}")
-                        elif current_wallpaper_id != last_wallpaper_id:
-                            log_func.info(f"bin壁纸ID变化: {last_wallpaper_id} -> {current_wallpaper_id}")
-                            last_wallpaper_id = current_wallpaper_id
-                            save_active_wallpaper_id(current_wallpaper_id, log_func)
-                            触发刷新(target_wallpaper_id=current_wallpaper_id, changed_monitor_index=None)
-            except Exception as e:
-                log_func.error(f"bin监听异常: {e}")
-
-            time.sleep(monitor_check_interval)
-    except Exception as e:
-        log_func.error(f"bin监听循环异常: {e}")
-
-
 def is_fullscreen_app_running():
     """
     检测是否有应用程序在全屏运行
@@ -1267,18 +1191,13 @@ def 运行占用监控():
 
 if __name__ == "__main__":
     # 启动后台线程
-    t1 = None
-    if False:
-        t1 = start_thread(json监听, "JsonListener")
+    t1 = start_thread(json监听, "JsonListener")
     t2 = None
     if log.on_DEBUG == True:
         t2 = start_thread(运行占用监控, "ResourceMonitor")
-    t3 = None
-    if False:
-        t3 = start_thread(ram监听, "RamListener")
+    t3 = start_thread(ram监听, "RamListener")
     t4 = start_thread(焦点监听, "FocusListener")
     t5 = start_thread(settings_watcher, "SettingsWatcher")
-    t6 = start_thread(bin监听, "BinListener")
     
     log.info("所有后台线程已启动。")
 
@@ -1302,7 +1221,7 @@ if __name__ == "__main__":
             stop_flag.set()
 
     log.info("等待后台线程结束...")
-    for t in [t1, t2, t3, t4, t5, t6]:
+    for t in [t1, t2, t3]:
         if t and t.is_alive():
             log.info(f"正在等待 {t.name} 退出...")
             t.join(timeout=5)

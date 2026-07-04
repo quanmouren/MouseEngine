@@ -18,8 +18,41 @@ const DEFAULT_IMAGES = {
 };
 
 let currentOriginalGroup = null;
+let lastAppliedLanguage = null;
+
+function tr(key, params) {
+    return window.MouseEngineI18n ? MouseEngineI18n.t(key, params) : key;
+}
+
+function applyLanguage(root = document) {
+    if (window.MouseEngineI18n) MouseEngineI18n.apply(root);
+}
+
+function updateWindowTitle() {
+    const title = `MouseEngine-${tr('mouseGroupEditorSuffix')}`;
+    document.title = title;
+    const headerTitle = document.querySelector('.header-title');
+    if (headerTitle) {
+        headerTitle.dataset.i18n = 'mouseGroupEditor';
+        headerTitle.textContent = tr('mouseGroupEditor');
+    }
+}
+
+function updateEditorTitle(name = currentOriginalGroup) {
+    const titleElement = document.getElementById('editorTitle');
+    if (!titleElement) return;
+
+    if (name) {
+        delete titleElement.dataset.i18n;
+        titleElement.textContent = `${tr('editMouseGroup')}：${name}`;
+    } else {
+        titleElement.dataset.i18n = 'editMouseGroup';
+        titleElement.textContent = tr('editMouseGroup');
+    }
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
+    updateWindowTitle();
     renderRows();               // 右侧列表
     await renderPreviewGrid();   
     
@@ -157,9 +190,10 @@ function renderRows() {
                 <img src="${DEFAULT_IMAGES[k]}" alt="${k}">
             </div>
             <input id="input-${k}" class="position-input" placeholder="${k}" value="">
-            <button class="browse-button" onclick="handleBrowse('${k}')">浏览</button>
+            <button class="browse-button" onclick="handleBrowse('${k}')" data-i18n="browse">${tr('browse')}</button>
         </div>
     `).join('');
+    applyLanguage(container);
 }
 
 async function setPreviewImage(key, path) {
@@ -214,7 +248,7 @@ async function refreshGroups() {
 
     const newOpt = document.createElement('div');
     newOpt.className = 'dropdown-option';
-    newOpt.innerText = '+ 新建鼠标组';
+    newOpt.innerText = `+ ${tr('newMouseGroup')}`;
     newOpt.onclick = () => selectGroup(null);
     dropdown.appendChild(newOpt);
 
@@ -231,11 +265,7 @@ async function selectGroup(name) {
     currentOriginalGroup = name;
     document.getElementById('groupDropdown').style.display = 'none';
 
-    // 更新标题
-    const titleElement = document.getElementById('editorTitle');
-    if (titleElement) {
-        titleElement.textContent = name ? `编辑鼠标组：${name}` : '编辑鼠标组：新建组';
-    }
+    updateEditorTitle(name);
 
     for (const k of CURSOR_KEYS) {
         const input = document.getElementById(`input-${k}`);
@@ -265,14 +295,14 @@ async function selectGroup(name) {
 // 保存数据
 async function saveData() {
     if (!window.pywebview) {
-        alert('此功能仅在应用内可用');
+        alert(tr('thisFeatureAppOnly'));
         return;
     }
 
     // 获取保存按钮并显示加载状态
     const saveButton = document.querySelector('.save-button');
     const originalButtonText = saveButton.textContent;
-    saveButton.textContent = '保存中...';
+    saveButton.textContent = tr('saveInProgress');
     saveButton.disabled = true;
 
     try {
@@ -281,12 +311,10 @@ async function saveData() {
             data[key] = document.getElementById(`input-${key}`).value;
         }
 
-        // 获取当前组名
-        const titleElement = document.getElementById('editorTitle');
-        let groupName = titleElement.textContent.replace('编辑鼠标组：', '');
+        let groupName = currentOriginalGroup;
         
-        if (groupName === '新建组') {
-            groupName = prompt('请输入新组名：');
+        if (!groupName) {
+            groupName = prompt(`${tr('enterNewGroupName')}：`);
             if (!groupName) {
                 saveButton.textContent = originalButtonText;
                 saveButton.disabled = false;
@@ -295,7 +323,7 @@ async function saveData() {
             
             // 验证组名
             if (!validateGroupName(groupName)) {
-                alert('组名不能包含特殊字符，且长度不能超过20个字符');
+                alert(tr('invalidGroupName'));
                 saveButton.textContent = originalButtonText;
                 saveButton.disabled = false;
                 return;
@@ -304,7 +332,7 @@ async function saveData() {
             // 检查组名是否已存在
             const existingGroups = await pywebview.api.get_existing_groups();
             if (existingGroups.includes(groupName)) {
-                const confirmOverwrite = confirm('该组名已存在，是否覆盖？');
+                const confirmOverwrite = confirm(tr('groupExistsOverwrite'));
                 if (!confirmOverwrite) {
                     saveButton.textContent = originalButtonText;
                     saveButton.disabled = false;
@@ -315,7 +343,7 @@ async function saveData() {
 
         // 验证组名
         if (!validateGroupName(groupName)) {
-            alert('组名格式无效');
+            alert(tr('invalidGroupNameShort'));
             saveButton.textContent = originalButtonText;
             saveButton.disabled = false;
             return;
@@ -325,7 +353,7 @@ async function saveData() {
         if (result.status === 'success') {
             // 更新当前组信息
             currentOriginalGroup = groupName;
-            titleElement.textContent = `编辑鼠标组：${groupName}`;
+            updateEditorTitle(groupName);
             
             // 刷新组列表和预览网格
             await refreshGroups();
@@ -336,7 +364,7 @@ async function saveData() {
         }
     } catch (e) {
         console.error('保存失败', e);
-        alert('保存失败，请重试');
+        alert(tr('saveFailed'));
     } finally {
         // 恢复保存按钮状态
         saveButton.textContent = originalButtonText;
@@ -386,7 +414,7 @@ function showNotification(message, type) {
 // 浏览文件
 async function handleBrowse(key) {
     if (!window.pywebview) {
-        alert('此功能仅在应用内可用');
+        alert(tr('thisFeatureAppOnly'));
         return;
     }
 
@@ -431,20 +459,20 @@ async function confirmCreateGroup() {
     const groupName = input.value.trim();
     
     if (!groupName) {
-        alert('组名不能为空');
+        alert(tr('groupNameEmpty'));
         return;
     }
 
     // 验证组名
     if (!validateGroupName(groupName)) {
-        alert('组名不能包含特殊字符，且长度不能超过20个字符');
+        alert(tr('invalidGroupName'));
         return;
     }
 
     // 检查组名是否已存在
     const existingGroups = await pywebview.api.get_existing_groups();
     if (existingGroups.includes(groupName)) {
-        const confirmOverwrite = confirm('该组名已存在，是否覆盖？');
+        const confirmOverwrite = confirm(tr('groupExistsOverwrite'));
         if (!confirmOverwrite) {
             return;
         }
@@ -472,14 +500,14 @@ async function confirmCreateGroup() {
         }
     } catch (e) {
         console.error('创建空白组失败', e);
-        alert('创建空白组失败，请重试');
+        alert(tr('createFailed'));
     }
 }
 
 // 新建空白组
 function createEmptyGroup() {
     if (!window.pywebview) {
-        alert('此功能仅在应用内可用');
+        alert(tr('thisFeatureAppOnly'));
         return;
     }
 
@@ -490,7 +518,7 @@ function createEmptyGroup() {
 // 导入组
 async function importGroup() {
     if (!window.pywebview) {
-        alert('此功能仅在应用内可用');
+        alert(tr('thisFeatureAppOnly'));
         return;
     }
 
@@ -504,7 +532,7 @@ async function importGroup() {
         // 如果返回false，跳过刷新
     } catch (e) {
         console.error('导入组失败', e);
-        alert('导入组失败，请重试');
+        alert(tr('importFailed'));
     }
 }
 
@@ -635,7 +663,11 @@ function showContextMenu(e, groupName) {
     contextMenu.style.top = top + 'px';
     contextMenu.style.position = 'fixed';
     
+    const applyItem = document.getElementById('applyGroupItem');
     const renameItem = document.getElementById('renameGroupItem');
+    
+    applyItem.classList.remove('disabled');
+    applyItem.onclick = () => handleApplyGroup(groupName);
     
     // 如果是默认组，禁用删除选项
     if (groupName === '默认组') {
@@ -735,10 +767,32 @@ async function clearInput(key) {
     hideInputContextMenu();
 }
 
+async function handleApplyGroup(groupName) {
+    if (!window.pywebview) {
+        alert(tr('thisFeatureAppOnly'));
+        hideContextMenu();
+        return;
+    }
+
+    try {
+        const result = await pywebview.api.apply_group(groupName);
+        if (result.status === 'success') {
+            showNotification(result.msg || tr('applyGroupSuccess'), 'success');
+        } else {
+            showNotification(result.msg || tr('applyGroupFailed'), 'error');
+        }
+    } catch (e) {
+        console.error('应用组失败', e);
+        showNotification(tr('applyGroupFailed'), 'error');
+    } finally {
+        hideContextMenu();
+    }
+}
+
 // 处理删除组操作
 async function handleDeleteGroup(groupName) {
     if (!window.pywebview) {
-        alert('此功能仅在应用内可用');
+        alert(tr('thisFeatureAppOnly'));
         hideContextMenu();
         return;
     }
@@ -756,13 +810,13 @@ async function handleDeleteGroup(groupName) {
                 await selectGroup('默认组');
             }
             
-            showNotification('删除成功', 'success');
+            showNotification(tr('deleteSuccess'), 'success');
         } else {
             showNotification(result.msg, 'error');
         }
     } catch (e) {
         console.error('删除组失败', e);
-        showNotification('删除失败，请重试', 'error');
+        showNotification(tr('deleteFailed'), 'error');
     } finally {
         hideContextMenu();
     }
@@ -771,7 +825,7 @@ async function handleDeleteGroup(groupName) {
 // 处理重命名组操作
 function handleRenameGroup(groupName) {
     if (!window.pywebview) {
-        alert('此功能仅在应用内可用');
+        alert(tr('thisFeatureAppOnly'));
         hideContextMenu();
         return;
     }
@@ -817,20 +871,20 @@ async function confirmRenameGroup() {
     const oldGroupName = modal.dataset.groupName;
     
     if (!newGroupName) {
-        alert('组名不能为空');
+        alert(tr('groupNameEmpty'));
         return;
     }
     
     // 验证组名
     if (!validateGroupName(newGroupName)) {
-        alert('组名不能包含特殊字符，且长度不能超过20个字符');
+        alert(tr('invalidGroupName'));
         return;
     }
     
     // 检查组名是否已存在
     const existingGroups = await pywebview.api.get_existing_groups();
     if (existingGroups.includes(newGroupName) && newGroupName !== oldGroupName) {
-        const confirmOverwrite = confirm('该组名已存在，是否覆盖？');
+        const confirmOverwrite = confirm(tr('groupExistsOverwrite'));
         if (!confirmOverwrite) {
             return;
         }
@@ -852,12 +906,24 @@ async function confirmRenameGroup() {
                 await selectGroup(newGroupName);
             }
             
-            showNotification('重命名成功', 'success');
+            showNotification(tr('renameSuccess'), 'success');
         } else {
             showNotification(result.msg, 'error');
         }
     } catch (e) {
         console.error('重命名组失败', e);
-        showNotification('重命名失败，请重试', 'error');
+        showNotification(tr('renameFailed'), 'error');
     }
 }
+
+window.addEventListener('mouseengine-language-applied', (event) => {
+    const nextLanguage = event.detail && event.detail.language;
+    if (nextLanguage === lastAppliedLanguage) return;
+    lastAppliedLanguage = nextLanguage;
+    updateWindowTitle();
+    updateEditorTitle();
+    const dropdown = document.getElementById('groupDropdown');
+    if (dropdown && dropdown.children.length) {
+        refreshGroups();
+    }
+});

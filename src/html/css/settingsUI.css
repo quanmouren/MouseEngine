@@ -154,6 +154,20 @@
     top: -1px;
 }
 
+.performance-badge {
+    display: inline-block;
+    padding: 1px 6px;
+    font-size: 10px;
+    font-weight: bold;
+    color: #111827;
+    background: rgba(250, 204, 21, 0.95);
+    border-radius: 10px;
+    margin-left: 6px;
+    vertical-align: text-top;
+    position: relative;
+    top: -1px;
+}
+
 .settings-control {
     display: flex;
     align-items: center;

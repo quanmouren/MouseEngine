@@ -31,6 +31,82 @@
             width: 550px;
             box-shadow: none;
             backdrop-filter: none;
+            position: relative;
+        }
+
+        .language-picker {
+            position: absolute;
+            top: 18px;
+            right: 18px;
+            z-index: 10;
+        }
+
+        .language-toggle {
+            width: 34px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(45, 55, 72, 0.72);
+            border: 1px solid rgba(66, 153, 225, 0.42);
+            border-radius: 8px;
+            color: #93c5fd;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .language-toggle:hover,
+        .language-toggle.active {
+            background: rgba(66, 153, 225, 0.18);
+            border-color: #4299e1;
+            box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.16);
+        }
+
+        .language-icon {
+            width: 19px;
+            height: 19px;
+            display: block;
+            fill: currentColor;
+        }
+
+        .language-menu {
+            position: absolute;
+            top: 42px;
+            right: 0;
+            width: 132px;
+            padding: 6px;
+            background: rgba(15, 23, 42, 0.96);
+            border: 1px solid rgba(66, 153, 225, 0.28);
+            border-radius: 8px;
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32);
+        }
+
+        .language-menu.hidden {
+            display: none;
+        }
+
+        .language-option {
+            width: 100%;
+            padding: 8px 10px;
+            background: transparent;
+            border: 0;
+            border-radius: 6px;
+            color: #cbd5e1;
+            cursor: pointer;
+            font-size: 13px;
+            text-align: left;
+            transition: all 0.2s ease;
+        }
+
+        .language-option:hover {
+            background: rgba(66, 153, 225, 0.14);
+            color: #ffffff;
+        }
+
+        .language-option.active {
+            background: rgba(66, 153, 225, 0.22);
+            color: #93c5fd;
+            font-weight: 600;
         }
         
         .header {

@@ -1,3 +1,5 @@
+# Copyright (c) 2025, CIF3
+# SPDX-License-Identifier: BSD-3-Clause
 import webview
 import os
 import toml
@@ -7,6 +9,7 @@ import re
 import tkinter as tk
 from tkinter import filedialog
 from path_utils import resolve_path, get_project_root
+from i18n_utils import get_language, set_language
 try:
     import psutil
 except ImportError:
@@ -100,6 +103,12 @@ class SettingsApi:
 
     def set_window(self, window):
         self._window = window
+
+    def get_language(self):
+        return get_language()
+
+    def set_language(self, language):
+        return set_language(language)
 
     def get_auto_start(self):
         log.info("获取自启动状态")
@@ -365,6 +374,40 @@ class SettingsApi:
         except Exception as e:
             log.error(f"设置显示更多菜单内容状态失败: {e}")
             return False
+
+    def get_use_new_menu(self):
+        try:
+            config_path = resolve_path("config.toml")
+            if not os.path.exists(config_path):
+                return True
+
+            config_data = toml.load(config_path)
+            return config_data.get("config", {}).get("use_new_menu", True)
+        except Exception as e:
+            log.error(f"获取新版菜单状态失败: {e}")
+            return True
+
+    def set_use_new_menu(self, status):
+        try:
+            config_path = resolve_path("config.toml")
+            if os.path.exists(config_path):
+                config_data = toml.load(config_path)
+            else:
+                config_data = {}
+
+            if "config" not in config_data:
+                config_data["config"] = {}
+
+            config_data["config"]["use_new_menu"] = status
+
+            with open(config_path, "w", encoding="utf-8") as f:
+                toml.dump(config_data, f)
+
+            return True
+        except Exception as e:
+            log.error(f"设置新版菜单状态失败: {e}")
+            return False
+
     def 清理缓存(self):
         # 清理主目录下的cache文件夹和html\cache文件夹内的所有文件
         try:
@@ -530,11 +573,11 @@ class SettingsApi:
             version_path = resolve_path("version.toml")
             if os.path.exists(version_path):
                 version_data = toml.load(version_path)
-                return version_data.get("__version__", "Beta1.3")
-            return "Beta1.3"
+                return version_data.get("__version__", "V1.0")
+            return "V1.0"
         except Exception as e:
             log.error(f"获取版本失败: {e}")
-            return "Beta1.3"
+            return "V1.0"
 
 
     def get_cursor_groups(self):

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MouseEngine</title>
+    <link rel="stylesheet" href="css/NewUI.css">
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <nav class="nav-list">
+                <button class="nav-item active" data-page="groups" data-target="mouseUI.html" data-i18n="mouseGroups">鼠标组</button>
+                <button class="nav-item" data-page="wallpapers" data-target="mainUIWeb.html" data-i18n="wallpaperBinding">壁纸绑定</button>
+                <button class="nav-item" data-page="settings" data-target="settingsUI.html" data-i18n="settings">设置</button>
+            </nav>
+        </aside>
+        <main class="workspace">
+            <iframe id="pageFrame" title="MouseEngine page" src="mouseUI.html"></iframe>
+        </main>
+    </div>
+    <script src="js/i18n.js"></script>
+    <script src="js/NewUI.js"></script>
+</body>
+</html>

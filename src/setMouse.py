@@ -1,6 +1,5 @@
 # Copyright (c) 2025, CIF3
 # SPDX-License-Identifier: BSD-3-Clause
-import winreg
 import ctypes
 from ctypes import wintypes
 import toml
@@ -40,6 +39,13 @@ MOUSES_DIR = resolve_path("mouses")
 DEFAULT_GROUP_NAME = "默认"
 DEFAULT_GROUP_DIR = os.path.join(MOUSES_DIR, DEFAULT_GROUP_NAME)
 DEFAULT_GROUP_CONFIG = os.path.join(DEFAULT_GROUP_DIR, "config.toml")
+NATIVE_CURSOR_DLL_CANDIDATES = [
+    resolve_path("setMouse.dll"),
+    os.path.abspath(os.path.join(PROJECT_ROOT, os.pardir, "setMouse.dll")),
+]
+NATIVE_CURSOR_DLL = NATIVE_CURSOR_DLL_CANDIDATES[0]
+_native_cursor_dll = None
+_native_cursor_load_error = None
 
 
 def _safe_toml_load(path: str) -> dict:
@@ -95,6 +101,100 @@ def 获取默认图标路径(index: int) -> str | None:
     return abs_path if os.path.exists(abs_path) else None
 
 
+def _resolve_cursor_paths(cursor_paths, enable_default: bool):
+    resolved_paths = []
+    for index, cursor_name in enumerate(CURSOR_ORDER_MAPPING):
+        cursor_path = ""
+        original_path = None
+        if isinstance(cursor_paths, (list, tuple)) and index < len(cursor_paths):
+            original_path = cursor_paths[index]
+
+        if original_path is None or str(original_path).strip() == "":
+            if enable_default:
+                default_path = 获取默认图标路径(index)
+                if default_path:
+                    log.debug(f"使用默认光标 {cursor_name}: {default_path}")
+                    cursor_path = default_path
+                else:
+                    log.debug(f"默认光标缺失，跳过: {cursor_name}")
+            else:
+                log.debug(f"未提供光标且未启用默认组，跳过: {cursor_name}")
+        else:
+            candidate_path = _abs_from_project(original_path)
+            log.debug(f"处理光标 {cursor_name}: {candidate_path}")
+
+            if os.path.exists(candidate_path):
+                cursor_path = candidate_path
+            else:
+                log.error(f"文件不存在 - {candidate_path}")
+                if enable_default:
+                    default_path = 获取默认图标路径(index)
+                    if default_path:
+                        log.debug(f"使用默认光标 {cursor_name} 替代: {default_path}")
+                        cursor_path = default_path
+
+        resolved_paths.append(cursor_path)
+    return resolved_paths
+
+
+def _load_native_cursor_dll():
+    global _native_cursor_dll, _native_cursor_load_error
+    if _native_cursor_dll is not None:
+        return _native_cursor_dll
+    if _native_cursor_load_error is not None:
+        return None
+    dll_path = next((path for path in NATIVE_CURSOR_DLL_CANDIDATES if os.path.exists(path)), None)
+    if not dll_path:
+        _native_cursor_load_error = "DLL 不存在: " + " | ".join(NATIVE_CURSOR_DLL_CANDIDATES)
+        return None
+
+    try:
+        dll = ctypes.WinDLL(dll_path)
+        dll.me_apply_system_cursors.argtypes = [
+            ctypes.POINTER(ctypes.c_wchar_p),
+            ctypes.c_int,
+            ctypes.POINTER(wintypes.DWORD),
+            ctypes.POINTER(wintypes.DWORD),
+        ]
+        dll.me_apply_system_cursors.restype = ctypes.c_int
+        _native_cursor_dll = dll
+        return dll
+    except Exception as e:
+        _native_cursor_load_error = str(e)
+        log.error(f"加载 native 光标 DLL 失败: {e}")
+        return None
+
+
+def _设置鼠标指针_native(resolved_paths):
+    dll = _load_native_cursor_dll()
+    if dll is None:
+        if _native_cursor_load_error:
+            log.error(f"native 光标接口不可用: {_native_cursor_load_error}")
+        return False
+
+    values = [str(path or "") for path in resolved_paths[:len(CURSOR_ORDER_MAPPING)]]
+    array_type = ctypes.c_wchar_p * len(values)
+    path_array = array_type(*values)
+    failed_index = wintypes.DWORD(0)
+    last_error = wintypes.DWORD(0)
+
+    ok = dll.me_apply_system_cursors(
+        path_array,
+        len(values),
+        ctypes.byref(failed_index),
+        ctypes.byref(last_error),
+    )
+    if ok:
+        return True
+
+    failed_name = CURSOR_ORDER_MAPPING[failed_index.value] if failed_index.value < len(CURSOR_ORDER_MAPPING) else "未知"
+    log.error(
+        f"native 设置光标失败: index={failed_index.value}, "
+        f"name={failed_name}, win32_error={last_error.value}"
+    )
+    return False
+
+
 def 设置鼠标指针(cursor_paths):
     log.debug(f"收到样式: {cursor_paths}")
 
@@ -104,69 +204,8 @@ def 设置鼠标指针(cursor_paths):
     else:
         log.debug("默认鼠标组未启用")
 
-    def update_system_cursors():
-        # SPI_SETCURSORS: 0x0057
-        # SPIF_SENDCHANGE: 0x01（广播变更）
-        ctypes.windll.user32.SystemParametersInfoW(
-            wintypes.UINT(0x0057),
-            wintypes.UINT(0),
-            wintypes.LPVOID(None),
-            wintypes.UINT(0x01)
-        )
-
-    base_reg_path = r"Control Panel\Cursors"
-
-    try:
-        base_key = winreg.OpenKey(
-            winreg.HKEY_CURRENT_USER,
-            base_reg_path,
-            0,
-            winreg.KEY_SET_VALUE
-        )
-
-        for index, cursor_name in enumerate(CURSOR_ORDER_MAPPING):
-            cursor_path = None
-
-            original_path = None
-            if isinstance(cursor_paths, (list, tuple)) and index < len(cursor_paths):
-                original_path = cursor_paths[index]
-            if original_path is None or str(original_path).strip() == "":
-                if enable_default:
-                    default_path = 获取默认图标路径(index)
-                    if default_path:
-                        log.debug(f"使用默认光标 {cursor_name}: {default_path}")
-                        cursor_path = default_path
-                    else:
-                        log.debug(f"默认光标缺失，跳过: {cursor_name}")
-                else:
-                    log.debug(f"未提供光标且未启用默认组，跳过: {cursor_name}")
-            else:
-                candidate_path = _abs_from_project(original_path)
-                log.debug(f"处理光标 {cursor_name}: {candidate_path}")
-
-                if os.path.exists(candidate_path):
-                    cursor_path = candidate_path
-                else:
-                    log.error(f"文件不存在 - {candidate_path}")
-                    if enable_default:
-                        default_path = 获取默认图标路径(index)
-                        if default_path:
-                            log.debug(f"使用默认光标 {cursor_name} 替代: {default_path}")
-                            cursor_path = default_path
-
-            # 写注册表
-            if cursor_path and str(cursor_path).strip():
-                winreg.SetValueEx(base_key, cursor_name, 0, winreg.REG_SZ, cursor_path)
-            else:
-                log.debug(f"跳过空光标设置: {cursor_name}")
-
-        winreg.CloseKey(base_key)
-        update_system_cursors()
-        return True
-
-    except Exception as e:
-        log.error(f"设置出错: {e}")
-        return False
+    resolved_paths = _resolve_cursor_paths(cursor_paths, enable_default)
+    return _设置鼠标指针_native(resolved_paths)
 
 
 if __name__ == "__main__":

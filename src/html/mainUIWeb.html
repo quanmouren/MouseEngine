@@ -16,7 +16,7 @@
             <div class="header-right">
                 <label class="checkbox-container">
                     <input type="checkbox" id="showPlaylistOnly" class="checkbox-input">
-                    <span class="checkbox-text">仅显示当前播放列表</span>
+                    <span class="checkbox-text" data-i18n="showCurrentPlaylistOnly">仅显示当前播放列表</span>
                 </label>
             </div>
         </div>
@@ -36,10 +36,10 @@
                     </div>
                 </div>
                 <div class="wallpaper-details" id="wallpaperDetails">
-                    <div class="wallpaper-title" id="detailTitle">请选择壁纸</div>
-                    <div class="wallpaper-subtitle" id="detailSubtitle">暂无信息</div>
+                    <div class="wallpaper-title" id="detailTitle" data-i18n="selectWallpaper">请选择壁纸</div>
+                    <div class="wallpaper-subtitle" id="detailSubtitle" data-i18n="noInfo">暂无信息</div>
                     <div class="details-list">
-                        <div id="detailType">类型：-</div>
+                        <div id="detailType" data-i18n-prefix="type" data-i18n-value="-">类型：-</div>
                         <div class="icons-container">
                             <div class="icon-item"></div>
                             <div class="icon-item"></div>
@@ -59,7 +59,7 @@
                         </div>
                         <div class="select-container">
                             <select class="custom-select">
-                                <option value="">请选择</option>
+                                <option value="" data-i18n="select">请选择</option>
                                 <option value="option1">选项1</option>
                             </select>
                         </div>
@@ -71,8 +71,8 @@
         <!-- 底部播放列表 -->
         <div class="footer">
             <div class="playlist-header">
-                <div class="playlist-title">当前播放列表: 加载中...</div>
-                <div class="playlist-loading" style="display: none;">加载中...</div>
+                <div class="playlist-title" data-i18n="currentPlaylistLoading">当前播放列表: 加载中...</div>
+                <div class="playlist-loading" style="display: none;" data-i18n="loading">加载中...</div>
             </div>
             <div class="playlist-content">
                 <!-- 播放列表项将通过 JavaScript 动态添加 -->
@@ -80,6 +80,8 @@
         </div>
     </div>
 
+    <script src="js/pywebviewBridge.js"></script>
+    <script src="js/i18n.js"></script>
     <script src="js/mainUIWeb.js"></script>
 </body>
 </html>

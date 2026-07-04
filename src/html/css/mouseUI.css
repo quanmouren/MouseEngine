@@ -11,14 +11,16 @@ body {
 /* 顶部导航 */
 .header {
     background: rgba(20, 30, 60, 0.9);
-    padding: 10px 20px;
+    height: 46px;
+    min-height: 46px;
+    padding: 0 20px;
     border-bottom: 1px solid #334155;
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-shrink: 0;
 }
-.header-title { font-weight: bold; font-size: 16px; margin-right: 20px; }
+.header-title { font-weight: bold; font-size: 16px; line-height: 1; margin-right: 20px; }
 .header-left {
     display: flex;
     align-items: center;
@@ -29,13 +31,16 @@ body {
     gap: 10px;
 }
 .header-btn {
-    padding: 4px 8px;
+    height: 28px;
+    padding: 0 10px;
     background: rgba(45, 55, 72, 0.7);
     border: 1px solid #334155;
     border-radius: 4px;
     cursor: pointer;
     font-size: 12px;
     color: white;
+    display: flex;
+    align-items: center;
 }
 
 .main-content { display: flex; flex: 1; overflow: hidden; }
