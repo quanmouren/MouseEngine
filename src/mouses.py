@@ -483,6 +483,180 @@ def 导入组包(pack_path, base_path=MOUSE_BASE_PATH):
         return False, str(e), None
 
 
+# 完整备份包扩展名（项目级备份：mouses/ + config.toml）
+MOUSE_ENGINE_PACK_EXT = ".mecpack"
+CONFIG_FILE_NAME = "config.toml"
+
+
+def _safe_join_under(base, rel):
+    """
+    安全地拼接 base + rel（POSIX 风格 rel），防止 zip slip。
+    - 拒绝任何包含 `..` 的路径（不静默修复）
+    - 拒绝绝对路径
+    - 返回绝对路径（base 之下的）
+    """
+    if os.path.isabs(rel):
+        raise ValueError(f"非法绝对路径: {rel}")
+    rel_norm = rel.replace("\\", "/")
+    parts = rel_norm.split("/")
+    if any(p == ".." for p in parts):
+        raise ValueError(f"非法路径（可能 zip slip）: {rel}")
+    target = os.path.abspath(os.path.join(base, *parts))
+    base_abs = os.path.abspath(base)
+    if not (target == base_abs or target.startswith(base_abs + os.sep)):
+        raise ValueError(f"非法路径（zip slip 防护）: {rel}")
+    return target
+
+
+def 导出完整备份(target_path, project_root=None):
+    """
+    将整个项目数据（mouses/ + config.toml）打包为 .mecpack (zip) 文件。
+
+    zip 内结构：
+        mouses/<组名>/config.toml
+        mouses/<组名>/*.cur / *.ani
+        config.toml
+
+    默认组也包含在内。
+
+    :param target_path: 目标 .mepack 文件路径
+    :param project_root: 项目根目录，默认自动 resolve
+    :return: (success: bool, message: str)
+    """
+    import zipfile
+
+    if not target_path:
+        return False, "未指定导出路径"
+
+    if project_root is None:
+        from path_utils import get_project_root
+        project_root = get_project_root()
+    project_root = os.path.abspath(project_root)
+
+    mouses_dir = os.path.join(project_root, "mouses")
+    main_config = os.path.join(project_root, "config.toml")
+
+    if not os.path.isabs(target_path):
+        target_path = os.path.abspath(target_path)
+    if not target_path.lower().endswith(MOUSE_ENGINE_PACK_EXT):
+        target_path = target_path + MOUSE_ENGINE_PACK_EXT
+
+    try:
+        os.makedirs(os.path.dirname(target_path) or ".", exist_ok=True)
+        file_count = 0
+        with zipfile.ZipFile(target_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            # 1) mouses/ 下所有组
+            if os.path.isdir(mouses_dir):
+                for root, _dirs, files in os.walk(mouses_dir):
+                    for fname in files:
+                        file_path = os.path.join(root, fname)
+                        rel = os.path.relpath(file_path, project_root).replace("\\", "/")
+                        # 路径安全
+                        if ".." in rel.split("/"):
+                            log.warn(f"跳过可疑路径: {rel}")
+                            continue
+                        zf.write(file_path, rel)
+                        file_count += 1
+
+            # 2) 主 config.toml
+            if os.path.isfile(main_config):
+                zf.write(main_config, "config.toml")
+                file_count += 1
+
+        log.info(f"导出完整备份成功 -> {target_path}（{file_count} 个文件）")
+        return True, target_path
+    except Exception as e:
+        log.error(f"导出完整备份失败: {e}")
+        return False, str(e)
+
+
+def 导入完整备份(pack_path, mode="merge", project_root=None):
+    """
+    从 .mecpack 文件恢复项目数据。
+
+    :param mode:
+        - 'merge'    合并模式：保留现有内容；冲突时按"恢复单位=整个鼠标组"用 pack 内容
+        - 'overwrite' 覆盖模式：先删 mouses/ 目录和 config.toml，再解压 pack
+    :return: (success: bool, message: str)
+    """
+    import zipfile
+
+    if mode not in ("merge", "overwrite"):
+        return False, f"未知恢复模式: {mode}"
+
+    if not pack_path or not pack_path.strip():
+        return False, "未选择 .mecpack 文件"
+    pack_path = resolve_path(pack_path)
+    if not os.path.isfile(pack_path):
+        return False, f".mecpack 文件不存在: {pack_path}"
+    if not pack_path.lower().endswith(MOUSE_ENGINE_PACK_EXT):
+        return False, f"文件扩展名不是 {MOUSE_ENGINE_PACK_EXT}"
+
+    if project_root is None:
+        from path_utils import get_project_root
+        project_root = get_project_root()
+    project_root = os.path.abspath(project_root)
+
+    mouses_dir = os.path.join(project_root, "mouses")
+    main_config = os.path.join(project_root, "config.toml")
+
+    # 覆盖模式：先清空目标
+    if mode == "overwrite":
+        try:
+            if os.path.isdir(mouses_dir):
+                shutil.rmtree(mouses_dir)
+                log.info(f"已清空 mouses/ 目录")
+            if os.path.isfile(main_config):
+                os.remove(main_config)
+                log.info(f"已删除 config.toml")
+        except Exception as e:
+            log.error(f"覆盖模式清理失败: {e}")
+            return False, f"清理失败: {e}"
+
+    # 解压
+    try:
+        with zipfile.ZipFile(pack_path, "r") as zf:
+            names = zf.namelist()
+
+            # 在合并模式下，先把 pack 内的"组目录"列出来，准备按组覆盖
+            groups_to_replace = set()
+            if mode == "merge":
+                for n in names:
+                    # mouses/<组名>/... 中的 <组名>
+                    parts = n.replace("\\", "/").split("/")
+                    if len(parts) >= 3 and parts[0] == "mouses" and parts[1] and parts[1] != "..":
+                        groups_to_replace.add(parts[1])
+
+                # 把要替换的整个组先删掉（保证恢复单位=整个光标组）
+                for g in groups_to_replace:
+                    g_path = os.path.join(mouses_dir, g)
+                    if os.path.isdir(g_path):
+                        shutil.rmtree(g_path)
+                        log.info(f"合并模式：已删除原组目录 {g_path}")
+
+            # 遍历解压
+            for n in names:
+                # zip slip 防护
+                target = _safe_join_under(project_root, n)
+                if os.path.isabs(n) or n.endswith("/"):
+                    # 跳过目录条目或绝对路径
+                    continue
+                if os.path.dirname(n):
+                    os.makedirs(os.path.dirname(target), exist_ok=True)
+                with zf.open(n) as src, open(target, "wb") as dst:
+                    shutil.copyfileobj(src, dst)
+
+        log.info(f"导入完整备份成功 ({mode}): {pack_path}")
+        return True, "恢复完成"
+    except zipfile.BadZipFile:
+        return False, "文件不是有效的 zip 包"
+    except ValueError as ve:
+        return False, f"包结构异常: {ve}"
+    except Exception as e:
+        log.error(f"导入完整备份失败 ({pack_path}): {e}")
+        return False, str(e)
+
+
 def old_add_wallpaper(name, query_path, config_path=CONFIG_PATH):
     """
     绑定壁纸 ID 到 config.toml。

@@ -448,3 +448,46 @@
         ::-webkit-scrollbar-thumb:hover {
             background: rgba(148, 163, 184, 0.7);
         }
+
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 1000;
+    opacity: 0;
+    transform: translateY(-20px);
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    max-width: 420px;
+    word-break: break-word;
+    white-space: pre-wrap;
+    line-height: 1.4;
+}
+
+.notification.success {
+    background-color: #10b981;
+    color: white;
+    border-left: 4px solid #059669;
+}
+
+.notification.error {
+    background-color: #ef4444;
+    color: white;
+    border-left: 4px solid #dc2626;
+}
+
+.notification.warning {
+    background-color: #f59e0b;
+    color: white;
+    border-left: 4px solid #d97706;
+}
+
+.notification.info {
+    background-color: #3b82f6;
+    color: white;
+    border-left: 4px solid #2563eb;
+}

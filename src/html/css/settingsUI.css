@@ -514,3 +514,64 @@
     font-size: 11px;
     color: #94a3b8;
 }
+
+/* Markdown 渲染样式（用于许可证 modal 等） */
+.markdown-body h1 {
+    font-size: 20px;
+    font-weight: bold;
+    color: #3b82f6;
+    margin: 0 0 12px 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+}
+.markdown-body h2 {
+    font-size: 15px;
+    font-weight: bold;
+    color: #3b82f6;
+    margin: 20px 0 10px 0;
+    padding-bottom: 4px;
+    border-bottom: 1px solid rgba(51, 65, 85, 0.3);
+}
+.markdown-body h3 {
+    font-size: 13px;
+    font-weight: bold;
+    color: #94a3b8;
+    margin: 16px 0 8px 0;
+}
+.markdown-body p {
+    margin: 8px 0;
+    line-height: 1.6;
+    color: #cbd5e1;
+}
+.markdown-body hr {
+    border: none;
+    height: 1px;
+    background: rgba(51, 65, 85, 0.5);
+    margin: 18px 0;
+}
+.markdown-body ul {
+    margin: 8px 0;
+    padding-left: 22px;
+    color: #cbd5e1;
+    line-height: 1.6;
+}
+.markdown-body li {
+    margin: 4px 0;
+}
+.markdown-body code {
+    background: rgba(30, 41, 59, 0.8);
+    color: #93c5fd;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 12px;
+    word-break: break-all;
+}
+.markdown-body a {
+    color: #60a5fa;
+    text-decoration: underline;
+    word-break: break-all;
+}
+.markdown-body a:hover {
+    color: #93c5fd;
+}

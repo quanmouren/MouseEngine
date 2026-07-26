@@ -293,45 +293,7 @@ body {
     display: none;
 }
 
-/* 通知样式 */
-.notification {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 12px 20px;
-    border-radius: 6px;
-    font-size: 14px;
-    font-weight: 500;
-    z-index: 1000;
-    opacity: 0;
-    transform: translateY(-20px);
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.notification.success {
-    background-color: #10b981;
-    color: white;
-    border-left: 4px solid #059669;
-}
-
-.notification.error {
-    background-color: #ef4444;
-    color: white;
-    border-left: 4px solid #dc2626;
-}
-
-.notification.warning {
-    background-color: #f59e0b;
-    color: white;
-    border-left: 4px solid #d97706;
-}
-
-.notification.info {
-    background-color: #3b82f6;
-    color: white;
-    border-left: 4px solid #2563eb;
-}
+/* 通知样式由 mainUIWeb.css 共享提供 */
 
 /* 悬浮窗样式 */
 .modal-overlay {
