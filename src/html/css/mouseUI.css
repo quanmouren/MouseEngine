@@ -92,6 +92,34 @@ body {
     text-overflow: ellipsis;
     color: #ffffff;
     margin-top: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+/* 组名（左侧，自动省略） */
+.group-name-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+/* 作者（位于组名右侧）：未填写时不显示 */
+.group-author {
+    flex: 0 0 auto;
+    display: none;
+    color: #94a3b8;
+    font-size: 10px;
+    padding: 1px 6px;
+    border: 1px solid rgba(148, 163, 184, 0.4);
+    border-radius: 8px;
+    max-width: 50%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.group-author.is-shown {
+    display: inline-block;
 }
 /* 主指针位置 */
 .cursor-slot.main {

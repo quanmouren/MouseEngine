@@ -88,13 +88,22 @@ async function renderPreviewGrid() {
         const groupCard = document.createElement('div');
         groupCard.className = 'grid-item';
         groupCard.dataset.group = groupName;
-        
-        // 组名称
+
+        // 组名称 + 作者（作者位于组名右侧）
         const nameLabel = document.createElement('div');
         nameLabel.className = 'group-name';
-        nameLabel.textContent = groupName;
+
+        const nameText = document.createElement('span');
+        nameText.className = 'group-name-text';
+        nameText.textContent = groupName;
+        nameLabel.appendChild(nameText);
+
+        const authorSpan = document.createElement('span');
+        authorSpan.className = 'group-author';
+        nameLabel.appendChild(authorSpan);
+
         groupCard.appendChild(nameLabel);
-        
+
         // 加载组配置
         let groupConfig = {};
         if (window.pywebview) {
@@ -102,6 +111,18 @@ async function renderPreviewGrid() {
                 groupConfig = await pywebview.api.load_group_config(groupName);
             } catch (e) {
                 console.error('加载组配置失败:', e);
+            }
+
+            // 加载组元数据（作者信息）：为空则不显示徽章
+            try {
+                const meta = await pywebview.api.get_group_meta(groupName);
+                const author = meta && meta.author ? String(meta.author).trim() : '';
+                if (author) {
+                    authorSpan.textContent = author;
+                    authorSpan.classList.add('is-shown');
+                }
+            } catch (e) {
+                console.warn('加载组元数据失败:', e);
             }
         }
         

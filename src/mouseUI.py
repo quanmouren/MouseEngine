@@ -10,7 +10,7 @@ import signal
 import threading
 from PIL import Image
 from lib.INFParser import INFParser
-from mouses import 保存组配置, CURSOR_ORDER_MAPPING
+from mouses import 保存组配置, CURSOR_ORDER_MAPPING, read_group_meta, build_group_meta
 from setMouse import 设置鼠标指针
 from Tlog import TLog
 from path_utils import resolve_path
@@ -50,6 +50,33 @@ class EditMouseApi:
             d for d in os.listdir(MOUSE_BASE_PATH)
             if os.path.isdir(os.path.join(MOUSE_BASE_PATH, d))
         ]
+
+    def get_group_meta(self, group_name):
+        """
+        获取鼠标组元数据。
+        返回字典: { author, url, created_date, added_date }
+        author / url 为空字符串时表示未填写，前端可不显示。
+        """
+        empty = {
+            "author": "",
+            "url": "",
+            "created_date": "",
+            "added_date": "",
+        }
+        if not group_name:
+            return empty
+
+        config_path = os.path.join(MOUSE_BASE_PATH, group_name, "config.toml")
+        meta = read_group_meta(config_path)
+        if not meta:
+            return empty
+
+        return {
+            "author": str(meta.get("author", "") or ""),
+            "url": str(meta.get("url", "") or ""),
+            "created_date": str(meta.get("created_date", "") or ""),
+            "added_date": str(meta.get("added_date", "") or ""),
+        }
 
     def load_group_config(self, group_name):
         path = os.path.join(MOUSE_BASE_PATH, group_name, "config.toml")
@@ -280,7 +307,7 @@ class EditMouseApi:
                 log.val(f"cursor_paths: {cursor_paths}")
                 log.val(f"scheme_name: {scheme_name}")
                 if scheme_name and cursor_paths != ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '']:
-                    保存组配置(scheme_name, "mouses", cursor_paths)
+                    保存组配置(scheme_name, "mouses", cursor_paths, is_import=True)
                     success = True
                     result_box[0] = success
                 else:

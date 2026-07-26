@@ -3,6 +3,7 @@
 import os
 import shutil
 import toml
+from datetime import datetime
 try:
     import portalocker
 except ImportError:
@@ -25,6 +26,71 @@ log = TLog("mouses")
 
 CONFIG_PATH = "config.toml"
 MOUSE_BASE_PATH = "mouses"
+
+
+def _today_str():
+    """返回当前日期的 YYYY-MM-DD 字符串"""
+    return datetime.now().strftime("%Y-%m-%d")
+
+
+def read_group_meta(config_file_path):
+    """
+    读取鼠标组 config.toml 的 [meta] 段。
+    文件不存在或解析失败时返回 None。
+    """
+    if not config_file_path or not os.path.exists(config_file_path):
+        return None
+    try:
+        with open(config_file_path, "r", encoding="utf-8") as f:
+            data = toml.load(f)
+        meta = data.get("meta")
+        if isinstance(meta, dict):
+            return meta
+        return None
+    except Exception as e:
+        log.debug(f"读取 meta 失败 ({config_file_path}): {e}")
+        return None
+
+
+def build_group_meta(existing_meta=None, is_import=False):
+    """
+    根据已有 meta 构造新的 meta 字典。
+
+    - is_import=True（从外部 INF 等导入）：
+        * created_date 保持原值（即便为空也不动，不填今天）
+        * added_date 设为今天（因为刚刚被加进来）
+        * author / url 尽量保留
+
+    - is_import=False（用户主动新建 / 编辑）：
+        * 已有 created_date：保留，更新 added_date 到今天
+        * 没有 created_date（全新创建）：created_date = added_date = 今天
+        * author / url 留空（由用户自行填写）
+    """
+    today = _today_str()
+    existing = existing_meta if isinstance(existing_meta, dict) else {}
+
+    if is_import:
+        return {
+            "created_date": existing.get("created_date", ""),
+            "added_date": today,
+            "author": existing.get("author", ""),
+            "url": existing.get("url", ""),
+        }
+
+    if existing.get("created_date"):
+        return {
+            "created_date": existing.get("created_date", today),
+            "added_date": today,
+            "author": existing.get("author", ""),
+            "url": existing.get("url", ""),
+        }
+
+    return {
+        "created_date": today,
+        "added_date": today,
+        "author": "",
+        "url": "",
+    }
 
 def load_toml_config(path=CONFIG_PATH):
     """加载顶层 config.toml 文件"""
@@ -125,12 +191,13 @@ def 触发刷新(config_path, username, monitor=None):
     return False
 
 
-def 保存组配置(name, folder_path, file_list):
+def 保存组配置(name, folder_path, file_list, is_import=False):
     """
     保存配置文件。
     :param name: 此配置名称
     :param folder_path: 配置文件夹路径
     :param file_list: 15个文件路径列表
+    :param is_import: 是否为从外部导入（INF 等）。为 True 时不会动 created_date。
     """
     if len(file_list) != 15:
         log.error(f"file_list 长度不符: {len(file_list)} (期望 15)")
@@ -140,12 +207,12 @@ def 保存组配置(name, folder_path, file_list):
     target_folder = os.path.join(folder_path, name)
     os.makedirs(target_folder, exist_ok=True)
     log.debug(f"目标文件夹路径: {target_folder}")
-    
+
     mouse_config = {}
-    
+
     for i, file_path_input in enumerate(file_list):
         cursor_name = CURSOR_ORDER_MAPPING[i]
-        
+
         # 处理空路径
         if not file_path_input or not file_path_input.strip():
             mouse_config[cursor_name] = ""
@@ -153,7 +220,7 @@ def 保存组配置(name, folder_path, file_list):
 
         try:
             source_path = os.path.abspath(file_path_input)
-            
+
             if not os.path.exists(source_path):
                 log.error(f"源文件不存在，跳过: {source_path}")
                 mouse_config[cursor_name] = ""
@@ -162,7 +229,7 @@ def 保存组配置(name, folder_path, file_list):
             file_name = os.path.basename(source_path)
             # 删除文件名中的空格
             new_file_name = file_name.replace(' ', '')
-            
+
             target_path = os.path.join(target_folder, new_file_name)
             target_path_abs = os.path.abspath(target_path)
 
@@ -179,7 +246,7 @@ def 保存组配置(name, folder_path, file_list):
                 log.debug(f"已复制文件: {file_name} -> {new_file_name}")
             else:
                 log.debug(f"文件已存在且相同，跳过复制: {new_file_name}")
-            
+
             # 保存相对路径，相对于项目根目录
             from path_utils import get_project_root
             project_root = get_project_root()
@@ -194,7 +261,11 @@ def 保存组配置(name, folder_path, file_list):
 
     config_data = {'mouses': mouse_config}
     config_file_path = os.path.join(target_folder, "config.toml")
-    
+
+    # 读取已有 meta（如果存在），用于按场景决定如何填充
+    existing_meta = read_group_meta(config_file_path)
+    config_data['meta'] = build_group_meta(existing_meta, is_import=is_import)
+
     # 写入配置文件
     try:
         if portalocker:
@@ -203,7 +274,7 @@ def 保存组配置(name, folder_path, file_list):
         else:
             with open(config_file_path, 'w', encoding='utf-8') as f:
                 toml.dump(config_data, f)
-                
+
         log.info(f"配置保存成功: {config_file_path}")
         return target_folder
     except Exception as e:
