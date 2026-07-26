@@ -10,7 +10,7 @@ import signal
 import threading
 from PIL import Image
 from lib.INFParser import INFParser
-from mouses import 保存组配置, CURSOR_ORDER_MAPPING, read_group_meta, build_group_meta
+from mouses import 保存组配置, CURSOR_ORDER_MAPPING, read_group_meta, build_group_meta, 导出组, 导入组包, MOUSE_GROUP_PACK_EXT
 from setMouse import 设置鼠标指针
 from Tlog import TLog
 from path_utils import resolve_path
@@ -286,41 +286,131 @@ class EditMouseApi:
         except Exception as e:
             log.error(f"应用组失败: {e}")
             return {"status": "error", "msg": str(e)}
-    
-    def 导入组(self):
+
+    def export_group(self, group_name):
+        """
+        导出鼠标组为 .mepack (zip) 文件。
+        - 默认组允许导出
+        - 通过 webview SAVE_DIALOG 让用户选择保存位置
+        - 用户取消对话框返回 status=cancelled
+        """
+        if not group_name or not group_name.strip():
+            return {"status": "error", "msg": "组名不能为空"}
+
+        group_folder = os.path.join(MOUSE_BASE_PATH, group_name)
+        if not os.path.isdir(group_folder):
+            return {"status": "error", "msg": f"组 [{group_name}] 不存在"}
+
         import threading
-        done = threading.Event() 
+        done = threading.Event()
         result_box = [None]
+
         def worker():
             try:
-                # 打开文件对话框选择 INF 文件
-                inf_path = self._window.create_file_dialog(
+                default_filename = f"{group_name}{MOUSE_GROUP_PACK_EXT}"
+                res = self._window.create_file_dialog(
+                    webview.SAVE_DIALOG,
+                    directory="",
+                    save_filename=default_filename,
+                    file_types=(f"MouseEngine 鼠标组包 (*{MOUSE_GROUP_PACK_EXT})",)
+                )
+                if not res:
+                    result_box[0] = {"status": "cancelled", "msg": "已取消导出"}
+                    return
+
+                target_path = res[0] if isinstance(res, (list, tuple)) else res
+                if not target_path:
+                    result_box[0] = {"status": "cancelled", "msg": "已取消导出"}
+                    return
+
+                success, msg = 导出组(group_name, target_path)
+                if success:
+                    result_box[0] = {"status": "success", "msg": f"已导出组 [{group_name}] → {msg}"}
+                else:
+                    result_box[0] = {"status": "error", "msg": f"导出失败: {msg}"}
+            except Exception as e:
+                log.error(f"导出组失败: {e}")
+                result_box[0] = {"status": "error", "msg": str(e)}
+            finally:
+                done.set()
+
+        threading.Thread(target=worker, daemon=True).start()
+        done.wait()
+        return result_box[0]
+
+    def 导入组(self):
+        """
+        导入鼠标组（统一入口）。
+        - 文件对话框同时支持 .inf 和 .mepack
+        - 选中后按扩展名二次分流：
+            * .mepack -> mouses.导入组包
+            * 其他   -> 原有 INFParser 流程
+        返回 {status, msg, group_name?}：
+            status: 'success' / 'cancelled' / 'error'
+        """
+        import threading
+        done = threading.Event()
+        result_box = [None]
+
+        def worker():
+            try:
+                # 二次判断的第一步：弹文件对话框，让用户选类型
+                # pywebview 期望 file_types 是 list of strings，每个 string 形如 "描述 (*.ext)"
+                res = self._window.create_file_dialog(
                     webview.OPEN_DIALOG,
                     allow_multiple=False,
-                    file_types=('INF Files (*.inf)',)
+                    file_types=(
+                        f"MouseEngine 鼠标组包 (*{MOUSE_GROUP_PACK_EXT})",
+                        "INF 主题 (*.inf)",
+                    )
                 )
-                inf_path = inf_path[0] if inf_path else ""
-                
-                # 解析 INF 文件
-                parser = INFParser(inf_path)
+                if not res:
+                    result_box[0] = {"status": "cancelled", "msg": "已取消导入"}
+                    return
+
+                file_path = res[0] if isinstance(res, (list, tuple)) else res
+                if not file_path:
+                    result_box[0] = {"status": "cancelled", "msg": "已取消导入"}
+                    return
+
+                # 二次判断的第二步：按扩展名二次分流
+                ext = os.path.splitext(file_path)[1].lower()
+                if ext == MOUSE_GROUP_PACK_EXT:
+                    # 分流到 .mepack 导入
+                    success, msg, group_name = 导入组包(file_path)
+                    if success:
+                        result_box[0] = {
+                            "status": "success",
+                            "msg": msg,
+                            "group_name": group_name,
+                        }
+                    else:
+                        result_box[0] = {"status": "error", "msg": f"导入失败: {msg}"}
+                    return
+
+                # 默认按 INF 流程处理
+                parser = INFParser(file_path)
                 cursor_paths, scheme_name = parser.get_cursor_paths_in_order()
                 log.val(f"cursor_paths: {cursor_paths}")
                 log.val(f"scheme_name: {scheme_name}")
                 if scheme_name and cursor_paths != ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '']:
                     保存组配置(scheme_name, "mouses", cursor_paths, is_import=True)
-                    success = True
-                    result_box[0] = success
+                    result_box[0] = {
+                        "status": "success",
+                        "msg": f"已导入组 [{scheme_name}]",
+                        "group_name": scheme_name,
+                    }
                 else:
-                    log.error(f"导入组失败: 为空组")
-                    success = False
-                    result_box[0] = success
+                    log.error(f"导入组失败: 为空组 ({file_path})")
+                    result_box[0] = {"status": "error", "msg": "INF 解析失败或为空组"}
             except Exception as e:
                 log.error(f"导入组失败: {e}")
-                result_box[0] = False
+                result_box[0] = {"status": "error", "msg": str(e)}
             finally:
-                done.set()           # 通知主线程：结果已就绪
+                done.set()
+
         threading.Thread(target=worker, daemon=True).start()
-        done.wait()                  # 阻塞等待线程完成
+        done.wait()
         return result_box[0]
 
 

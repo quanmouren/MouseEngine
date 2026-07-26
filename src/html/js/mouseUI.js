@@ -536,7 +536,7 @@ function createEmptyGroup() {
     showGroupNameModal();
 }
 
-// 导入组
+// 导入组（统一入口：支持 .inf 和 .mepack，后端按扩展名分流）
 async function importGroup() {
     if (!window.pywebview) {
         alert(tr('thisFeatureAppOnly'));
@@ -545,12 +545,20 @@ async function importGroup() {
 
     try {
         const result = await pywebview.api.导入组();
-        if (result) {
-            // 如果返回true，刷新组列表
+        if (result && result.status === 'success') {
+            showNotification(result.msg || tr('importGroupSuccess'), 'success');
             await refreshGroups();
             await renderPreviewGrid();
+            // 自动选中新导入的组
+            if (result.group_name) {
+                await selectGroup(result.group_name);
+            }
+        } else if (result && result.status === 'cancelled') {
+            // 静默
+        } else {
+            const msg = (result && result.msg) || tr('importFailed');
+            showNotification(msg, 'error');
         }
-        // 如果返回false，跳过刷新
     } catch (e) {
         console.error('导入组失败', e);
         alert(tr('importFailed'));
@@ -686,10 +694,17 @@ function showContextMenu(e, groupName) {
     
     const applyItem = document.getElementById('applyGroupItem');
     const renameItem = document.getElementById('renameGroupItem');
-    
+    const exportItem = document.getElementById('exportGroupItem');
+
     applyItem.classList.remove('disabled');
     applyItem.onclick = () => handleApplyGroup(groupName);
-    
+
+    // 导出对所有组开放（含默认组）
+    if (exportItem) {
+        exportItem.classList.remove('disabled');
+        exportItem.onclick = () => handleExportGroup(groupName);
+    }
+
     // 如果是默认组，禁用删除选项
     if (groupName === '默认组') {
         deleteItem.classList.add('disabled');
@@ -698,7 +713,7 @@ function showContextMenu(e, groupName) {
         deleteItem.classList.remove('disabled');
         deleteItem.onclick = () => handleDeleteGroup(groupName);
     }
-    
+
     // 为所有组添加重命名选项
     renameItem.classList.remove('disabled');
     renameItem.onclick = () => handleRenameGroup(groupName);
@@ -805,6 +820,31 @@ async function handleApplyGroup(groupName) {
     } catch (e) {
         console.error('应用组失败', e);
         showNotification(tr('applyGroupFailed'), 'error');
+    } finally {
+        hideContextMenu();
+    }
+}
+
+// 处理导出组操作
+async function handleExportGroup(groupName) {
+    if (!window.pywebview) {
+        alert(tr('thisFeatureAppOnly'));
+        hideContextMenu();
+        return;
+    }
+
+    try {
+        const result = await pywebview.api.export_group(groupName);
+        if (result.status === 'success') {
+            showNotification(result.msg || tr('exportGroupSuccess'), 'success');
+        } else if (result.status === 'cancelled') {
+            // 用户取消，不提示
+        } else {
+            showNotification(result.msg || tr('exportGroupFailed'), 'error');
+        }
+    } catch (e) {
+        console.error('导出组失败', e);
+        showNotification(tr('exportGroupFailed'), 'error');
     } finally {
         hideContextMenu();
     }
