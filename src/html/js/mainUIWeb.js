@@ -109,12 +109,7 @@
     // 更新右侧预览面板
     function updatePreviewPanel(wallpaperData) {
         const [id, imagePath, name, type] = wallpaperData;
-        
-        // 如果类型为web或application，不执行更新操作
-        if (type && (type.toLowerCase() === 'web' || type.toLowerCase() === 'application')) {
-            return;
-        }
-        
+
         // 保存当前选中的壁纸 ID
         currentWallpaperId = id;
         
@@ -188,29 +183,6 @@
                     this.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgZmlsbD0iIzMzNDE1NSIvPjx0ZXh0IHg9IjkwIiB5PSI5MCIgZm9udC1mYW1pbHk9IkxlZnQgVUlUIiwgZm9udC1zaXplPSIxMiIgZmlsbD0iIzlhYjNjOCIgbGV0dGVyLXNwYWNpbmc9Im5vcm1hbCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+5Zu+54mH5Lu25Lq6PC90ZXh0Pjwvc3ZnPg==';
                 };
                 thumbEl.appendChild(img);
-                
-                // 如果类型为web或application，添加半透明红色覆盖层
-                if (type && (type.toLowerCase() === 'web' || type.toLowerCase() === 'application')) {
-                    const overlay = document.createElement('div');
-                    overlay.style.position = 'absolute';
-                    overlay.style.top = '0';
-                    overlay.style.left = '0';
-                    overlay.style.width = '100%';
-                    overlay.style.height = '100%';
-                    overlay.style.background = 'rgba(255, 0, 0, 0.5)';
-                    overlay.style.display = 'flex';
-                    overlay.style.alignItems = 'center';
-                    overlay.style.justifyContent = 'center';
-                    overlay.style.color = 'white';
-                    overlay.style.fontSize = '12px';
-                    overlay.style.fontWeight = 'bold';
-                    overlay.style.textAlign = 'center';
-                    overlay.style.padding = '10px';
-                    const overlayKey = type.toLowerCase() === 'web' ? 'unsupportedWebWallpaper' : 'unsupportedApplicationWallpaper';
-                    overlay.dataset.i18n = overlayKey;
-                    overlay.textContent = tr(overlayKey);
-                    thumbEl.appendChild(overlay);
-                }
             } else {
                 thumbEl.innerHTML = `<span style="color:#94a3b8; font-size:12px;" data-i18n="noImage">${tr('noImage')}</span>`;
             }
