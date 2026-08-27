@@ -7,19 +7,24 @@ from path_utils import resolve_path
 from mainUIWeb import Api as WallpaperApi
 from settingsUIWeb import SettingsApi
 from mouseUI import EditMouseApi
+from debugUI import DebugApi
 
 
 log = TLog("NewUI")
 
 
-class UnifiedApi(WallpaperApi, SettingsApi, EditMouseApi):
+class UnifiedApi(WallpaperApi, SettingsApi, EditMouseApi, DebugApi):
     def __init__(self):
         SettingsApi.__init__(self)
         EditMouseApi.__init__(self)
+        DebugApi.__init__(self)
         self._window = None
 
     def set_window(self, window):
         self._window = window
+
+    def is_debug_enabled(self):
+        return bool(log.on_DEBUG)
 
     def exit_app(self):
         if self._window:

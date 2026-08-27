@@ -1,4 +1,4 @@
-# Copyright (c) 2025, CIF3
+﻿# Copyright (c) 2025, CIF3
 # SPDX-License-Identifier: BSD-3-Clause
 import threading
 import time
@@ -875,6 +875,18 @@ def playliststate监听():
             )
 
             if wallpaper_id and snapshot != last_snapshot:
+                log_func.debug(
+                    "跨显示器行为变化: "
+                    f"last_snapshot={last_snapshot} -> new_snapshot={snapshot}, "
+                    f"device_name={mouse_monitor.get('device_name')!r}, "
+                    f"display_name={mouse_monitor.get('display_name')!r}, "
+                    f"rect={mouse_monitor.get('rect')}, "
+                    f"work_rect={mouse_monitor.get('work_rect')}, "
+                    f"dpi={mouse_monitor.get('dpi')}, "
+                    f"is_primary={mouse_monitor.get('is_primary')}, "
+                    f"hmonitor={mouse_monitor.get('hmonitor')}, "
+                    f"wallpaper_id={wallpaper_id!r}"
+                )
                 log_func.info(
                     "运行状态变化: "
                     f"display={mouse_monitor.get('device_name')}, "

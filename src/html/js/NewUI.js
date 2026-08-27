@@ -1,6 +1,7 @@
 (function () {
     const frame = document.getElementById("pageFrame");
     const navItems = Array.from(document.querySelectorAll(".nav-item"));
+    const debugButton = document.querySelector(".nav-debug");
 
     function sharePywebviewWithFrame() {
         try {
@@ -28,6 +29,19 @@
         frame.src = button.dataset.target;
     }
 
+    async function initDebugNav() {
+        if (!debugButton || !window.pywebview || !window.pywebview.api) {
+            return;
+        }
+        try {
+            const enabled = await window.pywebview.api.is_debug_enabled();
+            debugButton.style.display = enabled ? "" : "none";
+        } catch (error) {
+            console.warn("Unable to check debug state", error);
+            debugButton.style.display = "none";
+        }
+    }
+
     navItems.forEach((button) => {
         button.addEventListener("click", () => switchPage(button));
     });
@@ -36,6 +50,10 @@
         sharePywebviewWithFrame();
         syncFrameLanguage();
     });
-    window.addEventListener("pywebviewready", sharePywebviewWithFrame);
+    window.addEventListener("pywebviewready", () => {
+        sharePywebviewWithFrame();
+        initDebugNav();
+    });
     window.addEventListener("mouseengine-language-applied", syncFrameLanguage);
+    window.addEventListener("load", initDebugNav);
 })();

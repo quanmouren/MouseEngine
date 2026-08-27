@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ctypes
+import getpass
 import json
 import time
 from pathlib import Path
@@ -300,6 +301,86 @@ def find_mouse_playliststate_item(
     raise RuntimeError("无法把鼠标所在显示器匹配到 playliststate_reader.dll 的显示器详情")
 
 
+_we_monitormap_cache: dict[str, Any] = {}
+_we_monitormap_cache_time = 0.0
+
+
+def _get_we_monitormap() -> dict[str, Any]:
+    """读取 Wallpaper Engine config.json 的 monitormap（key -> {location, timestamp, ...}）。
+    带短缓存5秒
+    """
+    global _we_monitormap_cache, _we_monitormap_cache_time
+    now = time.time()
+    if _we_monitormap_cache and now - _we_monitormap_cache_time < 5.0:
+        return _we_monitormap_cache
+    try:
+        cfg = toml.load(CONFIG_FILE_PATH)
+        we_path = str(cfg.get("path", {}).get("wallpaper_engine_config", "") or "").strip()
+        if not we_path or not Path(we_path).exists():
+            _we_monitormap_cache = {}
+        else:
+            data = json.load(open(we_path, "r", encoding="utf-8"))
+            user = getpass.getuser()
+            mm = data.get(user, {}).get("general", {}).get("user", {}).get("monitormap", {})
+            _we_monitormap_cache = {
+                str(k): v for k, v in mm.items() if isinstance(v, dict)
+            }
+    except Exception as e:
+        log.error(f"读取 monitormap 失败: {e}")
+        _we_monitormap_cache = {}
+    _we_monitormap_cache_time = now
+    return _we_monitormap_cache
+
+
+def _resolve_we_monitor_location(device_id: str, device_name: str, monitormap: dict[str, Any]) -> int:
+    """用硬件型号（DeviceID 里的型号名）+ 最新 timestamp 解析显示器对应的 WE location"""
+    if not monitormap:
+        return -1
+    norm_name = str(device_name or "").replace(chr(92), "/")
+    model = ""
+    parts = str(device_id or "").split(chr(92))
+    if len(parts) >= 2:
+        model = parts[1]
+    best = None
+    for key, val in monitormap.items():
+        if not isinstance(val, dict):
+            continue
+        matched = (norm_name and key == norm_name) or (model and model in key)
+        if not matched:
+            continue
+        ts = val.get("timestamp", 0) or 0
+        if best is None or ts > best[0]:
+            best = (ts, val)
+    if best is not None:
+        try:
+            return int(best[1].get("location", -1))
+        except Exception:
+            pass
+    return -1
+
+
+def load_monitor_current_ids(
+    wallpaper_engine_root: str | Path | None = None,
+    playliststate_reader_dll: str | Path | ctypes.CDLL = DEFAULT_PLAYLISTSTATE_READER_DLL,
+) -> dict[str, str]:
+    """调用 DLL we_get_monitor_current_ids_json，返回 {MonitorN: current_id}。"""
+    dll = load_playliststate_reader(playliststate_reader_dll)
+    root = resolve_wallpaper_engine_root(wallpaper_engine_root)
+    dll.we_get_monitor_current_ids_json.argtypes = [ctypes.c_char_p]
+    dll.we_get_monitor_current_ids_json.restype = ctypes.c_void_p
+    ptr = dll.we_get_monitor_current_ids_json(str(root).encode("utf-8"))
+    if not ptr:
+        return {}
+    try:
+        raw_json = ctypes.string_at(ptr).decode("utf-8", errors="replace")
+    finally:
+        dll.we_free_string(ptr)
+    result = json.loads(raw_json)
+    if isinstance(result, dict) and "error" in result:
+        raise RuntimeError(f"playliststate_reader.dll error: {result['error']}")
+    return result if isinstance(result, dict) else {}
+
+
 def get_mouse_playliststate_detail(
     wallpaper_engine_root: str | Path | None = None,
     mouse_probe_dll: str | Path | ctypes.CDLL = DEFAULT_MOUSE_PROBE_DLL,
@@ -312,10 +393,22 @@ def get_mouse_playliststate_detail(
         mouse_monitor = get_mouse_monitor_python_fallback()
         mouse_monitor["mouse_probe_error"] = str(e)
     item = find_mouse_playliststate_item(mouse_monitor, details)
+
+    device_id = str(item.get("device_id") or "") if item else ""
+    monitormap = _get_we_monitormap()
+    location = _resolve_we_monitor_location(
+        device_id, mouse_monitor.get("device_name", ""), monitormap
+    )
+    if location >= 0:
+        current_ids = load_monitor_current_ids(wallpaper_engine_root, playliststate_reader_dll)
+        current_id = str(current_ids.get("Monitor" + str(location), "") or "")
+    else:
+        current_id = str(item.get("current_id") or "") if item else ""
+
     return {
         "mouse_monitor": mouse_monitor,
         "playliststate_item": item,
-        "current_id": str(item.get("current_id") or ""),
+        "current_id": current_id,
     }
 
 
