@@ -409,29 +409,21 @@ class SettingsApi:
             return False
 
     def 清理缓存(self):
-        # 清理主目录下的cache文件夹和html\cache文件夹内的所有文件
         try:
             # 清理主目录下的cache文件夹
             main_cache_dir = resolve_path("cache")
             if os.path.exists(main_cache_dir):
-                for root, dirs, files in os.walk(main_cache_dir, topdown=False):
-                    for file_name in files:
-                        file_path = os.path.join(root, file_name)
-                        os.remove(file_path)
-                    for dir_name in dirs:
-                        dir_path = os.path.join(root, dir_name)
-                        os.rmdir(dir_path)
+                shutil.rmtree(main_cache_dir, ignore_errors=True)
+                os.makedirs(main_cache_dir, exist_ok=True)
                 log.info("主目录缓存清理完成")
-            
+
             # 清理html\cache文件夹
             html_cache_dir = resolve_path("html/cache")
             if os.path.exists(html_cache_dir):
-                for file_name in os.listdir(html_cache_dir):
-                    file_path = os.path.join(html_cache_dir, file_name)
-                    if os.path.isfile(file_path):
-                        os.remove(file_path)
+                shutil.rmtree(html_cache_dir, ignore_errors=True)
+                os.makedirs(html_cache_dir, exist_ok=True)
                 log.info("HTML缓存清理完成")
-            
+
             log.info("缓存清理完成")
             return True
         except Exception as e:

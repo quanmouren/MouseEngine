@@ -632,7 +632,7 @@ def _build_decision(binding, foreground_process, mouse_monitor, fullscreen_activ
             "status": "unknown",
             "condition": "pause_flag（主进程运行时状态）",
             "yes": {"label": "跳过刷新", "taken": False},
-            "no": {"label": "继续（假设未暂停）", "taken": True},
+            "no": {"label": "继续", "taken": True},
         },
         {
             "key": "fullscreen",

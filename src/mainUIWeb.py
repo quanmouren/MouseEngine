@@ -26,6 +26,10 @@ MOUSE_BASE_PATH = resolve_path("mouses")
 CONFIG_PATH = resolve_path("config.toml")
 HTML_ROOT = resolve_path("html")
 CACHE_BASE_DIR = resolve_path("html/cache")
+THUMB_DIR = os.path.join(CACHE_BASE_DIR, "thumb")
+# 主网格用 240px
+WALLPAPER_THUMB_SIZE = 240
+PREVIEW_THUMB_SIZE = 512
 
 # 导入鼠标组操作函数
 try:
@@ -43,6 +47,13 @@ except ImportError:
     log.error("无法导入图标转换模块")
     get_ani_frames = None
     get_cur_image = None
+
+# 缩略图预生成
+try:
+    from thumbnail_cache import ensure_thumbnails_batch
+except ImportError:
+    log.error("无法导入 thumbnail_cache 模块, 缩略图预生成不可用")
+    ensure_thumbnails_batch = None
 
 # 设置当前工作目录为项目根目录
 os.chdir(PROJECT_ROOT)
@@ -119,36 +130,74 @@ def all_wallpapers():
     wallpaper_info_sorted = sorted(wallpaper_info, key=lambda x: x[4])
     return [[item[0], item[1], item[2], item[3]] for item in wallpaper_info_sorted]
 
-def 图片加缓存(original_list, cache_folder=CACHE_BASE_DIR):
-    """
-    将壁纸预览图复制到 HTML 缓存目录
-    """
+def 图片加缓存(original_list, cache_folder=THUMB_DIR):
+    if not original_list:
+        return original_list
+
+    if ensure_thumbnails_batch is None:
+        # 兜底退化到原图复制
+        log.warning("缩略图模块不可用, 退化到原图复制")
+        return _图片加缓存_fallback(original_list, cache_folder)
+
+    items = []
+    id_to_index = {}
+    for idx, sub in enumerate(original_list):
+        if len(sub) < 2:
+            continue
+        item_id = sub[0]
+        original_path = sub[1]
+        if not (isinstance(original_path, str) and os.path.exists(original_path)):
+            continue
+        items.append((str(item_id), original_path))
+        id_to_index[str(item_id)] = idx
+
+    if not items:
+        return original_list
+
+    thumb_map = ensure_thumbnails_batch(
+        items,
+        thumb_dir=cache_folder,
+        html_root=HTML_ROOT,
+        size=WALLPAPER_THUMB_SIZE,
+    )
+
+    processed_list = [item.copy() for item in original_list]
+    miss = 0
+    for item_id, idx in id_to_index.items():
+        rel = thumb_map.get(item_id, "")
+        if rel:
+            processed_list[idx][1] = rel
+        else:
+            # 缩略图生成失败, 退化用原图路径
+            miss += 1
+    if miss:
+        log.warning(f"缩略图生成失败 {miss} 张, 退化用原图路径")
+
+    return processed_list
+
+
+def _图片加缓存_fallback(original_list, cache_folder):
     try:
         os.makedirs(cache_folder, exist_ok=True)
-    except Exception as e:
+    except Exception:
         return original_list
-    
+
     processed_list = [item.copy() for item in original_list]
     for sub_list in processed_list:
         item_id = sub_list[0]
         original_path = sub_list[1]
         if not (isinstance(original_path, str) and os.path.exists(original_path)):
             continue
-
         file_ext = os.path.splitext(original_path)[1]
         cache_filename = f"{item_id}{file_ext}"
         cache_full_path = os.path.join(cache_folder, cache_filename)
-        # 前端访问的相对路径
         cache_relative_path = os.path.join("cache", cache_filename).replace('\\', '/')
-        
         if not os.path.exists(cache_full_path):
             try:
                 shutil.copy2(original_path, cache_full_path)
             except Exception:
                 continue
-        
         sub_list[1] = cache_relative_path
-    
     return processed_list
 
 def get_available_mouse_groups() -> list:
@@ -275,6 +324,40 @@ class Api:
     def get_mouse_group_icons(self, group_name):
         return get_mouse_group_icons(group_name)
     
+    def _process_playlist_item(self, item_path):
+        if not item_path:
+            return None
+        dir_path = os.path.dirname(item_path)
+        wallpaper_id = os.path.basename(dir_path)
+        preview_path = ""
+        for ext in ['jpg', 'png', 'gif']:
+            candidate = os.path.join(dir_path, f"preview.{ext}")
+            if os.path.exists(candidate):
+                preview_path = candidate
+                break
+        if not preview_path:
+            return [wallpaper_id, ""]
+        if ensure_thumbnails_batch:
+            rel = ensure_thumbnails_batch(
+                [(wallpaper_id, preview_path)],
+                thumb_dir=THUMB_DIR,
+                html_root=HTML_ROOT,
+                size=WALLPAPER_THUMB_SIZE,
+            ).get(wallpaper_id, "")
+            if rel:
+                return [wallpaper_id, rel]
+        # 兜底原图复制
+        try:
+            os.makedirs(CACHE_BASE_DIR, exist_ok=True)
+            file_ext = os.path.splitext(preview_path)[1]
+            cache_filename = f"{wallpaper_id}{file_ext}"
+            cache_full_path = os.path.join(CACHE_BASE_DIR, cache_filename)
+            if not os.path.exists(cache_full_path):
+                shutil.copy2(preview_path, cache_full_path)
+            return [wallpaper_id, f"cache/{cache_filename}"]
+        except Exception:
+            return [wallpaper_id, ""]
+
     def get_playlist(self):
         try:
             import getpass
@@ -295,71 +378,34 @@ class Api:
                 monitor1_data = wallpaper_list[0]
                 items_list = monitor1_data[2]
                 playlist_name = monitor1_data[3]
-                
+
                 processed_items = []
                 for item_path in items_list:
-                    if not item_path: continue
-                    dir_path = os.path.dirname(item_path)
-                    wallpaper_id = os.path.basename(dir_path)
-                    
-                    preview_path = ""
-                    for ext in ['jpg', 'png', 'gif']:
-                        candidate = os.path.join(dir_path, f"preview.{ext}")
-                        if os.path.exists(candidate):
-                            preview_path = candidate
-                            break
-                    
-                    if preview_path:
-                        try:
-                            os.makedirs(CACHE_BASE_DIR, exist_ok=True)
-                            file_ext = os.path.splitext(preview_path)[1]
-                            cache_filename = f"{wallpaper_id}{file_ext}"
-                            cache_full_path = os.path.join(CACHE_BASE_DIR, cache_filename)
-                            if not os.path.exists(cache_full_path):
-                                shutil.copy2(preview_path, cache_full_path)
-                            preview_path = f"cache/{cache_filename}"
-                        except Exception: pass
-                    
-                    processed_items.append([wallpaper_id, preview_path])
+                    row = self._process_playlist_item(item_path)
+                    if row is not None:
+                        processed_items.append(row)
                 return {"items": processed_items, "name": playlist_name, "monitors": [{"name": playlist_name}]}
             else:
                 monitors_info = []
                 all_items_set = set()
                 all_items_list = []
-                
+
                 for monitor_data in wallpaper_list:
                     playlist_name = monitor_data[3]
                     monitors_info.append({"name": playlist_name})
-                    
+
                     items_list = monitor_data[2]
                     for item_path in items_list:
-                        if not item_path: continue
-                        dir_path = os.path.dirname(item_path)
-                        wallpaper_id = os.path.basename(dir_path)
-                        
-                        if wallpaper_id not in all_items_set:
-                            all_items_set.add(wallpaper_id)
-                            
-                            preview_path = ""
-                            for ext in ['jpg', 'png', 'gif']:
-                                candidate = os.path.join(dir_path, f"preview.{ext}")
-                                if os.path.exists(candidate):
-                                    preview_path = candidate
-                                    break
-                            
-                            if preview_path:
-                                try:
-                                    os.makedirs(CACHE_BASE_DIR, exist_ok=True)
-                                    file_ext = os.path.splitext(preview_path)[1]
-                                    cache_filename = f"{wallpaper_id}{file_ext}"
-                                    cache_full_path = os.path.join(CACHE_BASE_DIR, cache_filename)
-                                    if not os.path.exists(cache_full_path):
-                                        shutil.copy2(preview_path, cache_full_path)
-                                    preview_path = f"cache/{cache_filename}"
-                                except Exception: pass
-                            
-                            all_items_list.append([wallpaper_id, preview_path])
-                
+                        if not item_path:
+                            continue
+                        wallpaper_id = os.path.basename(os.path.dirname(item_path))
+                        if wallpaper_id in all_items_set:
+                            continue
+                        all_items_set.add(wallpaper_id)
+                        row = self._process_playlist_item(item_path)
+                        if row is not None:
+                            all_items_list.append(row)
+
                 return {"items": all_items_list, "name": "", "monitors": monitors_info}
         except Exception as e:
             log.error(f"获取播放列表失败：{e}")
