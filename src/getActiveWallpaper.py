@@ -381,6 +381,64 @@ def load_monitor_current_ids(
     return result if isinstance(result, dict) else {}
 
 
+_we_selected_ids_cache: dict[str, str] = {}
+_we_selected_ids_mtime = 0.0
+
+
+def _get_we_config_selected_ids() -> tuple[dict[str, str], float]:
+    global _we_selected_ids_cache, _we_selected_ids_mtime
+    try:
+        cfg = toml.load(CONFIG_FILE_PATH)
+        we_path = str(cfg.get("path", {}).get("wallpaper_engine_config", "") or "").strip()
+    except Exception as e:
+        log.error(f"读取 config.toml 失败: {e}")
+        return {}, 0.0
+
+    if not we_path or not Path(we_path).exists():
+        _we_selected_ids_cache = {}
+        _we_selected_ids_mtime = 0.0
+        return {}, 0.0
+
+    try:
+        mtime = Path(we_path).stat().st_mtime
+    except OSError as e:
+        log.error(f"获取 config.json mtime 失败: {e}")
+        return {}, 0.0
+
+    if _we_selected_ids_cache and mtime == _we_selected_ids_mtime:
+        return _we_selected_ids_cache, mtime
+
+    try:
+        data = json.load(open(we_path, "r", encoding="utf-8"))
+        user = getpass.getuser()
+        general = data.get(user, {}).get("general", {})
+        selected = general.get("wallpaperconfig", {}).get("selectedwallpapers", {})
+        ids: dict[str, str] = {}
+        for k, v in selected.items():
+            if isinstance(v, dict):
+                fp = str(v.get("file", "") or "")
+                if fp:
+                    ids[str(k)] = Path(fp.replace(chr(92), "/")).parent.name
+        _we_selected_ids_cache = ids
+        _we_selected_ids_mtime = mtime
+    except Exception as e:
+        log.error(f"读取 wallpaperconfig.selectedwallpapers 失败: {e}")
+        _we_selected_ids_cache = {}
+        _we_selected_ids_mtime = mtime
+    return _we_selected_ids_cache, _we_selected_ids_mtime
+
+
+def _get_playliststate_mtime() -> float:
+    try:
+        root = get_wallpaper_engine_root_from_config()
+        bin_path = Path(root) / "bin" / "playliststate.bin"
+        if bin_path.exists():
+            return bin_path.stat().st_mtime
+    except Exception as e:
+        log.error(f"获取 playliststate.bin mtime 失败: {e}")
+    return 0.0
+
+
 def get_mouse_playliststate_detail(
     wallpaper_engine_root: str | Path | None = None,
     mouse_probe_dll: str | Path | ctypes.CDLL = DEFAULT_MOUSE_PROBE_DLL,
@@ -400,8 +458,13 @@ def get_mouse_playliststate_detail(
         device_id, mouse_monitor.get("device_name", ""), monitormap
     )
     if location >= 0:
-        current_ids = load_monitor_current_ids(wallpaper_engine_root, playliststate_reader_dll)
-        current_id = str(current_ids.get("Monitor" + str(location), "") or "")
+        we_key = "Monitor" + str(location)
+        config_ids, config_mtime = _get_we_config_selected_ids()
+        if config_mtime >= _get_playliststate_mtime() and config_ids.get(we_key):
+            current_id = str(config_ids.get(we_key, ""))
+        else:
+            current_ids = load_monitor_current_ids(wallpaper_engine_root, playliststate_reader_dll)
+            current_id = str(current_ids.get(we_key, "") or "")
     else:
         current_id = str(item.get("current_id") or "") if item else ""
 
