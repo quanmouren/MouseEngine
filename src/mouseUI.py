@@ -10,7 +10,7 @@ import signal
 import threading
 from PIL import Image
 from lib.INFParser import INFParser
-from mouses import 保存组配置, CURSOR_ORDER_MAPPING
+from mouses import 保存组配置, CURSOR_ORDER_MAPPING, read_group_meta, build_group_meta, 导出组, 导入组包, MOUSE_GROUP_PACK_EXT
 from setMouse import 设置鼠标指针
 from Tlog import TLog
 from path_utils import resolve_path
@@ -50,6 +50,33 @@ class EditMouseApi:
             d for d in os.listdir(MOUSE_BASE_PATH)
             if os.path.isdir(os.path.join(MOUSE_BASE_PATH, d))
         ]
+
+    def get_group_meta(self, group_name):
+        """
+        获取鼠标组元数据。
+        返回字典: { author, url, created_date, added_date }
+        author / url 为空字符串时表示未填写，前端可不显示。
+        """
+        empty = {
+            "author": "",
+            "url": "",
+            "created_date": "",
+            "added_date": "",
+        }
+        if not group_name:
+            return empty
+
+        config_path = os.path.join(MOUSE_BASE_PATH, group_name, "config.toml")
+        meta = read_group_meta(config_path)
+        if not meta:
+            return empty
+
+        return {
+            "author": str(meta.get("author", "") or ""),
+            "url": str(meta.get("url", "") or ""),
+            "created_date": str(meta.get("created_date", "") or ""),
+            "added_date": str(meta.get("added_date", "") or ""),
+        }
 
     def load_group_config(self, group_name):
         path = os.path.join(MOUSE_BASE_PATH, group_name, "config.toml")
@@ -96,76 +123,94 @@ class EditMouseApi:
         done.wait()
         return result_box[0]
 
-    def get_preview_base64(self, file_path):
+    def _build_or_reuse_preview(self, file_path):
         if not file_path or not os.path.exists(file_path):
             return ""
 
-        import threading
-        done = threading.Event()
-        result_box = [""]
-        
-        def worker():
+        try:
+            import hashlib
+            cache_folder = resolve_path("html/cache")
+            os.makedirs(cache_folder, exist_ok=True)
+
+            file_hash = hashlib.md5(file_path.encode()).hexdigest()
+            ext = os.path.splitext(file_path)[1].lower()
+
+            if ext == ".ani":
+                cache_filename = f"preview_{file_hash}.gif"
+            else:
+                cache_filename = f"preview_{file_hash}.webp"
+            cache_path = os.path.join(cache_folder, cache_filename)
+            cache_relative_path = os.path.join("cache", cache_filename).replace('\\', '/')
+
             try:
-                import hashlib
-                # 缓存文件夹
-                cache_folder = resolve_path("html/cache")
-                os.makedirs(cache_folder, exist_ok=True)
-                
-                # 生成基于文件路径的唯一哈希值
-                file_hash = hashlib.md5(file_path.encode()).hexdigest()
-                ext = os.path.splitext(file_path)[1].lower()
-                
-                # 根据文件类型确定缓存文件格式
-                if ext == ".ani":
-                    cache_filename = f"preview_{file_hash}.gif"
+                src_mtime = os.path.getmtime(file_path)
+                if os.path.exists(cache_path) and os.path.getmtime(cache_path) >= src_mtime:
+                    return cache_relative_path
+            except OSError:
+                pass
+
+            if ext == ".ani" and get_ani_frames:
+                frames = get_ani_frames(file_path)
+                if frames:
+                    frames[0].save(
+                        cache_path,
+                        format="GIF",
+                        save_all=True,
+                        append_images=frames[1:],
+                        duration=100,
+                        loop=0,
+                        disposal=2,
+                    )
+                    try:
+                        os.utime(cache_path, (src_mtime, src_mtime))
+                    except OSError:
+                        pass
+                    return cache_relative_path
+
+            if ext == ".cur" and get_cur_image:
+                img = get_cur_image(file_path)
+                if img:
+                    tmp = cache_path + ".tmp"
+                    img.save(tmp, format="WEBP", quality=80, method=4)
+                    os.replace(tmp, cache_path)
+                    try:
+                        os.utime(cache_path, (src_mtime, src_mtime))
+                    except OSError:
+                        pass
+                    return cache_relative_path
+
+            img = Image.open(file_path).convert("RGBA")
+            tmp = cache_path + ".tmp"
+            img.save(tmp, format="WEBP", quality=80, method=4)
+            os.replace(tmp, cache_path)
+            try:
+                os.utime(cache_path, (src_mtime, src_mtime))
+            except OSError:
+                pass
+            return cache_relative_path
+        except Exception as e:
+            log.debug(f"预览生成失败: {file_path} - {e}")
+            return ""
+
+    def get_preview_base64(self, file_path):
+        return self._build_or_reuse_preview(file_path)
+
+    def get_all_cursor_previews(self, groups_config):
+        if not isinstance(groups_config, dict):
+            return {}
+        result = {}
+        for group_name, cursor_map in groups_config.items():
+            if not isinstance(cursor_map, dict):
+                result[group_name] = {}
+                continue
+            group_out = {}
+            for key, path in cursor_map.items():
+                if path:
+                    group_out[key] = self._build_or_reuse_preview(path)
                 else:
-                    cache_filename = f"preview_{file_hash}.png"
-                
-                cache_path = os.path.join(cache_folder, cache_filename)
-                cache_relative_path = os.path.join("cache", cache_filename).replace('\\', '/')
-                
-                # 如果缓存文件已存在，直接返回路径
-                if os.path.exists(cache_path):
-                    result_box[0] = cache_relative_path
-                    return
-                
-                # 处理不同类型的光标文件
-                if ext == ".ani" and get_ani_frames:
-                    frames = get_ani_frames(file_path)
-                    if frames:
-                        frames[0].save(
-                            cache_path,
-                            format="GIF",
-                            save_all=True,
-                            append_images=frames[1:],
-                            duration=100,
-                            loop=0,
-                            disposal=2
-                        )
-                        result_box[0] = cache_relative_path
-                        return
-
-                if ext == ".cur" and get_cur_image:
-                    img = get_cur_image(file_path)
-                    if img:
-                        img.save(cache_path, format="PNG")
-                        result_box[0] = cache_relative_path
-                        return
-
-                # 处理其他图像格式
-                img = Image.open(file_path).convert("RGBA")
-                img.save(cache_path, format="PNG")
-                result_box[0] = cache_relative_path
-
-            except Exception as e:
-                log.debug(f"预览生成失败: {e}")
-                result_box[0] = ""
-            finally:
-                done.set()
-        
-        threading.Thread(target=worker, daemon=True).start()
-        done.wait()
-        return result_box[0]
+                    group_out[key] = ""
+            result[group_name] = group_out
+        return result
 
     def save_group_config(self, group_name, cursor_data, original_name=None):
         if not group_name.strip():
@@ -259,41 +304,131 @@ class EditMouseApi:
         except Exception as e:
             log.error(f"应用组失败: {e}")
             return {"status": "error", "msg": str(e)}
-    
-    def 导入组(self):
+
+    def export_group(self, group_name):
+        """
+        导出鼠标组为 .mepack (zip) 文件。
+        - 默认组允许导出
+        - 通过 webview SAVE_DIALOG 让用户选择保存位置
+        - 用户取消对话框返回 status=cancelled
+        """
+        if not group_name or not group_name.strip():
+            return {"status": "error", "msg": "组名不能为空"}
+
+        group_folder = os.path.join(MOUSE_BASE_PATH, group_name)
+        if not os.path.isdir(group_folder):
+            return {"status": "error", "msg": f"组 [{group_name}] 不存在"}
+
         import threading
-        done = threading.Event() 
+        done = threading.Event()
         result_box = [None]
+
         def worker():
             try:
-                # 打开文件对话框选择 INF 文件
-                inf_path = self._window.create_file_dialog(
+                default_filename = f"{group_name}{MOUSE_GROUP_PACK_EXT}"
+                res = self._window.create_file_dialog(
+                    webview.SAVE_DIALOG,
+                    directory="",
+                    save_filename=default_filename,
+                    file_types=(f"MouseEngine 鼠标组包 (*{MOUSE_GROUP_PACK_EXT})",)
+                )
+                if not res:
+                    result_box[0] = {"status": "cancelled", "msg": "已取消导出"}
+                    return
+
+                target_path = res[0] if isinstance(res, (list, tuple)) else res
+                if not target_path:
+                    result_box[0] = {"status": "cancelled", "msg": "已取消导出"}
+                    return
+
+                success, msg = 导出组(group_name, target_path)
+                if success:
+                    result_box[0] = {"status": "success", "msg": f"已导出组 [{group_name}] → {msg}"}
+                else:
+                    result_box[0] = {"status": "error", "msg": f"导出失败: {msg}"}
+            except Exception as e:
+                log.error(f"导出组失败: {e}")
+                result_box[0] = {"status": "error", "msg": str(e)}
+            finally:
+                done.set()
+
+        threading.Thread(target=worker, daemon=True).start()
+        done.wait()
+        return result_box[0]
+
+    def 导入组(self):
+        """
+        导入鼠标组（统一入口）。
+        - 文件对话框同时支持 .inf 和 .mepack
+        - 选中后按扩展名二次分流：
+            * .mepack -> mouses.导入组包
+            * 其他   -> 原有 INFParser 流程
+        返回 {status, msg, group_name?}：
+            status: 'success' / 'cancelled' / 'error'
+        """
+        import threading
+        done = threading.Event()
+        result_box = [None]
+
+        def worker():
+            try:
+                # 二次判断的第一步：弹文件对话框，让用户选类型
+                # pywebview 期望 file_types 是 list of strings，每个 string 形如 "描述 (*.ext)"
+                res = self._window.create_file_dialog(
                     webview.OPEN_DIALOG,
                     allow_multiple=False,
-                    file_types=('INF Files (*.inf)',)
+                    file_types=(
+                        f"MouseEngine 鼠标组包 (*{MOUSE_GROUP_PACK_EXT})",
+                        "INF 主题 (*.inf)",
+                    )
                 )
-                inf_path = inf_path[0] if inf_path else ""
-                
-                # 解析 INF 文件
-                parser = INFParser(inf_path)
+                if not res:
+                    result_box[0] = {"status": "cancelled", "msg": "已取消导入"}
+                    return
+
+                file_path = res[0] if isinstance(res, (list, tuple)) else res
+                if not file_path:
+                    result_box[0] = {"status": "cancelled", "msg": "已取消导入"}
+                    return
+
+                # 二次判断的第二步：按扩展名二次分流
+                ext = os.path.splitext(file_path)[1].lower()
+                if ext == MOUSE_GROUP_PACK_EXT:
+                    # 分流到 .mepack 导入
+                    success, msg, group_name = 导入组包(file_path)
+                    if success:
+                        result_box[0] = {
+                            "status": "success",
+                            "msg": msg,
+                            "group_name": group_name,
+                        }
+                    else:
+                        result_box[0] = {"status": "error", "msg": f"导入失败: {msg}"}
+                    return
+
+                # 默认按 INF 流程处理
+                parser = INFParser(file_path)
                 cursor_paths, scheme_name = parser.get_cursor_paths_in_order()
                 log.val(f"cursor_paths: {cursor_paths}")
                 log.val(f"scheme_name: {scheme_name}")
                 if scheme_name and cursor_paths != ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '']:
-                    保存组配置(scheme_name, "mouses", cursor_paths)
-                    success = True
-                    result_box[0] = success
+                    保存组配置(scheme_name, "mouses", cursor_paths, is_import=True)
+                    result_box[0] = {
+                        "status": "success",
+                        "msg": f"已导入组 [{scheme_name}]",
+                        "group_name": scheme_name,
+                    }
                 else:
-                    log.error(f"导入组失败: 为空组")
-                    success = False
-                    result_box[0] = success
+                    log.error(f"导入组失败: 为空组 ({file_path})")
+                    result_box[0] = {"status": "error", "msg": "INF 解析失败或为空组"}
             except Exception as e:
                 log.error(f"导入组失败: {e}")
-                result_box[0] = False
+                result_box[0] = {"status": "error", "msg": str(e)}
             finally:
-                done.set()           # 通知主线程：结果已就绪
+                done.set()
+
         threading.Thread(target=worker, daemon=True).start()
-        done.wait()                  # 阻塞等待线程完成
+        done.wait()
         return result_box[0]
 
 

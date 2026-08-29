@@ -40,48 +40,29 @@
         detailType.textContent = `${tr('type')}：${typeValue || '-'}`;
     }
 
-    // 初始化函数：自动调用Python API，3秒超时使用测试数据
+    // 初始化函数：自动调用Python API
     async function initApp() {
-        try {
-            console.log("1. 检查 pywebview 对象:", window.pywebview);
-            
-            if (!window.pywebview) {
-                console.log("2. 等待 pywebview 就绪...（3秒超时）");
-                await Promise.race([
-                    new Promise(resolve => {
-                        window.addEventListener('pywebviewready', resolve);
-                    }),
-                    // 3秒超时器
-                    new Promise((_, reject) => {
-                        setTimeout(() => reject(new Error("pywebview 3秒未就绪")), 3000);
-                    })
-                ]);
-            }
-            
-            console.log("3. pywebview API:", window.pywebview.api);
-            console.log("4. 调用 init 方法...");
-            
-            // 调用API获取数据
-            let wallpapers = await window.pywebview.api.init();
-            console.log("5. 获取到的API数据：", wallpapers);
+        console.log("1. 检查 pywebview 对象:", window.pywebview);
 
-            // 如果API返回空/无效数据，则使用测试列表
-            if (!wallpapers || wallpapers.length === 0) {
-                console.log("API返回数据为空，使用测试备用数据");
-                wallpapers = TEST_WALLPAPERS;
-            }
-            
-            // 缓存所有壁纸数据
-            allWallpapersData = wallpapers;
-            
-            renderWallpapers(wallpapers);
-        } catch (error) {
-            // 捕获所有异常
-            console.error("初始化失败，切换到测试数据：", error);
-            allWallpapersData = TEST_WALLPAPERS;
-            renderWallpapers(TEST_WALLPAPERS);
+        if (!window.pywebview) {
+            console.log("2. 等待 pywebview 就绪...");
+            await new Promise(resolve => {
+                window.addEventListener('pywebviewready', resolve);
+            });
         }
-        
+
+        console.log("3. pywebview API:", window.pywebview.api);
+        console.log("4. 调用 init 方法...");
+
+        // 调用API获取数据
+        const wallpapers = await window.pywebview.api.init();
+        console.log("5. 获取到的API数据：", wallpapers);
+
+        // 缓存所有壁纸数据
+        allWallpapersData = wallpapers || [];
+
+        renderWallpapers(allWallpapersData);
+
         // 初始化复选框事件监听
         initCheckboxListener();
     }
@@ -109,12 +90,7 @@
     // 更新右侧预览面板
     function updatePreviewPanel(wallpaperData) {
         const [id, imagePath, name, type] = wallpaperData;
-        
-        // 如果类型为web或application，不执行更新操作
-        if (type && (type.toLowerCase() === 'web' || type.toLowerCase() === 'application')) {
-            return;
-        }
-        
+
         // 保存当前选中的壁纸 ID
         currentWallpaperId = id;
         
@@ -188,29 +164,6 @@
                     this.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgZmlsbD0iIzMzNDE1NSIvPjx0ZXh0IHg9IjkwIiB5PSI5MCIgZm9udC1mYW1pbHk9IkxlZnQgVUlUIiwgZm9udC1zaXplPSIxMiIgZmlsbD0iIzlhYjNjOCIgbGV0dGVyLXNwYWNpbmc9Im5vcm1hbCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+5Zu+54mH5Lu25Lq6PC90ZXh0Pjwvc3ZnPg==';
                 };
                 thumbEl.appendChild(img);
-                
-                // 如果类型为web或application，添加半透明红色覆盖层
-                if (type && (type.toLowerCase() === 'web' || type.toLowerCase() === 'application')) {
-                    const overlay = document.createElement('div');
-                    overlay.style.position = 'absolute';
-                    overlay.style.top = '0';
-                    overlay.style.left = '0';
-                    overlay.style.width = '100%';
-                    overlay.style.height = '100%';
-                    overlay.style.background = 'rgba(255, 0, 0, 0.5)';
-                    overlay.style.display = 'flex';
-                    overlay.style.alignItems = 'center';
-                    overlay.style.justifyContent = 'center';
-                    overlay.style.color = 'white';
-                    overlay.style.fontSize = '12px';
-                    overlay.style.fontWeight = 'bold';
-                    overlay.style.textAlign = 'center';
-                    overlay.style.padding = '10px';
-                    const overlayKey = type.toLowerCase() === 'web' ? 'unsupportedWebWallpaper' : 'unsupportedApplicationWallpaper';
-                    overlay.dataset.i18n = overlayKey;
-                    overlay.textContent = tr(overlayKey);
-                    thumbEl.appendChild(overlay);
-                }
             } else {
                 thumbEl.innerHTML = `<span style="color:#94a3b8; font-size:12px;" data-i18n="noImage">${tr('noImage')}</span>`;
             }

@@ -54,20 +54,20 @@ function updateEditorTitle(name = currentOriginalGroup) {
 document.addEventListener('DOMContentLoaded', async () => {
     updateWindowTitle();
     renderRows();               // 右侧列表
-    await renderPreviewGrid();   
-    
+
     // 初始化悬浮窗事件监听器
     initModalListeners();
 
+   
     if (window.pywebview) {
         await refreshGroups();
-        await renderPreviewGrid(); // 刷新组列表后重新渲染列表
-        await selectGroup('默认'); // 默认加载默认组
+        await renderPreviewGrid();
+        await selectGroup('默认');
     } else {
         window.addEventListener('pywebviewready', async () => {
             await refreshGroups();
-            await renderPreviewGrid(); // 刷新组列表后重新渲染列表
-            await selectGroup('默认'); // 默认加载默认组
+            await renderPreviewGrid();
+            await selectGroup('默认');
         });
     }
 });
@@ -75,52 +75,94 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function renderPreviewGrid() {
     const grid = document.getElementById('previewGrid');
     if (!grid) return;
-    
+
     // 清空列表
     grid.innerHTML = '';
-    
+
     // 获取所有鼠标组
     const groups = window.pywebview ? await pywebview.api.get_existing_groups() : ['默认组'];
+
     
+    const groupInfos = await Promise.all(groups.map(async (groupName) => {
+        let groupConfig = {};
+        let author = '';
+        if (window.pywebview) {
+            try {
+                groupConfig = (await pywebview.api.load_group_config(groupName)) || {};
+            } catch (e) {
+                console.error('加载组配置失败:', groupName, e);
+            }
+            try {
+                const meta = await pywebview.api.get_group_meta(groupName);
+                author = meta && meta.author ? String(meta.author).trim() : '';
+            } catch (e) {
+                console.warn('加载组元数据失败:', groupName, e);
+            }
+        }
+        return { groupName, groupConfig, author };
+    }));
+
+    
+    let previewsMap = {};
+    if (window.pywebview) {
+        try {
+            const groupsConfigInput = {};
+            for (const info of groupInfos) groupsConfigInput[info.groupName] = info.groupConfig;
+            previewsMap = await pywebview.api.get_all_cursor_previews(groupsConfigInput);
+        } catch (e) {
+            console.error('批量获取预览失败:', e);
+        }
+    }
+
     // 为每个组生成一个列表项
-    for (const groupName of groups) {
+    for (const { groupName, groupConfig, author } of groupInfos) {
         // 创建组卡片
         const groupCard = document.createElement('div');
         groupCard.className = 'grid-item';
         groupCard.dataset.group = groupName;
-        
-        // 组名称
+
+        // 组名称 + 作者（作者位于组名右侧）
         const nameLabel = document.createElement('div');
         nameLabel.className = 'group-name';
-        nameLabel.textContent = groupName;
-        groupCard.appendChild(nameLabel);
-        
-        // 加载组配置
-        let groupConfig = {};
-        if (window.pywebview) {
-            try {
-                groupConfig = await pywebview.api.load_group_config(groupName);
-            } catch (e) {
-                console.error('加载组配置失败:', e);
-            }
+
+        const nameText = document.createElement('span');
+        nameText.className = 'group-name-text';
+        nameText.textContent = groupName;
+        nameLabel.appendChild(nameText);
+
+        const authorSpan = document.createElement('span');
+        authorSpan.className = 'group-author';
+        if (author) {
+            authorSpan.textContent = author;
+            authorSpan.classList.add('is-shown');
         }
-        
+        nameLabel.appendChild(authorSpan);
+
+        groupCard.appendChild(nameLabel);
+
+        const groupPreviews = (previewsMap && previewsMap[groupName]) || {};
+
         // 主指针
         const mainSlot = document.createElement('div');
         mainSlot.className = 'cursor-slot main';
         const mainImg = document.createElement('img');
         mainImg.id = `grid-img-${groupName}-${CURSOR_KEYS[0]}`;
         mainImg.alt = CURSOR_KEYS[0];
+        mainImg.loading = 'lazy';
+        mainImg.decoding = 'async';
+        const mainPreview = groupPreviews[CURSOR_KEYS[0]];
+        mainImg.src = mainPreview || DEFAULT_IMAGES[CURSOR_KEYS[0]];
         mainImg.onerror = function() {
-            this.src = `data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 60 60"%3E%3Crect width="60" height="60" fill="%23334155"/%3E%3Ctext x="10" y="35" font-size="12" fill="%23fff"%3E${CURSOR_KEYS[0]}%3C/text%3E%3C/svg%3E`;
+            this.onerror = null;
+            this.src = DEFAULT_IMAGES[CURSOR_KEYS[0]];
         };
         mainSlot.appendChild(mainImg);
         groupCard.appendChild(mainSlot);
-        
+
         // 其他指针容器
         const slotsContainer = document.createElement('div');
         slotsContainer.className = 'cursor-slots-container';
-        
+
         // 其他指针
         for (let i = 1; i < CURSOR_KEYS.length; i++) {
             const slot = document.createElement('div');
@@ -128,55 +170,33 @@ async function renderPreviewGrid() {
             const img = document.createElement('img');
             img.id = `grid-img-${groupName}-${CURSOR_KEYS[i]}`;
             img.alt = CURSOR_KEYS[i];
+            img.loading = 'lazy';
+            img.decoding = 'async';
+            const preview = groupPreviews[CURSOR_KEYS[i]];
+            img.src = preview || DEFAULT_IMAGES[CURSOR_KEYS[i]];
             img.onerror = function() {
-                this.src = `data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"%3E%3Crect width="40" height="40" fill="%23334155"/%3E%3Ctext x="5" y="25" font-size="10" fill="%23fff"%3E${CURSOR_KEYS[i]}%3C/text%3E%3C/svg%3E`;
+                this.onerror = null;
+                this.src = DEFAULT_IMAGES[CURSOR_KEYS[i]];
             };
             slot.appendChild(img);
             slotsContainer.appendChild(slot);
         }
-        
+
         groupCard.appendChild(slotsContainer);
-        
+
         // 添加点击事件
         groupCard.addEventListener('click', async () => {
             await selectGroup(groupName);
         });
-        
+
         // 添加右键点击事件
         groupCard.addEventListener('contextmenu', (e) => {
             e.preventDefault();
             showContextMenu(e, groupName);
         });
-        
+
         // 添加到列表
         grid.appendChild(groupCard);
-        
-        // 加载预览图片
-        for (const key of CURSOR_KEYS) {
-            const imgElement = document.getElementById(`grid-img-${groupName}-${key}`);
-            if (imgElement) {
-                const cursorPath = groupConfig[key] || '';
-                if (cursorPath && window.pywebview) {
-                    try {
-                        const previewPath = await pywebview.api.get_preview_base64(cursorPath);
-                        if (previewPath) {
-                            imgElement.src = previewPath;
-                        } else {
-                            if (groupName === '默认组') {
-                                imgElement.src = DEFAULT_IMAGES[key];
-                            } else {
-                                imgElement.src = DEFAULT_IMAGES[key];
-                            }
-                        }
-                    } catch (e) {
-                        console.error('获取预览失败:', e);
-                        imgElement.src = DEFAULT_IMAGES[key];
-                    }
-                } else {
-                    imgElement.src = DEFAULT_IMAGES[key];
-                }
-            }
-        }
     }
 }
 
@@ -515,7 +535,7 @@ function createEmptyGroup() {
     showGroupNameModal();
 }
 
-// 导入组
+// 导入组（统一入口：支持 .inf 和 .mepack，后端按扩展名分流）
 async function importGroup() {
     if (!window.pywebview) {
         alert(tr('thisFeatureAppOnly'));
@@ -524,12 +544,20 @@ async function importGroup() {
 
     try {
         const result = await pywebview.api.导入组();
-        if (result) {
-            // 如果返回true，刷新组列表
+        if (result && result.status === 'success') {
+            showNotification(result.msg || tr('importGroupSuccess'), 'success');
             await refreshGroups();
             await renderPreviewGrid();
+            // 自动选中新导入的组
+            if (result.group_name) {
+                await selectGroup(result.group_name);
+            }
+        } else if (result && result.status === 'cancelled') {
+            // 静默
+        } else {
+            const msg = (result && result.msg) || tr('importFailed');
+            showNotification(msg, 'error');
         }
-        // 如果返回false，跳过刷新
     } catch (e) {
         console.error('导入组失败', e);
         alert(tr('importFailed'));
@@ -665,10 +693,17 @@ function showContextMenu(e, groupName) {
     
     const applyItem = document.getElementById('applyGroupItem');
     const renameItem = document.getElementById('renameGroupItem');
-    
+    const exportItem = document.getElementById('exportGroupItem');
+
     applyItem.classList.remove('disabled');
     applyItem.onclick = () => handleApplyGroup(groupName);
-    
+
+    // 导出对所有组开放（含默认组）
+    if (exportItem) {
+        exportItem.classList.remove('disabled');
+        exportItem.onclick = () => handleExportGroup(groupName);
+    }
+
     // 如果是默认组，禁用删除选项
     if (groupName === '默认组') {
         deleteItem.classList.add('disabled');
@@ -677,7 +712,7 @@ function showContextMenu(e, groupName) {
         deleteItem.classList.remove('disabled');
         deleteItem.onclick = () => handleDeleteGroup(groupName);
     }
-    
+
     // 为所有组添加重命名选项
     renameItem.classList.remove('disabled');
     renameItem.onclick = () => handleRenameGroup(groupName);
@@ -784,6 +819,31 @@ async function handleApplyGroup(groupName) {
     } catch (e) {
         console.error('应用组失败', e);
         showNotification(tr('applyGroupFailed'), 'error');
+    } finally {
+        hideContextMenu();
+    }
+}
+
+// 处理导出组操作
+async function handleExportGroup(groupName) {
+    if (!window.pywebview) {
+        alert(tr('thisFeatureAppOnly'));
+        hideContextMenu();
+        return;
+    }
+
+    try {
+        const result = await pywebview.api.export_group(groupName);
+        if (result.status === 'success') {
+            showNotification(result.msg || tr('exportGroupSuccess'), 'success');
+        } else if (result.status === 'cancelled') {
+            // 用户取消，不提示
+        } else {
+            showNotification(result.msg || tr('exportGroupFailed'), 'error');
+        }
+    } catch (e) {
+        console.error('导出组失败', e);
+        showNotification(tr('exportGroupFailed'), 'error');
     } finally {
         hideContextMenu();
     }

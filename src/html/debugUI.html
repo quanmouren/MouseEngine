@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MouseEngine Debug</title>
+    <link rel="stylesheet" href="css/debugUI.css">
+</head>
+<body>
+    <header class="debug-header">
+        <div class="debug-title">
+            <span class="dot"></span>
+            MouseEngine Debug
+        </div>
+        <div class="debug-status">
+            <span id="fps">等待刷新…</span>
+            <span class="muted">窗口检测 · 显示器布局 · 决策链路 · 壁纸缩略图</span>
+        </div>
+    </header>
+
+    <main class="debug-main">
+        <section class="panel decision-panel">
+            <h2 class="panel-title">决策链路</h2>
+            <div id="decision" class="decision">
+                <div class="empty">加载中…</div>
+            </div>
+        </section>
+
+        <div class="debug-row">
+            <section class="panel layout-panel">
+                <h2 class="panel-title">显示器布局 / 窗口 / 鼠标</h2>
+                <div class="canvas-wrap">
+                    <canvas id="layoutCanvas"></canvas>
+                </div>
+            </section>
+
+            <aside class="side-column">
+                <section class="panel">
+                    <h2 class="panel-title">显示器 / 壁纸</h2>
+                    <div id="monitorGrid" class="monitor-grid">
+                        <div class="empty">加载中…</div>
+                    </div>
+                </section>
+
+                <section class="panel">
+                    <h2 class="panel-title">实时窗口检测</h2>
+                    <div id="realtime" class="realtime"></div>
+                    <h3 class="panel-subtitle">可见窗口列表</h3>
+                    <div id="windowList" class="window-list"></div>
+                </section>
+            </aside>
+        </div>
+    </main>
+
+    <script src="js/debugUI.js"></script>
+</body>
+</html>

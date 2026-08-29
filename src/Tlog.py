@@ -2,9 +2,36 @@
 # SPDX-License-Identifier: MIT
 import datetime
 import inspect
+import os
 import sys
 import re
 import traceback
+
+import toml
+
+from path_utils import resolve_path
+
+# on_DEBUG 的进程级缓存, 同一进程只读一次 config.toml
+_on_DEBUG_cache = None
+_DEFAULT_ON_DEBUG = False
+
+
+def _load_on_DEBUG_from_config():
+    global _on_DEBUG_cache
+    if _on_DEBUG_cache is not None:
+        return _on_DEBUG_cache
+    try:
+        config_path = resolve_path("config.toml")
+        if os.path.exists(config_path):
+            data = toml.load(config_path)
+            val = data.get("log", {}).get("on_DEBUG", _DEFAULT_ON_DEBUG)
+        else:
+            val = _DEFAULT_ON_DEBUG
+    except Exception:
+        val = _DEFAULT_ON_DEBUG
+    _on_DEBUG_cache = val
+    return val
+
 
 class TLog:
     def __init__(self, title="SYSTEM"):
@@ -13,7 +40,7 @@ class TLog:
         self.TF = True
         self.on_def = True
         self._time = True
-        self.on_DEBUG = True
+        self.on_DEBUG = _load_on_DEBUG_from_config()
         self.level = 3
 
     def __color_text(self, text, is_error=False):

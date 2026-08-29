@@ -1,4 +1,4 @@
-# Copyright (c) 2025, CIF3
+﻿# Copyright (c) 2025, CIF3
 # SPDX-License-Identifier: BSD-3-Clause
 import threading
 import time
@@ -9,7 +9,7 @@ import toml
 import sys
 import subprocess
 import ctypes
-from getActiveWallpaper import get_active_ids
+from getActiveWallpaper import getPlayliststateID, get_mouse_playliststate_detail
 #from test_测试句柄更新 import get_active_ids_optimized as get_active_ids
 try:
     import psutil
@@ -89,6 +89,8 @@ CURSOR_ORDER_MAPPING = [
 
 log = TLog("main")
 active_ui_processes = {}  
+RUNTIME_APPLY_LOCK = threading.Lock()
+last_runtime_cursor_paths = None
 
 ME_TITLE_LEN = 512
 ME_CLASS_LEN = 256
@@ -160,10 +162,31 @@ def is_strict_window_judgment_enabled(config_data=None):
 def load_main_config():
     try:
         if os.path.exists(CONFIG_FILE_PATH):
-            return toml.load(CONFIG_FILE_PATH)
+            with open(CONFIG_FILE_PATH, "r", encoding="utf-8") as f:
+                return toml.load(f)
     except Exception as e:
         log.error(f"读取主配置失败: {e}")
     return {}
+
+
+def load_toml_utf8(path):
+    with open(path, "r", encoding="utf-8") as f:
+        return toml.load(f)
+
+
+def apply_cursor_paths_once(cursor_paths, log_func=None):
+    global last_runtime_cursor_paths
+    logger = log_func or log
+    signature = tuple(str(path or "") for path in cursor_paths)
+
+    with RUNTIME_APPLY_LOCK:
+        if signature == last_runtime_cursor_paths:
+            logger.debug("目标光标组未变化，跳过重复设置")
+            return True
+        ok = 设置鼠标指针(list(signature))
+        if ok:
+            last_runtime_cursor_paths = signature
+        return ok
 
 
 def save_main_config(config_data):
@@ -208,14 +231,14 @@ def apply_mouse_group_by_name(group_name, log_func=None):
         return False
 
     try:
-        group_cfg = toml.load(group_config_path)
+        group_cfg = load_toml_utf8(group_config_path)
         mouses_section = group_cfg.get("mouses", {})
         if not isinstance(mouses_section, dict):
             logger.error(f"指定光标组配置格式无效: {group_config_path}")
             return False
 
         cursor_paths_list = [mouses_section.get(name, "") for name in CURSOR_ORDER_MAPPING]
-        ok = 设置鼠标指针(cursor_paths_list)
+        ok = apply_cursor_paths_once(cursor_paths_list, logger)
         if ok:
             logger.info(f"已应用指定光标组: {group_name}")
         else:
@@ -405,7 +428,7 @@ def open_settings_ui(icon=None, item=None):
 
 def open_mouseengine_ui(icon=None, item=None):
     """打开新版统一 UI"""
-    run_ui_in_process(["MouseEngineUI.exe", "NewUI.py"], "MouseEngine")
+    run_ui_in_process(["NewUI.exe", "NewUI.py"], "MouseEngine")
 
 def get_tray_title():
     if get_specified_mouse_group():
@@ -497,7 +520,7 @@ def create_menu():
     show_more_menu = False
     use_new_menu = True
     try:
-        config_data = toml.load(CONFIG_FILE_PATH)
+        config_data = load_main_config()
         config_section = config_data.get("config", {})
         show_more_menu = config_section.get("show_more_menu", False)
         use_new_menu = config_section.get("use_new_menu", True)
@@ -557,11 +580,15 @@ def setup_pystray_icon():
     TRAY_ICON = Icon("MouseEngine", image, get_tray_title(), menu)
     return TRAY_ICON
 
-def 触发刷新(target_wallpaper_id=None, changed_monitor_index=None):
+def 触发刷新(
+    target_wallpaper_id=None,
+    changed_monitor_index=None,
+    current_process_name_override=None,
+):
     log_func = TLog("触发刷新")
     try:
         log_func.val(f"CONFIG_FILE_PATH={CONFIG_FILE_PATH}")
-        main_cfg = toml.load(CONFIG_FILE_PATH)
+        main_cfg = load_main_config()
         enable_default = bool(main_cfg.get("config", {}).get("enable_default_icon_group", False))
         specified_mouse_group = str(main_cfg.get("config", {}).get("specified_mouse_group", "") or "").strip()
         wallpaper_map = main_cfg.get("wallpaper", {}) or {}
@@ -573,7 +600,20 @@ def 触发刷新(target_wallpaper_id=None, changed_monitor_index=None):
         log_func.error(f"读取主配置失败: {e}")
         return False
 
-    if specified_mouse_group:
+    current_process_name = current_process_name_override or get_process_name(main_cfg)
+
+    if pause_flag.is_set():
+        log_func.debug("全局暂停中，跳过本次刷新")
+        return True
+
+    if (
+        bool(main_cfg.get("config", {}).get("pause_on_fullscreen", False))
+        and is_fullscreen_app_running()
+    ):
+        log_func.debug("检测到全屏应用，跳过本次刷新")
+        return True
+
+    if specified_mouse_group and not program_whitelist.get(current_process_name):
         if apply_mouse_group_by_name(specified_mouse_group, log_func):
             return True
         log_func.error(f"指定光标组无效，清空配置并继续原刷新逻辑: {specified_mouse_group}")
@@ -583,7 +623,6 @@ def 触发刷新(target_wallpaper_id=None, changed_monitor_index=None):
             log_func.error(f"清空指定光标组失败: {e}")
 
     # 程序白名单检查
-    current_process_name = get_process_name(main_cfg)
     if current_process_name:
         log_func.debug(f"当前焦点程序: {current_process_name}")
         whitelist_theme = program_whitelist.get(current_process_name)
@@ -603,7 +642,7 @@ def 触发刷新(target_wallpaper_id=None, changed_monitor_index=None):
                     log_func.error(f"配置文件不存在: {group_config_path}（theme_dir={theme_dir}）")
                     return False
 
-                group_cfg = toml.load(group_config_path)
+                group_cfg = load_toml_utf8(group_config_path)
 
                 if "mouses" not in group_cfg or not isinstance(group_cfg["mouses"], dict):
                     log_func.error(f"配置缺少 [mouses] 段或格式错误: {group_config_path}")
@@ -631,7 +670,7 @@ def 触发刷新(target_wallpaper_id=None, changed_monitor_index=None):
 
                 log_func.debug(f"生成的 cursor_paths 列表长度: {len(cursor_paths_list)}")
 
-                ok = 设置鼠标指针(cursor_paths_list)
+                ok = apply_cursor_paths_once(cursor_paths_list, log_func)
                 if ok:
                     log_func.info("鼠标指针主题设置成功（程序白名单）。")
                     return True
@@ -648,18 +687,12 @@ def 触发刷新(target_wallpaper_id=None, changed_monitor_index=None):
         log_func.debug("无法获取当前焦点程序名，继续使用壁纸ID匹配")
 
     if target_wallpaper_id is None:
-        log_func.debug("未提供 target_wallpaper_id，尝试获取当前活跃壁纸ID")
+        log_func.debug("未提供 target_wallpaper_id，读取鼠标所在显示器的当前壁纸ID")
         try:
-            # 尝试获取当前活跃的壁纸ID
-            active_ids = get_active_ids()
-            if active_ids:
-                target_wallpaper_id = list(active_ids)[0]
-                log_func.info(f"获取到当前活跃壁纸ID: {target_wallpaper_id}")
-            else:
-                log_func.error("未获取到活跃壁纸ID，无法应用主题。")
-                return False
+            target_wallpaper_id = getPlayliststateID()
+            log_func.info(f"鼠标所在显示器当前壁纸ID: {target_wallpaper_id}")
         except Exception as e:
-            log_func.error(f"获取活跃壁纸ID失败: {e}")
+            log_func.error(f"获取鼠标所在显示器壁纸ID失败: {e}")
             return False
 
     target_id_str = str(target_wallpaper_id).strip()
@@ -696,7 +729,7 @@ def 触发刷新(target_wallpaper_id=None, changed_monitor_index=None):
             log_func.error(f"配置文件不存在: {group_config_path}（theme_dir={theme_dir}）")
             return False
 
-        group_cfg = toml.load(group_config_path)
+        group_cfg = load_toml_utf8(group_config_path)
 
         if "mouses" not in group_cfg or not isinstance(group_cfg["mouses"], dict):
             log_func.error(f"配置缺少 [mouses] 段或格式错误: {group_config_path}")
@@ -724,7 +757,7 @@ def 触发刷新(target_wallpaper_id=None, changed_monitor_index=None):
 
         log_func.debug(f"生成的 cursor_paths 列表长度: {len(cursor_paths_list)}")
 
-        ok = 设置鼠标指针(cursor_paths_list)
+        ok = apply_cursor_paths_once(cursor_paths_list, log_func)
         if ok:
             log_func.info("鼠标指针主题设置成功。")
             return True
@@ -819,6 +852,56 @@ def save_focus_info(current_app, last_app, log_func, last_app_1):
     except Exception as e:
         log_func.error(f"保存焦点信息失败: {e}")
 
+
+def playliststate监听():
+    """监听鼠标跨屏和鼠标所在显示器的当前壁纸变化。"""
+    global initial_loading_done
+    log_func = TLog("playliststate监听")
+    last_snapshot = None
+
+    while not stop_flag.is_set():
+        if pause_flag.is_set():
+            time.sleep(0.2)
+            continue
+
+        try:
+            detail = get_mouse_playliststate_detail()
+            mouse_monitor = detail.get("mouse_monitor", {})
+            wallpaper_id = str(detail.get("current_id") or "").strip()
+            snapshot = (
+                int(mouse_monitor.get("hmonitor") or 0),
+                str(mouse_monitor.get("device_name") or "").lower(),
+                wallpaper_id,
+            )
+
+            if wallpaper_id and snapshot != last_snapshot:
+                log_func.debug(
+                    "跨显示器行为变化: "
+                    f"last_snapshot={last_snapshot} -> new_snapshot={snapshot}, "
+                    f"device_name={mouse_monitor.get('device_name')!r}, "
+                    f"display_name={mouse_monitor.get('display_name')!r}, "
+                    f"rect={mouse_monitor.get('rect')}, "
+                    f"work_rect={mouse_monitor.get('work_rect')}, "
+                    f"dpi={mouse_monitor.get('dpi')}, "
+                    f"is_primary={mouse_monitor.get('is_primary')}, "
+                    f"hmonitor={mouse_monitor.get('hmonitor')}, "
+                    f"wallpaper_id={wallpaper_id!r}"
+                )
+                log_func.info(
+                    "运行状态变化: "
+                    f"display={mouse_monitor.get('device_name')}, "
+                    f"hmonitor={mouse_monitor.get('hmonitor')}, "
+                    f"wallpaper={wallpaper_id}"
+                )
+                save_active_wallpaper_id(wallpaper_id, log_func)
+                触发刷新(target_wallpaper_id=wallpaper_id)
+                last_snapshot = snapshot
+                initial_loading_done = True
+        except Exception as e:
+            log_func.error(f"playliststate监听异常: {e}")
+
+        time.sleep(0.2)
+
 def json监听():
     global LAST_JSON_TRIGGER_TIME
     global initial_loading_done
@@ -828,7 +911,7 @@ def json监听():
     # 加载配置路径
     try:
         log_func.val(f"CONFIG_FILE_PATH={CONFIG_FILE_PATH}")
-        config_data = toml.load(CONFIG_FILE_PATH)
+        config_data = load_main_config()
         config_path = config_data.get("path", {}).get("wallpaper_engine_config", "")
         log_func.val(f"config_path={config_path}")
     except FileNotFoundError:
@@ -946,17 +1029,29 @@ def 焦点监听():
                         if last_in_whitelist_value is None:
                             # 首次运行触发刷新
                             log_func.debug("首次运行，触发刷新")
-                            触发刷新(target_wallpaper_id=None, changed_monitor_index=None)
+                            触发刷新(
+                                target_wallpaper_id=None,
+                                changed_monitor_index=None,
+                                current_process_name_override=current_process_name,
+                            )
                             last_in_whitelist = current_in_whitelist
                         elif current_in_whitelist != last_in_whitelist_value:
                             # 白名单状态发生变化
                             log_func.debug(f"白名单状态变化: {last_in_whitelist_value} -> {current_in_whitelist}，触发刷新")
-                            触发刷新(target_wallpaper_id=None, changed_monitor_index=None)
+                            触发刷新(
+                                target_wallpaper_id=None,
+                                changed_monitor_index=None,
+                                current_process_name_override=current_process_name,
+                            )
                             last_in_whitelist = current_in_whitelist
                         elif current_in_whitelist and last_in_whitelist_value:
                             # 都在白名单中
                             log_func.debug(f"白名单内切换: {last_process_name} -> {current_process_name}，触发刷新")
-                            触发刷新(target_wallpaper_id=None, changed_monitor_index=None)
+                            触发刷新(
+                                target_wallpaper_id=None,
+                                changed_monitor_index=None,
+                                current_process_name_override=current_process_name,
+                            )
                             last_in_whitelist = current_in_whitelist
                         else:
                             # 都不在白名单中
@@ -966,7 +1061,11 @@ def 焦点监听():
                     except Exception as e:
                         log_func.error(f"检查白名单状态失败: {e}")
                         # 容错
-                        触发刷新(target_wallpaper_id=None, changed_monitor_index=None)
+                        触发刷新(
+                            target_wallpaper_id=None,
+                            changed_monitor_index=None,
+                            current_process_name_override=current_process_name,
+                        )
                 
             except Exception as e:
                 log_func.error(f"焦点监听异常: {e}")
@@ -999,7 +1098,7 @@ def ram监听():
         log_func.info(f"RAM初始检测到活跃 ID: {last_active_ids}")
         # 检查是否启用全屏暂停
         try:
-            main_cfg = toml.load(CONFIG_FILE_PATH)
+            main_cfg = load_main_config()
             pause_on_fullscreen = bool(main_cfg.get("config", {}).get("pause_on_fullscreen", False))
             if pause_on_fullscreen and is_fullscreen_app_running():
                 log_func.info("检测到全屏应用，跳过初始触发")
@@ -1026,7 +1125,7 @@ def ram监听():
             
             # 检查是否启用全屏暂停
             try:
-                main_cfg = toml.load(CONFIG_FILE_PATH)
+                main_cfg = load_main_config()
                 pause_on_fullscreen = bool(main_cfg.get("config", {}).get("pause_on_fullscreen", False))
                 if pause_on_fullscreen and is_fullscreen_app_running():
                     log_func.debug("检测到全屏应用，跳过RAM检测")
@@ -1191,11 +1290,11 @@ def 运行占用监控():
 
 if __name__ == "__main__":
     # 启动后台线程
-    t1 = start_thread(json监听, "JsonListener")
+    t1 = start_thread(playliststate监听, "PlayliststateListener")
     t2 = None
     if log.on_DEBUG == True:
         t2 = start_thread(运行占用监控, "ResourceMonitor")
-    t3 = start_thread(ram监听, "RamListener")
+    t3 = None
     t4 = start_thread(焦点监听, "FocusListener")
     t5 = start_thread(settings_watcher, "SettingsWatcher")
     

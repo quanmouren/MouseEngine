@@ -1,8 +1,10 @@
 # Copyright (c) 2025, CIF3
 # SPDX-License-Identifier: BSD-3-Clause
+import io
 import os
 import shutil
 import toml
+from datetime import datetime
 try:
     import portalocker
 except ImportError:
@@ -25,6 +27,71 @@ log = TLog("mouses")
 
 CONFIG_PATH = "config.toml"
 MOUSE_BASE_PATH = "mouses"
+
+
+def _today_str():
+    """返回当前日期的 YYYY-MM-DD 字符串"""
+    return datetime.now().strftime("%Y-%m-%d")
+
+
+def read_group_meta(config_file_path):
+    """
+    读取鼠标组 config.toml 的 [meta] 段。
+    文件不存在或解析失败时返回 None。
+    """
+    if not config_file_path or not os.path.exists(config_file_path):
+        return None
+    try:
+        with open(config_file_path, "r", encoding="utf-8") as f:
+            data = toml.load(f)
+        meta = data.get("meta")
+        if isinstance(meta, dict):
+            return meta
+        return None
+    except Exception as e:
+        log.debug(f"读取 meta 失败 ({config_file_path}): {e}")
+        return None
+
+
+def build_group_meta(existing_meta=None, is_import=False):
+    """
+    根据已有 meta 构造新的 meta 字典。
+
+    - is_import=True（从外部 INF 等导入）：
+        * created_date 保持原值（即便为空也不动，不填今天）
+        * added_date 设为今天（因为刚刚被加进来）
+        * author / url 尽量保留
+
+    - is_import=False（用户主动新建 / 编辑）：
+        * 已有 created_date：保留，更新 added_date 到今天
+        * 没有 created_date（全新创建）：created_date = added_date = 今天
+        * author / url 留空（由用户自行填写）
+    """
+    today = _today_str()
+    existing = existing_meta if isinstance(existing_meta, dict) else {}
+
+    if is_import:
+        return {
+            "created_date": existing.get("created_date", ""),
+            "added_date": today,
+            "author": existing.get("author", ""),
+            "url": existing.get("url", ""),
+        }
+
+    if existing.get("created_date"):
+        return {
+            "created_date": existing.get("created_date", today),
+            "added_date": today,
+            "author": existing.get("author", ""),
+            "url": existing.get("url", ""),
+        }
+
+    return {
+        "created_date": today,
+        "added_date": today,
+        "author": "",
+        "url": "",
+    }
 
 def load_toml_config(path=CONFIG_PATH):
     """加载顶层 config.toml 文件"""
@@ -125,12 +192,13 @@ def 触发刷新(config_path, username, monitor=None):
     return False
 
 
-def 保存组配置(name, folder_path, file_list):
+def 保存组配置(name, folder_path, file_list, is_import=False):
     """
     保存配置文件。
     :param name: 此配置名称
     :param folder_path: 配置文件夹路径
     :param file_list: 15个文件路径列表
+    :param is_import: 是否为从外部导入（INF 等）。为 True 时不会动 created_date。
     """
     if len(file_list) != 15:
         log.error(f"file_list 长度不符: {len(file_list)} (期望 15)")
@@ -140,12 +208,12 @@ def 保存组配置(name, folder_path, file_list):
     target_folder = os.path.join(folder_path, name)
     os.makedirs(target_folder, exist_ok=True)
     log.debug(f"目标文件夹路径: {target_folder}")
-    
+
     mouse_config = {}
-    
+
     for i, file_path_input in enumerate(file_list):
         cursor_name = CURSOR_ORDER_MAPPING[i]
-        
+
         # 处理空路径
         if not file_path_input or not file_path_input.strip():
             mouse_config[cursor_name] = ""
@@ -153,7 +221,7 @@ def 保存组配置(name, folder_path, file_list):
 
         try:
             source_path = os.path.abspath(file_path_input)
-            
+
             if not os.path.exists(source_path):
                 log.error(f"源文件不存在，跳过: {source_path}")
                 mouse_config[cursor_name] = ""
@@ -162,7 +230,7 @@ def 保存组配置(name, folder_path, file_list):
             file_name = os.path.basename(source_path)
             # 删除文件名中的空格
             new_file_name = file_name.replace(' ', '')
-            
+
             target_path = os.path.join(target_folder, new_file_name)
             target_path_abs = os.path.abspath(target_path)
 
@@ -179,7 +247,7 @@ def 保存组配置(name, folder_path, file_list):
                 log.debug(f"已复制文件: {file_name} -> {new_file_name}")
             else:
                 log.debug(f"文件已存在且相同，跳过复制: {new_file_name}")
-            
+
             # 保存相对路径，相对于项目根目录
             from path_utils import get_project_root
             project_root = get_project_root()
@@ -194,7 +262,11 @@ def 保存组配置(name, folder_path, file_list):
 
     config_data = {'mouses': mouse_config}
     config_file_path = os.path.join(target_folder, "config.toml")
-    
+
+    # 读取已有 meta（如果存在），用于按场景决定如何填充
+    existing_meta = read_group_meta(config_file_path)
+    config_data['meta'] = build_group_meta(existing_meta, is_import=is_import)
+
     # 写入配置文件
     try:
         if portalocker:
@@ -203,12 +275,386 @@ def 保存组配置(name, folder_path, file_list):
         else:
             with open(config_file_path, 'w', encoding='utf-8') as f:
                 toml.dump(config_data, f)
-                
+
         log.info(f"配置保存成功: {config_file_path}")
         return target_folder
     except Exception as e:
         log.error(f"保存配置失败: {e}")
         return False
+
+
+# 鼠标组导出包扩展名
+MOUSE_GROUP_PACK_EXT = ".mepack"
+
+
+def _clean_config_for_export(src_config_path):
+    """
+    读取源 config.toml，构造导出用的精简版本：
+    - 保留 [mouses] 段
+    - [meta] 段只保留 created_date（其他字段在导出时丢弃，符合"只保留创建时间"）
+    - 若没有 created_date，则 meta 段整体省略
+    """
+    src = toml.load(src_config_path)
+    cleaned = {"mouses": src.get("mouses", {})}
+    meta = src.get("meta")
+    if isinstance(meta, dict):
+        created = meta.get("created_date")
+        if created:
+            cleaned["meta"] = {"created_date": created}
+    return cleaned
+
+
+def 导出组(group_name, target_path, base_path=MOUSE_BASE_PATH):
+    """
+    将指定鼠标组目录打包为 .mepack (zip) 文件。
+
+    zip 内结构：
+        <group_name>/
+            config.toml    <- 精简版：只保留 [mouses] + [meta].created_date
+            *.cur / *.ani
+            ...
+
+    之所以精简 config.toml，是为了避免将本机的 added_date / author / url 等
+    私有信息带入到处方，导入端只拿到"创建时间"作为作品信息。
+
+    :param group_name: 鼠标组名称
+    :param target_path: 目标 .mepack 文件路径（扩展名缺省时会自动补）
+    :param base_path: 鼠标组根目录
+    :return: (success: bool, message: str)
+             success=True 时 message 是最终 .mepack 绝对路径；
+             success=False 时 message 是错误信息。
+    """
+    import zipfile
+
+    if not group_name or not group_name.strip():
+        return False, "组名不能为空"
+
+    source_folder = os.path.join(base_path, group_name)
+    if not os.path.isdir(source_folder):
+        return False, f"组 [{group_name}] 不存在"
+
+    config_path = os.path.join(source_folder, "config.toml")
+    if not os.path.isfile(config_path):
+        return False, f"组 [{group_name}] 缺少 config.toml"
+
+    if not target_path:
+        return False, "未指定导出路径"
+
+    # 保证绝对路径
+    if not os.path.isabs(target_path):
+        target_path = resolve_path(target_path)
+
+    # 自动补 .mepack 扩展名
+    if not target_path.lower().endswith(MOUSE_GROUP_PACK_EXT):
+        target_path = target_path + MOUSE_GROUP_PACK_EXT
+
+    try:
+        os.makedirs(os.path.dirname(target_path) or ".", exist_ok=True)
+        with zipfile.ZipFile(target_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            for root, _dirs, files in os.walk(source_folder):
+                for fname in files:
+                    file_path = os.path.join(root, fname)
+                    arcname = os.path.join(group_name, fname)
+
+                    if fname.lower() == "config.toml":
+                        # 写入精简版 config.toml
+                        cleaned = _clean_config_for_export(file_path)
+                        buf = io.StringIO()
+                        toml.dump(cleaned, buf)
+                        zf.writestr(arcname, buf.getvalue())
+                    else:
+                        zf.write(file_path, arcname)
+
+        log.info(f"导出鼠标组成功: {group_name} -> {target_path}")
+        return True, target_path
+    except Exception as e:
+        log.error(f"导出鼠标组失败 ({group_name}): {e}")
+        return False, str(e)
+
+
+def 导入组包(pack_path, base_path=MOUSE_BASE_PATH):
+    """
+    从 .mepack 文件导入鼠标组到本地 mouses 目录。
+
+    流程：
+    1. 校验 .mepack 路径与扩展名
+    2. 读 zip 内 <group_name>/config.toml，解析 [mouses] 段得到 15 个光标键
+    3. 解压所有光标文件到 mouses/<group_name>/
+    4. 调 保存组配置(..., is_import=True) 重写 config.toml
+       -> is_import=True 时：
+          - created_date 保留 zip 内的值
+          - added_date 设为今天（这就是用户说的"修改添加时间"）
+          - author / url 留空
+
+    :param pack_path: .mepack 文件绝对路径
+    :param base_path: 鼠标组根目录
+    :return: (success: bool, message: str, group_name: str|None)
+    """
+    import zipfile
+
+    if not pack_path or not pack_path.strip():
+        return False, "未选择 .mepack 文件", None
+    pack_path = resolve_path(pack_path)
+    if not os.path.isfile(pack_path):
+        return False, f".mepack 文件不存在: {pack_path}", None
+    if not pack_path.lower().endswith(MOUSE_GROUP_PACK_EXT):
+        return False, f"文件扩展名不是 {MOUSE_GROUP_PACK_EXT}", None
+
+    try:
+        with zipfile.ZipFile(pack_path, "r") as zf:
+            names = zf.namelist()
+            if not names:
+                return False, ".mepack 包为空", None
+
+            # 顶层目录作为组名
+            top_dirs = sorted({n.split("/", 1)[0] for n in names if "/" in n})
+            if len(top_dirs) != 1:
+                return False, ".mepack 包结构异常：顶层目录不唯一", None
+            group_name = top_dirs[0]
+            if not group_name or group_name in ("", ".", ".."):
+                return False, ".mepack 包结构异常：组名非法", None
+
+            cfg_inside = f"{group_name}/config.toml"
+            if cfg_inside not in names:
+                return False, f".mepack 包缺少 {cfg_inside}", None
+
+            with zf.open(cfg_inside) as f:
+                src_config = toml.load(io.TextIOWrapper(f, encoding="utf-8"))
+
+            mouses_section = src_config.get("mouses")
+            if not isinstance(mouses_section, dict):
+                return False, ".mepack 包内 config.toml 缺少 [mouses] 段", None
+
+            # 解压光标文件
+            target_folder = os.path.join(base_path, group_name)
+            os.makedirs(target_folder, exist_ok=True)
+
+            # 先把 zip 内的 config.toml 临时落盘到目标位置，
+            # 这样下面调 保存组配置 时 read_group_meta 能读到 zip 内的 created_date
+            cfg_target = os.path.join(target_folder, "config.toml")
+            with zf.open(cfg_inside) as src, open(cfg_target, "wb") as dst:
+                shutil.copyfileobj(src, dst)
+
+            file_list = []
+            for cursor_name in CURSOR_ORDER_MAPPING:
+                rel_path = mouses_section.get(cursor_name, "")
+                if rel_path and isinstance(rel_path, str) and rel_path.strip():
+                    # 取纯文件名（兼容 \\ 和 /）
+                    fname = os.path.basename(rel_path.replace("\\", "/"))
+                    if not fname or fname in (".", ".."):
+                        file_list.append("")
+                        continue
+                    # 在 zip 里找这个文件
+                    matched = None
+                    for n in names:
+                        if not n.startswith(f"{group_name}/"):
+                            continue
+                        if n == cfg_inside:
+                            continue
+                        if os.path.basename(n) == fname:
+                            matched = n
+                            break
+                    if matched is None:
+                        log.warn(f"zip 包内找不到对应光标文件: {fname}")
+                        file_list.append("")
+                        continue
+                    target_path = os.path.join(target_folder, fname)
+                    with zf.open(matched) as src, open(target_path, "wb") as dst:
+                        shutil.copyfileobj(src, dst)
+                    file_list.append(target_path)
+                else:
+                    file_list.append("")
+
+        # 用 保存组配置 重新生成 config.toml
+        # is_import=True：保留 zip 内的 created_date，added_date = today
+        保存组配置(
+            name=group_name,
+            folder_path=base_path,
+            file_list=file_list,
+            is_import=True
+        )
+
+        log.info(f"导入鼠标组包成功: {pack_path} -> {group_name}")
+        return True, f"已导入组 [{group_name}]", group_name
+    except zipfile.BadZipFile:
+        return False, "文件不是有效的 zip 包", None
+    except Exception as e:
+        log.error(f"导入鼠标组包失败 ({pack_path}): {e}")
+        return False, str(e), None
+
+
+# 完整备份包扩展名（项目级备份：mouses/ + config.toml）
+MOUSE_ENGINE_PACK_EXT = ".mecpack"
+CONFIG_FILE_NAME = "config.toml"
+
+
+def _safe_join_under(base, rel):
+    """
+    安全地拼接 base + rel（POSIX 风格 rel），防止 zip slip。
+    - 拒绝任何包含 `..` 的路径（不静默修复）
+    - 拒绝绝对路径
+    - 返回绝对路径（base 之下的）
+    """
+    if os.path.isabs(rel):
+        raise ValueError(f"非法绝对路径: {rel}")
+    rel_norm = rel.replace("\\", "/")
+    parts = rel_norm.split("/")
+    if any(p == ".." for p in parts):
+        raise ValueError(f"非法路径（可能 zip slip）: {rel}")
+    target = os.path.abspath(os.path.join(base, *parts))
+    base_abs = os.path.abspath(base)
+    if not (target == base_abs or target.startswith(base_abs + os.sep)):
+        raise ValueError(f"非法路径（zip slip 防护）: {rel}")
+    return target
+
+
+def 导出完整备份(target_path, project_root=None):
+    """
+    将整个项目数据（mouses/ + config.toml）打包为 .mecpack (zip) 文件。
+
+    zip 内结构：
+        mouses/<组名>/config.toml
+        mouses/<组名>/*.cur / *.ani
+        config.toml
+
+    默认组也包含在内。
+
+    :param target_path: 目标 .mepack 文件路径
+    :param project_root: 项目根目录，默认自动 resolve
+    :return: (success: bool, message: str)
+    """
+    import zipfile
+
+    if not target_path:
+        return False, "未指定导出路径"
+
+    if project_root is None:
+        from path_utils import get_project_root
+        project_root = get_project_root()
+    project_root = os.path.abspath(project_root)
+
+    mouses_dir = os.path.join(project_root, "mouses")
+    main_config = os.path.join(project_root, "config.toml")
+
+    if not os.path.isabs(target_path):
+        target_path = os.path.abspath(target_path)
+    if not target_path.lower().endswith(MOUSE_ENGINE_PACK_EXT):
+        target_path = target_path + MOUSE_ENGINE_PACK_EXT
+
+    try:
+        os.makedirs(os.path.dirname(target_path) or ".", exist_ok=True)
+        file_count = 0
+        with zipfile.ZipFile(target_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            # 1) mouses/ 下所有组
+            if os.path.isdir(mouses_dir):
+                for root, _dirs, files in os.walk(mouses_dir):
+                    for fname in files:
+                        file_path = os.path.join(root, fname)
+                        rel = os.path.relpath(file_path, project_root).replace("\\", "/")
+                        # 路径安全
+                        if ".." in rel.split("/"):
+                            log.warn(f"跳过可疑路径: {rel}")
+                            continue
+                        zf.write(file_path, rel)
+                        file_count += 1
+
+            # 2) 主 config.toml
+            if os.path.isfile(main_config):
+                zf.write(main_config, "config.toml")
+                file_count += 1
+
+        log.info(f"导出完整备份成功 -> {target_path}（{file_count} 个文件）")
+        return True, target_path
+    except Exception as e:
+        log.error(f"导出完整备份失败: {e}")
+        return False, str(e)
+
+
+def 导入完整备份(pack_path, mode="merge", project_root=None):
+    """
+    从 .mecpack 文件恢复项目数据。
+
+    :param mode:
+        - 'merge'    合并模式：保留现有内容；冲突时按"恢复单位=整个鼠标组"用 pack 内容
+        - 'overwrite' 覆盖模式：先删 mouses/ 目录和 config.toml，再解压 pack
+    :return: (success: bool, message: str)
+    """
+    import zipfile
+
+    if mode not in ("merge", "overwrite"):
+        return False, f"未知恢复模式: {mode}"
+
+    if not pack_path or not pack_path.strip():
+        return False, "未选择 .mecpack 文件"
+    pack_path = resolve_path(pack_path)
+    if not os.path.isfile(pack_path):
+        return False, f".mecpack 文件不存在: {pack_path}"
+    if not pack_path.lower().endswith(MOUSE_ENGINE_PACK_EXT):
+        return False, f"文件扩展名不是 {MOUSE_ENGINE_PACK_EXT}"
+
+    if project_root is None:
+        from path_utils import get_project_root
+        project_root = get_project_root()
+    project_root = os.path.abspath(project_root)
+
+    mouses_dir = os.path.join(project_root, "mouses")
+    main_config = os.path.join(project_root, "config.toml")
+
+    # 覆盖模式：先清空目标
+    if mode == "overwrite":
+        try:
+            if os.path.isdir(mouses_dir):
+                shutil.rmtree(mouses_dir)
+                log.info(f"已清空 mouses/ 目录")
+            if os.path.isfile(main_config):
+                os.remove(main_config)
+                log.info(f"已删除 config.toml")
+        except Exception as e:
+            log.error(f"覆盖模式清理失败: {e}")
+            return False, f"清理失败: {e}"
+
+    # 解压
+    try:
+        with zipfile.ZipFile(pack_path, "r") as zf:
+            names = zf.namelist()
+
+            # 在合并模式下，先把 pack 内的"组目录"列出来，准备按组覆盖
+            groups_to_replace = set()
+            if mode == "merge":
+                for n in names:
+                    # mouses/<组名>/... 中的 <组名>
+                    parts = n.replace("\\", "/").split("/")
+                    if len(parts) >= 3 and parts[0] == "mouses" and parts[1] and parts[1] != "..":
+                        groups_to_replace.add(parts[1])
+
+                # 把要替换的整个组先删掉（保证恢复单位=整个光标组）
+                for g in groups_to_replace:
+                    g_path = os.path.join(mouses_dir, g)
+                    if os.path.isdir(g_path):
+                        shutil.rmtree(g_path)
+                        log.info(f"合并模式：已删除原组目录 {g_path}")
+
+            # 遍历解压
+            for n in names:
+                # zip slip 防护
+                target = _safe_join_under(project_root, n)
+                if os.path.isabs(n) or n.endswith("/"):
+                    # 跳过目录条目或绝对路径
+                    continue
+                if os.path.dirname(n):
+                    os.makedirs(os.path.dirname(target), exist_ok=True)
+                with zf.open(n) as src, open(target, "wb") as dst:
+                    shutil.copyfileobj(src, dst)
+
+        log.info(f"导入完整备份成功 ({mode}): {pack_path}")
+        return True, "恢复完成"
+    except zipfile.BadZipFile:
+        return False, "文件不是有效的 zip 包"
+    except ValueError as ve:
+        return False, f"包结构异常: {ve}"
+    except Exception as e:
+        log.error(f"导入完整备份失败 ({pack_path}): {e}")
+        return False, str(e)
 
 
 def old_add_wallpaper(name, query_path, config_path=CONFIG_PATH):

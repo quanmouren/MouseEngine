@@ -409,29 +409,21 @@ class SettingsApi:
             return False
 
     def 清理缓存(self):
-        # 清理主目录下的cache文件夹和html\cache文件夹内的所有文件
         try:
             # 清理主目录下的cache文件夹
             main_cache_dir = resolve_path("cache")
             if os.path.exists(main_cache_dir):
-                for root, dirs, files in os.walk(main_cache_dir, topdown=False):
-                    for file_name in files:
-                        file_path = os.path.join(root, file_name)
-                        os.remove(file_path)
-                    for dir_name in dirs:
-                        dir_path = os.path.join(root, dir_name)
-                        os.rmdir(dir_path)
+                shutil.rmtree(main_cache_dir, ignore_errors=True)
+                os.makedirs(main_cache_dir, exist_ok=True)
                 log.info("主目录缓存清理完成")
-            
+
             # 清理html\cache文件夹
             html_cache_dir = resolve_path("html/cache")
             if os.path.exists(html_cache_dir):
-                for file_name in os.listdir(html_cache_dir):
-                    file_path = os.path.join(html_cache_dir, file_name)
-                    if os.path.isfile(file_path):
-                        os.remove(file_path)
+                shutil.rmtree(html_cache_dir, ignore_errors=True)
+                os.makedirs(html_cache_dir, exist_ok=True)
                 log.info("HTML缓存清理完成")
-            
+
             log.info("缓存清理完成")
             return True
         except Exception as e:
@@ -597,6 +589,108 @@ class SettingsApi:
         except Exception as e:
             log.error(f"获取光标组失败: {e}")
             return ["默认"]
+
+    def export_full_backup(self):
+        """
+        导出完整备份（mouses/ + config.toml）为 .mecpack。
+        返回 {status, msg, path?}
+        status: 'success' / 'cancelled' / 'error'
+        """
+        from mouses import 导出完整备份, MOUSE_ENGINE_PACK_EXT
+        import threading
+
+        done = threading.Event()
+        result_box = [None]
+
+        def worker():
+            try:
+                default_filename = f"MouseEngine_Backup_{__import__('datetime').datetime.now().strftime('%Y-%m-%d')}{MOUSE_ENGINE_PACK_EXT}"
+                res = self._window.create_file_dialog(
+                    webview.SAVE_DIALOG,
+                    directory="",
+                    save_filename=default_filename,
+                    file_types=(f"MouseEngine 完整备份 (*{MOUSE_ENGINE_PACK_EXT})",)
+                )
+                if not res:
+                    result_box[0] = {"status": "cancelled", "msg": "已取消导出"}
+                    return
+                target = res[0] if isinstance(res, (list, tuple)) else res
+                if not target:
+                    result_box[0] = {"status": "cancelled", "msg": "已取消导出"}
+                    return
+                success, msg = 导出完整备份(target)
+                if success:
+                    result_box[0] = {"status": "success", "msg": f"已导出备份 → {msg}", "path": msg}
+                else:
+                    result_box[0] = {"status": "error", "msg": f"导出失败: {msg}"}
+            except Exception as e:
+                log.error(f"导出完整备份失败: {e}")
+                result_box[0] = {"status": "error", "msg": str(e)}
+            finally:
+                done.set()
+
+        threading.Thread(target=worker, daemon=True).start()
+        done.wait()
+        return result_box[0]
+
+    def import_full_backup_pick_file(self):
+        """
+        弹出文件选择对话框让用户选 .mecpack 文件。
+        返回 {status, msg, path?}
+        status: 'success' / 'cancelled' / 'error'
+        """
+        from mouses import MOUSE_ENGINE_PACK_EXT
+        import threading
+
+        done = threading.Event()
+        result_box = [None]
+
+        def worker():
+            try:
+                res = self._window.create_file_dialog(
+                    webview.OPEN_DIALOG,
+                    allow_multiple=False,
+                    file_types=(f"MouseEngine 完整备份 (*{MOUSE_ENGINE_PACK_EXT})",)
+                )
+                if not res:
+                    result_box[0] = {"status": "cancelled", "msg": "已取消"}
+                    return
+                pack_path = res[0] if isinstance(res, (list, tuple)) else res
+                if not pack_path:
+                    result_box[0] = {"status": "cancelled", "msg": "已取消"}
+                    return
+                result_box[0] = {"status": "success", "msg": "已选择文件", "path": pack_path}
+            except Exception as e:
+                log.error(f"选择备份文件失败: {e}")
+                result_box[0] = {"status": "error", "msg": str(e)}
+            finally:
+                done.set()
+
+        threading.Thread(target=worker, daemon=True).start()
+        done.wait()
+        return result_box[0]
+
+    def import_full_backup(self, pack_path, mode):
+        """
+        从 .mecpack 文件恢复项目数据。
+        :param pack_path: .mecpack 文件绝对路径
+        :param mode: 'merge' 或 'overwrite'
+        返回 {status, msg}
+        """
+        from mouses import 导入完整备份
+
+        if mode not in ("merge", "overwrite"):
+            return {"status": "error", "msg": f"未知恢复模式: {mode}"}
+
+        try:
+            success, msg = 导入完整备份(pack_path, mode=mode)
+            if success:
+                return {"status": "success", "msg": f"已恢复备份（{mode}）: {msg}"}
+            else:
+                return {"status": "error", "msg": f"恢复失败: {msg}"}
+        except Exception as e:
+            log.error(f"恢复备份失败: {e}")
+            return {"status": "error", "msg": str(e)}
 
 
     def get_all_windows(self):

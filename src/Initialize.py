@@ -27,6 +27,9 @@ strict_window_judgment = false
 specified_mouse_group = ""
 use_new_menu = true
 
+[log]
+on_DEBUG = false
+
 [program_whitelist]
 """
     try:

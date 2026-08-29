@@ -1,5 +1,128 @@
 // settingsUI.js
 
+function tr(key, params) {
+    return window.MouseEngineI18n ? MouseEngineI18n.t(key, params) : key;
+}
+
+// 显示通知（与 mouseUI 风格一致：右上角滑入，3 秒后消失）
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.className = `notification ${type || 'info'}`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    setTimeout(() => {
+        notification.style.opacity = '1';
+        notification.style.transform = 'translateY(0)';
+    }, 10);
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transform = 'translateY(-20px)';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, 3000);
+}
+
+// 最小 Markdown 渲染器（针对许可证/通知类内容定制）
+// 支持：
+//   ## xxx   -> <h2>
+//   ### xxx  -> <h3>
+//   ---      -> <hr>
+//   - xxx    -> <li>，连续多个聚合成 <ul>
+//   `xxx`    -> <code>xxx</code>
+//   自动把 https:// 链接转成 <a target="_blank">
+//   空行分段 -> <p>
+function renderMarkdown(md) {
+    if (!md) return '';
+    const escapeHtml = (s) => s
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+    // 行内处理：先做 code，再做自动链接
+    const inline = (s) => {
+        s = escapeHtml(s);
+        // code: `xxx`
+        s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+        // 自动链接
+        s = s.replace(/(https?:\/\/[^\s<]+)/g, (m) => {
+            return `<a href="${m}" target="_blank" rel="noopener">${m}</a>`;
+        });
+        return s;
+    };
+
+    const lines = md.split(/\r?\n/);
+    const out = [];
+    let inList = false;
+    let paraBuf = [];
+
+    const flushPara = () => {
+        if (paraBuf.length) {
+            out.push('<p>' + inline(paraBuf.join(' ')) + '</p>');
+            paraBuf = [];
+        }
+    };
+    const closeList = () => {
+        if (inList) {
+            out.push('</ul>');
+            inList = false;
+        }
+    };
+
+    for (const raw of lines) {
+        const line = raw.replace(/\s+$/, '');
+        if (!line.trim()) {
+            flushPara();
+            closeList();
+            continue;
+        }
+
+        // 水平线
+        if (/^---+\s*$/.test(line)) {
+            flushPara();
+            closeList();
+            out.push('<hr>');
+            continue;
+        }
+
+        // 标题
+        let m;
+        if ((m = line.match(/^##\s+(.+)$/))) {
+            flushPara();
+            closeList();
+            out.push('<h2>' + inline(m[1]) + '</h2>');
+            continue;
+        }
+        if ((m = line.match(/^###\s+(.+)$/))) {
+            flushPara();
+            closeList();
+            out.push('<h3>' + inline(m[1]) + '</h3>');
+            continue;
+        }
+
+        // 列表项
+        if ((m = line.match(/^[-*]\s+(.+)$/))) {
+            flushPara();
+            if (!inList) {
+                out.push('<ul>');
+                inList = true;
+            }
+            out.push('<li>' + inline(m[1]) + '</li>');
+            continue;
+        }
+
+        // 普通段落
+        closeList();
+        paraBuf.push(line.trim());
+    }
+
+    flushPara();
+    closeList();
+    return out.join('\n');
+}
+
 window.addEventListener('DOMContentLoaded', () => {
     initNavigation();
     // 初始加载第一页的数据
@@ -35,10 +158,6 @@ async function handleLanguageChange(language) {
 }
 
 window.addEventListener('mouseengine-language-applied', syncLanguageSelect);
-
-function tr(key, params) {
-    return window.MouseEngineI18n ? MouseEngineI18n.t(key, params) : key;
-}
 
 // 加载版本信息
 async function loadVersionInfo() {
@@ -136,185 +255,204 @@ function initNavigation() {
 }
 
 function updateSettingsContent(page) {
-    const settingsTitle = document.querySelector('.settings-title');
-    const settingsSection = document.querySelector('.settings-section');
-    const titleKeyMap = {
-        basic: 'basicSettings',
-        advanced: 'advancedSettings',
-        whitelist: 'programWhitelist',
-        about: 'about'
-    };
-    
-    if (settingsTitle) {
-        settingsTitle.dataset.i18n = titleKeyMap[page] || 'basicSettings';
-        settingsTitle.textContent = window.MouseEngineI18n ? MouseEngineI18n.t(settingsTitle.dataset.i18n) : settingsTitle.textContent;
-    }
-    
-    // 清空当前内容并根据菜单名重新渲染
+    const settingsContent = document.querySelector('.settings-content');
+    if (!settingsContent) return;
+
+    // 渲染对应 tab 的完整内容（settings-title + 若干 settings-section）
+    let html = '';
     switch (page) {
-        case 'basic':
-            renderBasicSettings(settingsSection);
-            startLoadingSequence(); // 重新填充数据
-            break;
-        case 'advanced':
-            renderAdvancedSettings(settingsSection);
-            startLoadingSequence(); // 重新填充数据
-            break;
-        case 'whitelist':
-            renderProgramWhitelistSettings(settingsSection);
-            break;
-        case 'about':
-            renderAboutSettings(settingsSection);
-            break;
+        case 'basic':     html = renderBasicSettings();     break;
+        case 'advanced':  html = renderAdvancedSettings();  break;
+        case 'whitelist': html = renderProgramWhitelistSettings(); break;
+        case 'about':     html = renderAboutSettings();     break;
+    }
+    settingsContent.innerHTML = html;
+
+    // 翻译
+    if (window.MouseEngineI18n) {
+        MouseEngineI18n.apply(settingsContent);
     }
 
-    if (window.MouseEngineI18n) {
-        MouseEngineI18n.apply(settingsSection);
+    // 后置操作
+    if (page === 'basic' || page === 'advanced') {
+        startLoadingSequence();
+    } else if (page === 'whitelist') {
+        loadWhitelistData();
+        loadCursorGroups();
+    } else if (page === 'about') {
+        loadVersionInfo();
+    }
+
+    if (page === 'basic') {
+        syncLanguageSelect();
     }
 }
 
 // --- 页面渲染模板 ---
 
-function renderBasicSettings(container) {
-    container.innerHTML = `
-        <div class="settings-section-title" data-i18n="appSettings">应用设置</div>
-        <div class="settings-item">
-            <div class="settings-label" data-i18n="language">语言</div>
-            <div class="settings-control">
-                <select class="custom-input" id="languageSelect" onchange="handleLanguageChange(this.value)">
-                    <option value="zh-CN">简体中文</option>
-                    <option value="en">English</option>
-                    <option value="ja">日本語</option>
-                </select>
+function renderBasicSettings() {
+    return `
+        <div class="settings-title" data-i18n="basicSettings">基本设置</div>
+        <div class="settings-section">
+            <div class="settings-section-title" data-i18n="appSettings">应用设置</div>
+            <div class="settings-item">
+                <div class="settings-label" data-i18n="language">语言</div>
+                <div class="settings-control">
+                    <select class="custom-input" id="languageSelect" onchange="handleLanguageChange(this.value)">
+                        <option value="zh-CN">简体中文</option>
+                        <option value="en">English</option>
+                        <option value="ja">日本語</option>
+                    </select>
+                </div>
+            </div>
+            <div class="settings-item">
+                <div class="settings-label" data-i18n="runAtStartup">启动时自动运行</div>
+                <div class="settings-control"><input type="checkbox" id="autoStart" onchange="handleAutoStartChange(this.checked)"></div>
+            </div>
+            <div class="settings-item settings-item-double-row">
+                <div class="settings-label-row"><div class="settings-label" data-i18n="wallpaperEnginePath">Wallpaper Engine路径</div></div>
+                <div class="settings-control-row">
+                    <input type="text" class="custom-input custom-input-stretch" placeholder="请输入路径" data-i18n-placeholder="enterPath">
+                    <div class="settings-buttons">
+                        <button class="settings-btn" onclick="handleAutoGet()" data-i18n="autoGet">自动获取</button>
+                        <button class="settings-btn" onclick="handlePreview()" data-i18n="preview">预览</button>
+                    </div>
+                </div>
+            </div>
+            <div class="settings-item">
+                <div class="settings-label" data-i18n="enableDefaultCursor">启用默认光标</div>
+                <div class="settings-control"><input type="checkbox" id="enableDefaultCursor" onchange="handleEnableDefaultCursorChange(this.checked)"></div>
+            </div>
+            <div class="settings-item">
+                <div class="settings-label" data-i18n="pauseOnFullscreen">启动全屏暂停</div>
+                <div class="settings-control"><input type="checkbox" id="enableFullscreenPause" onchange="handleFullscreenPauseChange(this.checked)"></div>
             </div>
         </div>
-        <div class="settings-item">
-            <div class="settings-label" data-i18n="runAtStartup">启动时自动运行</div>
-            <div class="settings-control"><input type="checkbox" id="autoStart" onchange="handleAutoStartChange(this.checked)"></div>
-        </div>
-        <div class="settings-item settings-item-double-row">
-            <div class="settings-label-row"><div class="settings-label" data-i18n="wallpaperEnginePath">Wallpaper Engine路径</div></div>
-            <div class="settings-control-row">
-                <input type="text" class="custom-input custom-input-stretch" placeholder="请输入路径" data-i18n-placeholder="enterPath">
-                <div class="settings-buttons">
-                    <button class="settings-btn" onclick="handleAutoGet()" data-i18n="autoGet">自动获取</button>
-                    <button class="settings-btn" onclick="handlePreview()" data-i18n="preview">预览</button>
+        <div class="settings-section">
+            <div class="settings-section-title" data-i18n="backupSection">导入导出备份</div>
+            <div class="settings-item">
+                <div class="settings-label" data-i18n="backupSection">导入导出备份</div>
+                <div class="settings-control">
+                    <div class="settings-buttons">
+                        <button class="settings-btn" onclick="handleExportBackup()" data-i18n="backupExport">导出备份</button>
+                        <button class="settings-btn" onclick="handleRestoreBackup()" data-i18n="backupImport">恢复备份</button>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="settings-item">
-            <div class="settings-label" data-i18n="enableDefaultCursor">启用默认光标</div>
-            <div class="settings-control"><input type="checkbox" id="enableDefaultCursor" onchange="handleEnableDefaultCursorChange(this.checked)"></div>
-        </div>
-        <div class="settings-item">
-            <div class="settings-label" data-i18n="pauseOnFullscreen">启动全屏暂停</div>
-            <div class="settings-control"><input type="checkbox" id="enableFullscreenPause" onchange="handleFullscreenPauseChange(this.checked)"></div>
-        </div>
     `;
-    syncLanguageSelect();
 }
 
-function renderAdvancedSettings(container) {
-    container.innerHTML = `
-        <div class="settings-section-title" data-i18n="advancedOptions">高级选项</div>
-        <div class="settings-item">
-            <div class="settings-label" data-i18n="cacheCleanup">缓存清理</div>
-            <div class="settings-control">
-                <button class="settings-btn" onclick="handleClearCache(this)" data-i18n="clear">清理</button>
+function renderAdvancedSettings() {
+    return `
+        <div class="settings-title" data-i18n="advancedSettings">高级设置</div>
+        <div class="settings-section">
+            <div class="settings-section-title" data-i18n="advancedOptions">高级选项</div>
+            <div class="settings-item">
+                <div class="settings-label" data-i18n="cacheCleanup">缓存清理</div>
+                <div class="settings-control">
+                    <button class="settings-btn" onclick="handleClearCache(this)" data-i18n="clear">清理</button>
+                </div>
             </div>
-        </div>
-        <div class="settings-item">
-            <div class="settings-label-container">
-                <div class="settings-label" data-i18n="setDefaultWindowsCursor">将默认组设置为Windows默认光标</div>
+            <div class="settings-item">
+                <div class="settings-label-container">
+                    <div class="settings-label" data-i18n="setDefaultWindowsCursor">将默认组设置为Windows默认光标</div>
+                </div>
+                <div class="settings-control">
+                    <button class="settings-btn" onclick="handleRestoreDefaultCursor()" data-i18n="setDefault">设置默认</button>
+                </div>
             </div>
-            <div class="settings-control">
-                <button class="settings-btn" onclick="handleRestoreDefaultCursor()" data-i18n="setDefault">设置默认</button>
+            <div class="settings-item">
+                <div class="settings-label-container">
+                    <div class="settings-label"><span data-i18n="strictWindowCheck">严格窗口判定</span> <span class="performance-badge" data-i18n="performanceImpactHigh">性能影响大</span></div>
+                </div>
+                <div class="settings-control"><input type="checkbox" id="strictWindowCheck" onchange="handleStrictWindowCheckChange(this.checked)"></div>
             </div>
-        </div>
-        <div class="settings-item">
-            <div class="settings-label-container">
-                <div class="settings-label"><span data-i18n="strictWindowCheck">严格窗口判定</span> <span class="performance-badge" data-i18n="performanceImpactHigh">性能影响大</span></div>
+            <div class="settings-item">
+                <div class="settings-label-container">
+                    <div class="settings-label"><span data-i18n="showMoreMenu">显示更多菜单内容</span> <span class="beta-badge">Beta</span></div>
+                </div>
+                <div class="settings-control"><input type="checkbox" id="showMoreMenu" onchange="handleShowMoreMenuChange(this.checked)"></div>
             </div>
-            <div class="settings-control"><input type="checkbox" id="strictWindowCheck" onchange="handleStrictWindowCheckChange(this.checked)"></div>
-        </div>
-        <div class="settings-item">
-            <div class="settings-label-container">
-                <div class="settings-label"><span data-i18n="showMoreMenu">显示更多菜单内容</span> <span class="beta-badge">Beta</span></div>
+            <div class="settings-item">
+                <div class="settings-label-container">
+                    <div class="settings-label"><span data-i18n="useNewMenu">使用新版菜单</span> <span class="beta-badge">Beta</span></div>
+                </div>
+                <div class="settings-control"><input type="checkbox" id="useNewMenu" onchange="handleUseNewMenuChange(this.checked)"></div>
             </div>
-            <div class="settings-control"><input type="checkbox" id="showMoreMenu" onchange="handleShowMoreMenuChange(this.checked)"></div>
-        </div>
-        <div class="settings-item">
-            <div class="settings-label-container">
-                <div class="settings-label"><span data-i18n="useNewMenu">使用新版菜单</span> <span class="beta-badge">Beta</span></div>
-            </div>
-            <div class="settings-control"><input type="checkbox" id="useNewMenu" onchange="handleUseNewMenuChange(this.checked)"></div>
         </div>
     `;
 }
 
-function renderAboutSettings(container) {
-    container.innerHTML = `
-        <div class="settings-section-title" data-i18n="aboutMouseEngine">关于 MouseEngine</div>
-        <div class="settings-item">
-            <div class="settings-label" data-i18n="version">版本</div>
-            <div class="settings-value" id="aboutVersion" data-i18n="loading">加载中...</div>
-        </div>
-        <div class="settings-item">
-            <div class="settings-label" data-i18n="developer">开发者</div>
-            <div class="settings-value">CIF3</div>
-        </div>
-        <div class="settings-item">
-            <div class="settings-label" data-i18n="copyright">版权</div>
-            <div class="settings-value">© 2025-${new Date().getFullYear()} CIF3</div>
-        </div>
-        <div class="settings-item">
-            <div class="settings-label" data-i18n="license">许可证</div>
-            <div class="settings-value settings-link" onclick="showModal('license')" data-i18n="view">查看</div>
-        </div>
-        <div class="settings-item">
-            <div class="settings-label" data-i18n="thirdPartyLibraries">第三方库</div>
-            <div class="settings-value settings-link" onclick="showModal('thirdparty')" data-i18n="view">查看</div>
+function renderAboutSettings() {
+    return `
+        <div class="settings-title" data-i18n="about">关于</div>
+        <div class="settings-section">
+            <div class="settings-section-title" data-i18n="aboutMouseEngine">关于 MouseEngine</div>
+            <div class="settings-item">
+                <div class="settings-label" data-i18n="version">版本</div>
+                <div class="settings-value" id="aboutVersion" data-i18n="loading">加载中...</div>
+            </div>
+            <div class="settings-item">
+                <div class="settings-label" data-i18n="developer">开发者</div>
+                <div class="settings-value">CIF3</div>
+            </div>
+            <div class="settings-item">
+                <div class="settings-label" data-i18n="copyright">版权</div>
+                <div class="settings-value">© 2025-${new Date().getFullYear()} CIF3</div>
+            </div>
+            <div class="settings-item">
+                <div class="settings-label" data-i18n="repository">仓库</div>
+                <div class="settings-value">
+                    <a href="https://github.com/quanmouren/MouseEngine" target="_blank" rel="noopener" class="settings-link" data-i18n="viewOnGithub">在 GitHub 上查看</a>
+                </div>
+            </div>
+            <div class="settings-item">
+                <div class="settings-label" data-i18n="license">许可证</div>
+                <div class="settings-value settings-link" onclick="showModal('license')" data-i18n="view">查看</div>
+            </div>
+            <div class="settings-item">
+                <div class="settings-label" data-i18n="thirdPartyLibraries">第三方库</div>
+                <div class="settings-value settings-link" onclick="showModal('thirdparty')" data-i18n="view">查看</div>
+            </div>
         </div>
     `;
-    
-    loadVersionInfo();
 }
 
-function renderProgramWhitelistSettings(container) {
-    container.innerHTML = `
-        <div class="settings-section-title" data-i18n="programExceptionRules">程序例外规则</div>
-        <div class="settings-item">
-            <div class="settings-label" data-i18n="application">应用程序</div>
-            <div class="settings-control">
-                <input type="text" class="custom-input" id="programInput" placeholder="选择应用程序" data-i18n-placeholder="selectApplication" readonly>
-                <button class="settings-btn" onclick="selectFromRunning()" data-i18n="selectFromRunning">从运行中选择</button>
+function renderProgramWhitelistSettings() {
+    return `
+        <div class="settings-title" data-i18n="programWhitelist">程序白名单</div>
+        <div class="settings-section">
+            <div class="settings-section-title" data-i18n="programExceptionRules">程序例外规则</div>
+            <div class="settings-item">
+                <div class="settings-label" data-i18n="application">应用程序</div>
+                <div class="settings-control">
+                    <input type="text" class="custom-input" id="programInput" placeholder="选择应用程序" data-i18n-placeholder="selectApplication" readonly>
+                    <button class="settings-btn" onclick="selectFromRunning()" data-i18n="selectFromRunning">从运行中选择</button>
+                </div>
+            </div>
+            <div class="settings-item">
+                <div class="settings-label" data-i18n="cursorGroup">光标组</div>
+                <div class="settings-control">
+                    <select class="custom-input" id="cursorGroupSelect">
+                        <option value="" data-i18n="selectCursorGroup">选择光标组</option>
+                    </select>
+                </div>
+            </div>
+            <div class="settings-item">
+                <div class="settings-label" data-i18n="operation">操作</div>
+                <div class="settings-control">
+                    <button class="settings-btn" onclick="addWhitelistEntry()" data-i18n="addBinding">添加绑定</button>
+                </div>
             </div>
         </div>
-        <div class="settings-item">
-            <div class="settings-label" data-i18n="cursorGroup">光标组</div>
-            <div class="settings-control">
-                <select class="custom-input" id="cursorGroupSelect">
-                    <option value="" data-i18n="selectCursorGroup">选择光标组</option>
-                </select>
+        <div class="settings-section">
+            <div class="settings-section-title" data-i18n="currentBindings">当前绑定</div>
+            <div id="whitelistEntries" class="whitelist-entries">
+                <div class="whitelist-empty" data-i18n="noBindings">暂无绑定</div>
             </div>
-        </div>
-        <div class="settings-item">
-            <div class="settings-label" data-i18n="operation">操作</div>
-            <div class="settings-control">
-                <button class="settings-btn" onclick="addWhitelistEntry()" data-i18n="addBinding">添加绑定</button>
-            </div>
-        </div>
-        <div class="settings-divider"></div>
-        <div class="settings-section-title" data-i18n="currentBindings">当前绑定</div>
-        <div id="whitelistEntries" class="whitelist-entries">
-            <div class="whitelist-empty" data-i18n="noBindings">暂无绑定</div>
         </div>
     `;
-    
-    // 加载白名单数据
-    loadWhitelistData();
-    // 加载光标组数据
-    loadCursorGroups();
 }
 
 async function loadWhitelistData() {
@@ -692,54 +830,71 @@ function showModal(type) {
     
     // 设置模态框内容
     if (type === 'license') {
+        // 用 Markdown 源文本，通过 renderMarkdown 渲染
+        const licenseMd = `# Project Licensing Notice
+
+Copyright (c) 2025, CIF3. All rights reserved.
+
+This project is distributed under a combined licensing model:
+
+## 1. Core Logic & Original Features
+
+The core functionality, original algorithms, and unique features of this software are licensed under:
+
+Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)
+
+\`https://creativecommons.org/licenses/by-nc-sa/4.0/\`
+
+## 2. Wallpaper Engine Integration & API Modules
+
+The modules specifically designed for interacting with Wallpaper Engine, process monitoring (psutil-based logic), and system handle operations are licensed under:
+
+The BSD 3-Clause License
+
+\`https://opensource.org/licenses/BSD-3-Clause\`
+
+## 3. Third-Party Support or Miscellaneous Modules
+
+Certain files in this project are licensed under:
+
+The MIT License (MIT)
+
+\`https://opensource.org/licenses/MIT\`
+
+(See individual file headers for the specific license governing each file.)
+
+---
+
+## BSD 3-Clause License Text (for Integration Modules)
+
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+
+---
+
+## Important Exceptions & Disclaimers
+
+- WALLPAPER CONTENT: This project identifies and retrieves metadata of wallpapers. All wallpaper assets, IDs, and media remain the property of their respective copyright holders on Steam Workshop.
+- THIRD-PARTY LIBRARIES: Libraries such as 'psutil' are subject to their own respective licenses.
+- NO ENDORSEMENT: This project is not affiliated with or endorsed by Wallpaper Engine or Steam.
+
+---
+
+Note: This project changed its license starting from Alpha2.0.
+
+Alpha2.0 and later: Licensed under CC BY-NC-SA 4.0 (Core) & BSD 3-Clause (Integration). Commercial use without authorization is prohibited.
+
+Alpha1.2 and earlier: Remains under BSD 3-Clause. Permissions granted under the previous license for older versions are still valid.
+`;
         modalContent.innerHTML = `
             <div class="modal-header">
                 <h3>许可证</h3>
             </div>
-            <div class="modal-body scrollable">
-                <h3># Project Licensing Notice</h3>
-                <p></p>
-                <p>Copyright (c) 2025, CIF3. All rights reserved.</p>
-                <p></p>
-                <p>This project is distributed under a combined licensing model:</p>
-                <p></p>
-                <h4>## 1. Core Logic & Original Features</h4>
-                <p>The core functionality, original algorithms, and unique features of this software are licensed under:</p>
-                <p>Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)</p>
-                <p><code>https://creativecommons.org/licenses/by-nc-sa/4.0/</code></p>
-                <p></p>
-                <h4>## 2. Wallpaper Engine Integration & API Modules</h4>
-                <p>The modules specifically designed for interacting with Wallpaper Engine, process monitoring (psutil-based logic), and system handle operations are licensed under:</p>
-                <p>The BSD 3-Clause License</p>
-                <p><code>https://opensource.org/licenses/BSD-3-Clause</code></p>
-                <p></p>
-                <h4>## 3. Third-Party Support or Miscellaneous Modules</h4>
-                <p>Certain files in this project are licensed under:</p>
-                <p>The MIT License (MIT)</p>
-                <p><code>https://opensource.org/licenses/MIT</code></p>
-                <p></p>
-                <p>(See individual file headers for the specific license governing each file.)</p>
-                <p></p>
-                <h4>---</h4>
-                <p></p>
-                <h4>## BSD 3-Clause License Text (for Integration Modules)</h4>
-                <p>Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:</p>
-                <p>1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.</p>
-                <p>2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.</p>
-                <p>3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.</p>
-                <p></p>
-                <h4>---</h4>
-                <p></p>
-                <h4>## Important Exceptions & Disclaimers</h4>
-                <p>- WALLPAPER CONTENT: This project identifies and retrieves metadata of wallpapers. All wallpaper assets, IDs, and media remain the property of their respective copyright holders on Steam Workshop.</p>
-                <p>- THIRD-PARTY LIBRARIES: Libraries such as 'psutil' are subject to their own respective licenses.</p>
-                <p>- NO ENDORSEMENT: This project is not affiliated with or endorsed by Wallpaper Engine or Steam.</p>
-                <p></p>
-                <h4>---</h4>
-                <p></p>
-                <p>Note: This project changed its license starting from Alpha2.0.</p>
-                <p>Alpha2.0 and later: Licensed under CC BY-NC-SA 4.0 (Core) & BSD 3-Clause (Integration). Commercial use without authorization is prohibited.</p>
-                <p>Alpha1.2 and earlier: Remains under BSD 3-Clause. Permissions granted under the previous license for older versions are still valid.</p>
+            <div class="modal-body scrollable markdown-body">
+                ${renderMarkdown(licenseMd)}
             </div>
         `;
     } else if (type === 'thirdparty') {
@@ -783,4 +938,101 @@ function showModal(type) {
             document.body.removeChild(modal);
         }
     });
+}
+
+// ============= 完整备份导入导出 =============
+
+// 临时保存选中的 .mecpack 文件路径
+let _pendingRestorePackPath = null;
+
+async function handleExportBackup() {
+    if (typeof pywebview === 'undefined' || !pywebview.api) {
+        showNotification(tr('thisFeatureAppOnly'), 'error');
+        return;
+    }
+    try {
+        const result = await pywebview.api.export_full_backup();
+        if (result && result.status === 'success') {
+            const msg = tr('backupExportSuccess') + (result.path ? '\n' + result.path : '');
+            showNotification(msg, 'success');
+        } else if (result && result.status === 'cancelled') {
+            // 静默
+        } else {
+            showNotification(tr('backupExportFailed') + ': ' + ((result && result.msg) || ''), 'error');
+        }
+    } catch (e) {
+        console.error('导出完整备份失败', e);
+        showNotification(tr('backupExportFailed') + ': ' + e, 'error');
+    }
+}
+
+async function handleRestoreBackup() {
+    if (typeof pywebview === 'undefined' || !pywebview.api) {
+        showNotification(tr('thisFeatureAppOnly'), 'error');
+        return;
+    }
+    try {
+        // 第一步：选文件
+        const pickResult = await pywebview.api.import_full_backup_pick_file();
+        if (!pickResult || pickResult.status !== 'success') {
+            // 取消或错误
+            if (pickResult && pickResult.status === 'error') {
+                showNotification(tr('backupImportFailed') + ': ' + pickResult.msg, 'error');
+            }
+            return;
+        }
+        // 第二步：显示风险确认弹窗
+        _pendingRestorePackPath = pickResult.path;
+        showRestoreBackupModal();
+    } catch (e) {
+        console.error('选择备份文件失败', e);
+        showNotification(tr('backupImportFailed') + ': ' + e, 'error');
+    }
+}
+
+function showRestoreBackupModal() {
+    const modal = document.getElementById('restoreBackupModal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+
+    // 每次打开都重新绑定（避免旧 handler 残留）
+    const mergeBtn = document.getElementById('restoreBackupMergeBtn');
+    const overwriteBtn = document.getElementById('restoreBackupOverwriteBtn');
+
+    const newMerge = mergeBtn.cloneNode(true);
+    const newOverwrite = overwriteBtn.cloneNode(true);
+    mergeBtn.parentNode.replaceChild(newMerge, mergeBtn);
+    overwriteBtn.parentNode.replaceChild(newOverwrite, overwriteBtn);
+
+    newMerge.addEventListener('click', () => doRestore('merge'));
+    newOverwrite.addEventListener('click', () => doRestore('overwrite'));
+}
+
+function closeRestoreBackupModal() {
+    const modal = document.getElementById('restoreBackupModal');
+    if (modal) modal.style.display = 'none';
+    _pendingRestorePackPath = null;
+}
+
+async function doRestore(mode) {
+    if (!_pendingRestorePackPath) {
+        closeRestoreBackupModal();
+        return;
+    }
+    if (typeof pywebview === 'undefined' || !pywebview.api) {
+        showNotification(tr('thisFeatureAppOnly'), 'error');
+        return;
+    }
+    try {
+        const result = await pywebview.api.import_full_backup(_pendingRestorePackPath, mode);
+        closeRestoreBackupModal();
+        if (result && result.status === 'success') {
+            showNotification(tr('backupImportSuccess') + '\n' + (result.msg || ''), 'success');
+        } else {
+            showNotification(tr('backupImportFailed') + ': ' + ((result && result.msg) || ''), 'error');
+        }
+    } catch (e) {
+        console.error('恢复备份失败', e);
+        showNotification(tr('backupImportFailed') + ': ' + e, 'error');
+    }
 }
