@@ -428,7 +428,7 @@ def open_settings_ui(icon=None, item=None):
 
 def open_mouseengine_ui(icon=None, item=None):
     """打开新版统一 UI"""
-    run_ui_in_process(["MouseEngineUI.exe", "NewUI.py"], "MouseEngine")
+    run_ui_in_process(["NewUI.exe", "NewUI.py"], "MouseEngine")
 
 def get_tray_title():
     if get_specified_mouse_group():
