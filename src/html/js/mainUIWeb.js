@@ -40,48 +40,29 @@
         detailType.textContent = `${tr('type')}：${typeValue || '-'}`;
     }
 
-    // 初始化函数：自动调用Python API，3秒超时使用测试数据
+    // 初始化函数：自动调用Python API
     async function initApp() {
-        try {
-            console.log("1. 检查 pywebview 对象:", window.pywebview);
-            
-            if (!window.pywebview) {
-                console.log("2. 等待 pywebview 就绪...（3秒超时）");
-                await Promise.race([
-                    new Promise(resolve => {
-                        window.addEventListener('pywebviewready', resolve);
-                    }),
-                    // 3秒超时器
-                    new Promise((_, reject) => {
-                        setTimeout(() => reject(new Error("pywebview 3秒未就绪")), 3000);
-                    })
-                ]);
-            }
-            
-            console.log("3. pywebview API:", window.pywebview.api);
-            console.log("4. 调用 init 方法...");
-            
-            // 调用API获取数据
-            let wallpapers = await window.pywebview.api.init();
-            console.log("5. 获取到的API数据：", wallpapers);
+        console.log("1. 检查 pywebview 对象:", window.pywebview);
 
-            // 如果API返回空/无效数据，则使用测试列表
-            if (!wallpapers || wallpapers.length === 0) {
-                console.log("API返回数据为空，使用测试备用数据");
-                wallpapers = TEST_WALLPAPERS;
-            }
-            
-            // 缓存所有壁纸数据
-            allWallpapersData = wallpapers;
-            
-            renderWallpapers(wallpapers);
-        } catch (error) {
-            // 捕获所有异常
-            console.error("初始化失败，切换到测试数据：", error);
-            allWallpapersData = TEST_WALLPAPERS;
-            renderWallpapers(TEST_WALLPAPERS);
+        if (!window.pywebview) {
+            console.log("2. 等待 pywebview 就绪...");
+            await new Promise(resolve => {
+                window.addEventListener('pywebviewready', resolve);
+            });
         }
-        
+
+        console.log("3. pywebview API:", window.pywebview.api);
+        console.log("4. 调用 init 方法...");
+
+        // 调用API获取数据
+        const wallpapers = await window.pywebview.api.init();
+        console.log("5. 获取到的API数据：", wallpapers);
+
+        // 缓存所有壁纸数据
+        allWallpapersData = wallpapers || [];
+
+        renderWallpapers(allWallpapersData);
+
         // 初始化复选框事件监听
         initCheckboxListener();
     }
